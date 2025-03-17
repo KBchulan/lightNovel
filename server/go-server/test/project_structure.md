@@ -1,74 +1,132 @@
-# Go服务器项目结构说明
+# API文档和项目结构
 
-## 核心文件说明
+## API接口说明
 
-### 1. `main.go`（主入口文件）
+### 1. 小说相关接口
 
-- 服务器的入口点
-- 配置加载和初始化
-- 中间件链的设置
-- 路由注册
-- 服务器启动配置
+#### 获取小说列表
+- 路径: `GET /api/v1/novels`
+- 参数: 
+  - page: 页码（默认1）
+  - size: 每页数量（默认10）
+- 返回: 小说列表和分页信息
 
-### 2. `pkg/middleware/logger.go`（日志中间件）
+#### 搜索小说
+- 路径: `GET /api/v1/novels/search`
+- 参数:
+  - keyword: 搜索关键词
+  - page: 页码
+  - size: 每页数量
+- 返回: 匹配的小说列表
 
-- 记录每个HTTP请求的详细信息
-- 包含请求时间、路径、状态码、响应时间等
-- 使用标准格式输出日志
+#### 获取最新小说
+- 路径: `GET /api/v1/novels/latest`
+- 参数: 
+  - limit: 返回数量（默认10）
+- 返回: 最新更新的小说列表
 
-### 3. `internal/models/novel.go`（数据模型定义）
+#### 获取热门小说
+- 路径: `GET /api/v1/novels/popular`
+- 参数:
+  - limit: 返回数量（默认10）
+- 返回: 热门小说列表
 
-- 定义了所有数据结构：
-  - `Novel`：小说基本信息
-  - `Volume`：卷信息
-  - `Chapter`：章节信息
-  - `Bookmark`：书签
-  - `ReadingProgress`：阅读进度
+#### 获取小说详情
+- 路径: `GET /api/v1/novels/:id`
+- 参数: 无
+- 返回: 小说详细信息
 
-### 4. `internal/service/novel_service.go`（业务逻辑层）
+#### 获取卷列表
+- 路径: `GET /api/v1/novels/:id/volumes`
+- 参数: 无
+- 返回: 小说的卷列表
 
-- 实现所有小说相关的业务逻辑
-- 处理数据库操作
-- 提供服务层接口给API层调用
+#### 获取章节列表
+- 路径: `GET /api/v1/novels/:id/volumes/:vid/chapters`
+- 参数: 无
+- 返回: 指定卷的章节列表
 
-### 5. `api/v1/novel_handler.go`（API处理层）
+#### 获取章节内容
+- 路径: `GET /api/v1/novels/:id/volumes/:vid/chapters/:cid`
+- 参数: 无
+- 返回: 章节详细内容
 
-- 处理所有HTTP请求
-- 参数验证和处理
-- 调用service层的方法
-- 返回HTTP响应
+### 2. 用户相关接口
 
-### 6. `pkg/database/mongodb.go`（数据库连接）
+#### 获取书签
+- 路径: `GET /api/v1/user/bookmarks`
+- 头部: X-Device-ID
+- 返回: 用户的书签列表
 
-- MongoDB数据库连接管理
-- 提供数据库操作接口
+#### 更新阅读进度
+- 路径: `PATCH /api/v1/user/progress`
+- 头部: X-Device-ID
+- 参数:
+  ```json
+  {
+    "novelId": "string",
+    "volumeId": number,
+    "chapterId": number,
+    "position": number
+  }
+  ```
+- 返回: 更新状态
 
-### 7. `pkg/middleware/cache.go`（缓存中间件）
+### 3. 系统监控接口
 
-- Redis缓存实现
-- 缓存GET请求响应
-- 管理缓存生命周期
+#### 健康检查
+- 路径: `GET /api/v1/health`
+- 返回: 服务器状态信息
 
-### 8. `pkg/middleware/rate_limiter.go`（限流中间件）
+#### 性能指标
+- 路径: `GET /api/v1/metrics`
+- 返回: 系统性能指标
 
-- 实现请求频率限制
-- 基于令牌桶算法
-- 防止API滥用
+## 项目文件结构
 
-### 9. `pkg/middleware/security.go`（安全中间件）
+### 主要目录
+```
+go-server/
+├── api/v1/              # API处理器
+├── config/              # 配置文件
+├── internal/            # 内部包
+│   ├── models/         # 数据模型
+│   └── service/        # 业务逻辑
+├── pkg/                 # 公共包
+│   ├── database/       # 数据库相关
+│   └── middleware/     # 中间件
+└── test/               # 测试文件
+```
 
-- 添加安全相关的HTTP头
-- 实现CORS策略
-- 防止XSS攻击
+### 核心文件说明
 
-### 10. `pkg/middleware/error.go`（错误处理中间件）
+#### 1. API层 (`api/v1/`)
+- `novel_handler.go`: 小说相关API处理
+- `user_handler.go`: 用户相关API处理
+- `health_handler.go`: 系统监控API处理
 
-- 统一错误处理
-- 标准化错误响应
-- 错误日志记录
+#### 2. 服务层 (`internal/service/`)
+- `novel_service.go`: 小说业务逻辑
+- `user_service.go`: 用户业务逻辑
+- `cache_service.go`: 缓存服务
 
-### 11. `config/config.go`（配置管理）
+#### 3. 数据层 (`internal/models/`)
+- `novel.go`: 小说相关模型
+- `user.go`: 用户相关模型
+- `bookmark.go`: 书签模型
+- `reading_progress.go`: 阅读进度模型
 
-- 加载配置文件
-- 提供配置访问接口
-- 管理环境变量
+#### 4. 中间件 (`pkg/middleware/`)
+- `rate_limiter.go`: 请求限流
+- `cache.go`: Redis缓存
+- `logger.go`: 日志记录
+- `security.go`: 安全相关
+- `error.go`: 错误处理
+
+#### 5. 数据库 (`pkg/database/`)
+- `mongodb.go`: MongoDB连接和操作
+- `redis.go`: Redis连接和操作
+
+#### 6. 配置 (`config/`)
+- `config.yaml`: 配置文件
+- `config.go`: 配置加载器
