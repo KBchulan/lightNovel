@@ -1,0 +1,339 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "轻小说阅读API服务",
+        "title": "Light Novel API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/api/v1",
+    "paths": {
+        "/novels": {
+            "get": {
+                "description": "获取小说列表，支持分页",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "novels"
+                ],
+                "summary": "获取所有小说",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "每页数量",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.PageResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/novels/latest": {
+            "get": {
+                "description": "获取最新更新的小说列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "novels"
+                ],
+                "summary": "获取最新小说",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "限制数量",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/novels/popular": {
+            "get": {
+                "description": "获取阅读量最高的小说列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "novels"
+                ],
+                "summary": "获取热门小说",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "限制数量",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/novels/search": {
+            "get": {
+                "description": "根据关键词搜索小说",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "novels"
+                ],
+                "summary": "搜索小说",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "搜索关键词",
+                        "name": "keyword",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "每页数量",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/novels/{id}": {
+            "get": {
+                "description": "根据ID获取小说详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "novels"
+                ],
+                "summary": "获取小说详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "小说ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Novel"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/bookmarks": {
+            "get": {
+                "description": "获取用户的所有书签",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "获取用户书签",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID",
+                        "name": "X-Device-ID",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/progress": {
+            "patch": {
+                "description": "更新用户的阅读进度",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "更新阅读进度",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID",
+                        "name": "X-Device-ID",
+                        "in": "header"
+                    },
+                    {
+                        "description": "阅读进度",
+                        "name": "progress",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "models.Novel": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "cover": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "readCount": {
+                    "description": "阅读量",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "连载中、已完结",
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "volumeCount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.PageResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "hasNext": {
+                    "type": "boolean"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.Response": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

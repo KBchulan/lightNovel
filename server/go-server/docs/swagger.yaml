@@ -1,0 +1,224 @@
+basePath: /api/v1
+definitions:
+  models.Novel:
+    properties:
+      author:
+        type: string
+      cover:
+        type: string
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      readCount:
+        description: 阅读量
+        type: integer
+      status:
+        description: 连载中、已完结
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      updatedAt:
+        type: string
+      volumeCount:
+        type: integer
+    type: object
+  response.PageResponse:
+    properties:
+      data: {}
+      hasNext:
+        type: boolean
+      page:
+        type: integer
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  response.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: 轻小说阅读API服务
+  title: Light Novel API
+  version: "1.0"
+paths:
+  /novels:
+    get:
+      consumes:
+      - application/json
+      description: 获取小说列表，支持分页
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.PageResponse'
+      summary: 获取所有小说
+      tags:
+      - novels
+  /novels/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取小说详情
+      parameters:
+      - description: 小说ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Novel'
+      summary: 获取小说详情
+      tags:
+      - novels
+  /novels/latest:
+    get:
+      consumes:
+      - application/json
+      description: 获取最新更新的小说列表
+      parameters:
+      - default: 10
+        description: 限制数量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取最新小说
+      tags:
+      - novels
+  /novels/popular:
+    get:
+      consumes:
+      - application/json
+      description: 获取阅读量最高的小说列表
+      parameters:
+      - default: 10
+        description: 限制数量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取热门小说
+      tags:
+      - novels
+  /novels/search:
+    get:
+      consumes:
+      - application/json
+      description: 根据关键词搜索小说
+      parameters:
+      - description: 搜索关键词
+        in: query
+        name: keyword
+        required: true
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 搜索小说
+      tags:
+      - novels
+  /user/bookmarks:
+    get:
+      consumes:
+      - application/json
+      description: 获取用户的所有书签
+      parameters:
+      - description: 设备ID
+        in: header
+        name: X-Device-ID
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取用户书签
+      tags:
+      - user
+  /user/progress:
+    patch:
+      consumes:
+      - application/json
+      description: 更新用户的阅读进度
+      parameters:
+      - description: 设备ID
+        in: header
+        name: X-Device-ID
+        type: string
+      - description: 阅读进度
+        in: body
+        name: progress
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 更新阅读进度
+      tags:
+      - user
+swagger: "2.0"

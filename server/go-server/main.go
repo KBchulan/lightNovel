@@ -1,17 +1,32 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	v1 "lightnovel/api/v1"
 	"lightnovel/config"
+	_ "lightnovel/docs" // 导入 swagger 文档
 	"lightnovel/internal/service"
+	"lightnovel/pkg/cache"
 	"lightnovel/pkg/database"
+	"lightnovel/pkg/middleware"
 	"log"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"golang.org/x/time/rate"
 )
 
+// @title Light Novel API
+// @version 1.0
+// @description 轻小说阅读API服务
+// @BasePath /api/v1
+
 func main() {
+	// 设置为发布模式
+	gin.SetMode(gin.ReleaseMode)
+
 	// 加载配置
 	cfg := config.LoadConfig()
 
@@ -22,24 +37,67 @@ func main() {
 	}
 	defer db.Close()
 
+	// 创建数据库索引
+	ctx := context.Background()
+	if err := db.CreateIndexes(ctx); err != nil {
+		log.Printf("Warning: Failed to create indexes: %v", err)
+	}
+
+	// 创建Redis缓存
+	redisAddr := fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port)
+	redisCache := cache.NewRedisCache(redisAddr, cfg.Redis.Password, cfg.Redis.DB)
+	defer redisCache.Close()
+
 	// 创建服务和处理器
-	novelService := service.NewNovelService(db)
+	novelService := service.NewNovelService(db, redisCache, cfg)
 	novelHandler := v1.NewNovelHandler(novelService)
+	healthHandler := v1.NewHealthHandler()
+	wsHandler := v1.NewWebSocketHandler(cfg)
 
 	// 创建路由
-	r := gin.Default()
+	r := gin.New()
 
-	// API 路由组 v1
-	v1Group := r.Group("/api/v1")
+	// 使用中间件
+	r.Use(gin.Recovery())
+	r.Use(middleware.Logger())
+	r.Use(middleware.SecurityHeaders())
+	r.Use(middleware.CORS())
+
+	// 创建限流器
+	rateLimiter := middleware.NewRateLimiter(rate.Limit(cfg.Rate.Limit), cfg.Rate.Burst)
+	r.Use(rateLimiter.RateLimit())
+
+	// API文档
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// API路由
+	api := r.Group("/api/v1")
 	{
-		// 小说相关路由
-		novels := v1Group.Group("/novels")
+		// WebSocket连接
+		api.GET("/ws", wsHandler.HandleConnection)
+
+		// 健康检查
+		api.GET("/health", healthHandler.Check)
+		api.GET("/metrics", healthHandler.Metrics)
+
+		// 小说相关
+		novels := api.Group("/novels")
 		{
 			novels.GET("", novelHandler.GetAllNovels)
+			novels.GET("/search", novelHandler.SearchNovels)
+			novels.GET("/latest", novelHandler.GetLatestNovels)
+			novels.GET("/popular", novelHandler.GetPopularNovels)
 			novels.GET("/:id", novelHandler.GetNovelByID)
 			novels.GET("/:id/volumes", novelHandler.GetVolumesByNovelID)
 			novels.GET("/:id/volumes/:volume/chapters", novelHandler.GetChaptersByVolumeID)
 			novels.GET("/:id/volumes/:volume/chapters/:chapter", novelHandler.GetChapterByNumber)
+		}
+
+		// 用户相关
+		user := api.Group("/user")
+		{
+			user.GET("/bookmarks", novelHandler.GetUserBookmarks)
+			user.PATCH("/progress", novelHandler.UpdateReadingProgress)
 		}
 	}
 
