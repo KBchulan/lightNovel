@@ -5,9 +5,11 @@ go 1.23.0
 toolchain go1.23.7
 
 require (
+	github.com/allegro/bigcache/v3 v3.1.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gorilla/websocket v1.5.3
+	github.com/redis/go-redis/v9 v9.7.1
 	github.com/spf13/viper v1.20.0
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0

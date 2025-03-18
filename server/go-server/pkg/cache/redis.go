@@ -10,14 +10,16 @@ import (
 
 const (
 	// 缓存键前缀
-	NovelListKey     = "novel:list"      // 小说列表
-	NovelDetailKey   = "novel:detail:"   // 小说详情
-	VolumeListKey    = "novel:volumes:"  // 卷列表
-	ChapterListKey   = "novel:chapters:" // 章节列表
-	ChapterKey       = "novel:chapter:"  // 章节内容
-	SearchKey        = "novel:search:"   // 搜索结果
-	LatestNovelsKey  = "novel:latest"    // 最新小说
-	PopularNovelsKey = "novel:popular"   // 热门小说
+	NovelListKey      = "novel:list"      // 小说列表
+	NovelDetailKey    = "novel:detail:"   // 小说详情
+	VolumeListKey     = "novel:volumes:"  // 卷列表
+	ChapterListKey    = "novel:chapters:" // 章节列表
+	ChapterKey        = "novel:chapter:"  // 章节内容
+	SearchKey         = "novel:search:"   // 搜索结果
+	LatestNovelsKey   = "novel:latest"    // 最新小说
+	PopularNovelsKey  = "novel:popular"   // 热门小说
+	ReadingHistoryKey = "user:history:"   // 阅读历史
+	DeviceKey         = "device:info:"    // 设备信息
 )
 
 // RedisCache Redis缓存服务

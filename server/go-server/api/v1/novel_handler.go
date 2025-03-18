@@ -6,7 +6,6 @@ import (
 	"lightnovel/pkg/errors"
 	"lightnovel/pkg/response"
 	"log"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -17,6 +16,15 @@ import (
 // @version 1.0
 // @description 轻小说阅读API服务
 // @BasePath /api/v1
+// @schemes http https
+// @contact.name API Support
+// @contact.email support@example.com
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-Device-ID
+// @description 设备ID用于识别用户，如果未提供则使用客户端IP
 
 type NovelHandler struct {
 	novelService *service.NovelService
@@ -31,9 +39,11 @@ func NewNovelHandler(novelService *service.NovelService) *NovelHandler {
 // @Tags novels
 // @Accept json
 // @Produce json
-// @Param page query int false "页码" default(1)
-// @Param size query int false "每页数量" default(10)
-// @Success 200 {object} response.PageResponse
+// @Param page query int false "页码" default(1) minimum(1)
+// @Param size query int false "每页数量" default(10) minimum(1) maximum(50)
+// @Success 200 {object} response.PageResponse{data=[]models.Novel} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /novels [get]
 func (h *NovelHandler) GetAllNovels(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -41,7 +51,7 @@ func (h *NovelHandler) GetAllNovels(c *gin.Context) {
 
 	novels, total, err := h.novelService.GetAllNovels(c.Request.Context(), page, size)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, err)
 		return
 	}
 
@@ -54,77 +64,107 @@ func (h *NovelHandler) GetAllNovels(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "小说ID"
-// @Success 200 {object} models.Novel
+// @Success 200 {object} models.Novel "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 404 {object} response.Response "小说不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /novels/{id} [get]
 func (h *NovelHandler) GetNovelByID(c *gin.Context) {
 	id := c.Param("id")
 	novel, err := h.novelService.GetNovelByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, err)
 		return
 	}
 
 	if novel == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "novel not found"})
+		response.Error(c, errors.NewError(errors.ErrNotFound))
 		return
 	}
 
-	c.JSON(http.StatusOK, novel)
+	response.Success(c, novel)
 }
 
-// GetVolumesByNovelID 获取小说的所有卷
+// @Summary 获取小说卷列表
+// @Description 获取指定小说的所有卷列表
+// @Tags novels
+// @Accept json
+// @Produce json
+// @Param id path string true "小说ID"
+// @Success 200 {object} response.Response{data=[]models.Volume} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 404 {object} response.Response "小说不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /novels/{id}/volumes [get]
 func (h *NovelHandler) GetVolumesByNovelID(c *gin.Context) {
 	novelID := c.Param("id")
 	volumes, err := h.novelService.GetVolumesByNovelID(c.Request.Context(), novelID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, volumes)
+	response.Success(c, volumes)
 }
 
-// GetChaptersByVolumeID 获取卷的所有章节
+// @Summary 获取卷的所有章节
+// @Description 获取指定卷的所有章节基本信息（不包含内容）
+// @Tags novels
+// @Accept json
+// @Produce json
+// @Param id path string true "小说ID"
+// @Param volume path int true "卷号"
+// @Success 200 {array} models.ChapterInfo
+// @Router /novels/{id}/volumes/{volume}/chapters [get]
 func (h *NovelHandler) GetChaptersByVolumeID(c *gin.Context) {
 	novelID := c.Param("id")
 	volumeNumber, err := strconv.Atoi(c.Param("volume"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid volume number"})
+		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
 		return
 	}
 
 	chapters, err := h.novelService.GetChaptersByVolumeID(c.Request.Context(), novelID, volumeNumber)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, chapters)
+	response.Success(c, chapters)
 }
 
-// GetChapterByNumber 获取指定章节
+// @Summary 获取章节内容
+// @Description 获取指定章节的详细内容
+// @Tags novels
+// @Accept json
+// @Produce json
+// @Param id path string true "小说ID"
+// @Param volume path int true "卷号"
+// @Param chapter path int true "章节号"
+// @Success 200 {object} models.Chapter
+// @Router /novels/{id}/volumes/{volume}/chapters/{chapter} [get]
 func (h *NovelHandler) GetChapterByNumber(c *gin.Context) {
 	novelID := c.Param("id")
 	volumeNumber, err := strconv.Atoi(c.Param("volume"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid volume number"})
+		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
 		return
 	}
 
 	chapterNumber, err := strconv.Atoi(c.Param("chapter"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid chapter number"})
+		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
 		return
 	}
 
 	chapter, err := h.novelService.GetChapterByNumber(c.Request.Context(), novelID, volumeNumber, chapterNumber)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, err)
 		return
 	}
 
 	if chapter == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "chapter not found"})
+		response.Error(c, errors.NewError(errors.ErrNotFound))
 		return
 	}
 
@@ -137,7 +177,7 @@ func (h *NovelHandler) GetChapterByNumber(c *gin.Context) {
 		}
 	}()
 
-	c.JSON(http.StatusOK, chapter)
+	response.Success(c, chapter)
 }
 
 // @Summary 搜索小说
@@ -186,18 +226,20 @@ func (h *NovelHandler) SearchNovels(c *gin.Context) {
 // @Tags novels
 // @Accept json
 // @Produce json
-// @Param limit query int false "限制数量" default(10)
-// @Success 200 {object} response.Response
+// @Param limit query int false "限制数量" default(10) minimum(1) maximum(100)
+// @Success 200 {object} response.Response{data=[]models.Novel} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /novels/latest [get]
 func (h *NovelHandler) GetLatestNovels(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	novels, err := h.novelService.GetLatestNovels(c.Request.Context(), limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"novels": novels})
+	response.Success(c, novels)
 }
 
 // @Summary 获取热门小说
@@ -205,18 +247,89 @@ func (h *NovelHandler) GetLatestNovels(c *gin.Context) {
 // @Tags novels
 // @Accept json
 // @Produce json
-// @Param limit query int false "限制数量" default(10)
-// @Success 200 {object} response.Response
+// @Param limit query int false "限制数量" default(10) minimum(1) maximum(100)
+// @Success 200 {object} response.Response{data=[]models.Novel} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /novels/popular [get]
 func (h *NovelHandler) GetPopularNovels(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	novels, err := h.novelService.GetPopularNovels(c.Request.Context(), limit)
+	novels, err := h.novelService.GetPopularNovelsParallel(c.Request.Context(), limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"novels": novels})
+	response.Success(c, novels)
+}
+
+// 更新阅读进度请求体
+type UpdateProgressRequest struct {
+	NovelID       string `json:"novelId" binding:"required"`
+	VolumeNumber  int    `json:"volumeNumber" binding:"required"`
+	ChapterNumber int    `json:"chapterNumber" binding:"required"`
+	Position      int    `json:"position"`
+}
+
+// @Summary 获取阅读历史
+// @Description 获取用户的阅读历史记录
+// @Tags user
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param X-Device-ID header string false "设备ID，如果未提供则使用客户端IP"
+// @Param limit query int false "限制数量" default(10) minimum(1) maximum(100)
+// @Success 200 {object} response.Response{data=[]models.ReadingProgress} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /user/history [get]
+func (h *NovelHandler) GetReadingHistory(c *gin.Context) {
+	deviceID := c.GetString("deviceID")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	history, err := h.novelService.GetReadingHistory(c.Request.Context(), deviceID, limit)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, history)
+}
+
+// @Summary 更新阅读进度
+// @Description 更新用户的小说阅读进度
+// @Tags user
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param X-Device-ID header string false "设备ID，如果未提供则使用客户端IP"
+// @Param body body UpdateProgressRequest true "阅读进度信息"
+// @Success 200 {object} response.Response{data=string} "更新成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 404 {object} response.Response "小说不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /user/progress [patch]
+func (h *NovelHandler) UpdateReadingProgress(c *gin.Context) {
+	deviceID := c.GetString("deviceID")
+	var req UpdateProgressRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
+		return
+	}
+
+	err := h.novelService.UpdateReadingProgress(
+		c.Request.Context(),
+		deviceID,
+		req.NovelID,
+		req.VolumeNumber,
+		req.ChapterNumber,
+		req.Position,
+	)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{"message": "更新成功"})
 }
 
 // @Summary 获取用户书签
@@ -224,56 +337,19 @@ func (h *NovelHandler) GetPopularNovels(c *gin.Context) {
 // @Tags user
 // @Accept json
 // @Produce json
-// @Param X-Device-ID header string false "设备ID"
-// @Success 200 {object} response.Response
+// @Security ApiKeyAuth
+// @Param X-Device-ID header string false "设备ID，如果未提供则使用客户端IP"
+// @Success 200 {object} response.Response{data=[]models.Bookmark} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /user/bookmarks [get]
 func (h *NovelHandler) GetUserBookmarks(c *gin.Context) {
-	deviceID := c.GetHeader("X-Device-ID")
-	if deviceID == "" {
-		deviceID = c.ClientIP() // 如果没有设备ID，使用IP地址作为标识
-	}
-
+	deviceID := c.GetString("deviceID")
 	bookmarks, err := h.novelService.GetUserBookmarks(c.Request.Context(), deviceID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"bookmarks": bookmarks})
-}
-
-// @Summary 更新阅读进度
-// @Description 更新用户的阅读进度
-// @Tags user
-// @Accept json
-// @Produce json
-// @Param X-Device-ID header string false "设备ID"
-// @Param progress body object true "阅读进度"
-// @Success 200 {object} response.Response
-// @Router /user/progress [patch]
-func (h *NovelHandler) UpdateReadingProgress(c *gin.Context) {
-	deviceID := c.GetHeader("X-Device-ID")
-	if deviceID == "" {
-		deviceID = c.ClientIP() // 如果没有设备ID，使用IP地址作为标识
-	}
-
-	var progress struct {
-		NovelID   string `json:"novelId" binding:"required"`
-		VolumeID  int    `json:"volumeId" binding:"required"`
-		ChapterID int    `json:"chapterId" binding:"required"`
-		Position  int    `json:"position"`
-	}
-
-	if err := c.ShouldBindJSON(&progress); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求参数"})
-		return
-	}
-
-	err := h.novelService.UpdateReadingProgress(c.Request.Context(), deviceID, progress.NovelID, progress.VolumeID, progress.ChapterID, progress.Position)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "更新成功"})
+	response.Success(c, bookmarks)
 }

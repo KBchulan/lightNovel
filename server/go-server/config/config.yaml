@@ -6,26 +6,26 @@ server:
 database:
   uri: "mongodb://localhost:27017"
   database: "lightnovel"
-  poolSize: 100
+  poolSize: 200
 
 redis:
   host: "localhost"
   port: "6379"
   password: "whx051021"
   db: 0
-  poolSize: 100
+  poolSize: 200
 
 cache:
-  novelList: 15m
-  novelDetail: 30m
-  volumeList: 20m
-  chapterList: 20m
-  chapterDetail: 1h
-  searchResult: 10m
-  latestNovels: 5m
-  popularNovels: 30m
+  novelList: 30m
+  novelDetail: 1h
+  volumeList: 40m
+  chapterList: 40m
+  chapterDetail: 2h
+  searchResult: 20m
+  latestNovels: 10m
+  popularNovels: 1h
 
 rate:
-  limit: 100
-  burst: 200
+  limit: 200
+  burst: 400
   window: 1 

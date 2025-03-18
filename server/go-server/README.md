@@ -13,19 +13,20 @@
 ## 核心功能
 
 1. 小说管理
-
    - 小说列表、搜索、详情
    - 最新小说、热门小说
    - 卷章节内容管理
+
 2. 用户功能
+   - 基于设备ID的阅读进度同步
+   - 阅读历史记录
+   - 多设备支持
+   - 书签管理（开发中）
 
-   - 基于设备ID的书签管理
-   - 阅读进度同步
 3. 系统功能
-
    - Redis缓存加速
    - 请求频率限制
-   - 系统监控指标
+   - 设备识别与管理
 
 ## 性能指标
 
@@ -127,12 +128,15 @@ GET /api/v1/novels/latest       # 最新更新
 GET /api/v1/novels/popular      # 热门小说
 GET /api/v1/novels/:id          # 获取小说详情
 GET /api/v1/novels/:id/volumes  # 获取卷列表
+GET /api/v1/novels/:id/volumes/:vid/chapters      # 获取章节列表
+GET /api/v1/novels/:id/volumes/:vid/chapters/:cid # 获取章节内容
 ```
 
 ### 用户相关
 
 ```
 GET /api/v1/user/bookmarks     # 获取书签
+GET /api/v1/user/history       # 获取阅读历史
 PATCH /api/v1/user/progress    # 更新阅读进度
 ```
 
@@ -142,3 +146,24 @@ PATCH /api/v1/user/progress    # 更新阅读进度
 GET /api/v1/health            # 健康检查
 GET /api/v1/metrics           # 性能指标
 ```
+
+## 设备识别机制
+
+系统使用设备ID来识别不同的用户设备：
+
+1. 主要识别方式：
+   - 通过 `X-Device-ID` 请求头传递设备ID
+   - 如果请求头不存在，则使用客户端IP作为备选标识
+
+2. 设备信息记录：
+   - 设备ID（唯一标识）
+   - IP地址
+   - User-Agent
+   - 设备类型（PC/Mobile/Tablet）
+   - 首次访问时间
+   - 最后访问时间
+
+3. 数据关联：
+   - 阅读进度
+   - 阅读历史
+   - 书签（开发中）

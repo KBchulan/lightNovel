@@ -3,6 +3,7 @@ package response
 import (
 	"lightnovel/pkg/errors"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,6 +22,21 @@ type PageResponse struct {
 	Size    int         `json:"size"`
 	HasNext bool        `json:"hasNext"`
 	Data    interface{} `json:"data"`
+}
+
+// ReadingHistoryResponse 阅读历史响应
+type ReadingHistoryResponse struct {
+	NovelInfo    interface{} `json:"novelInfo"`    // 小说基本信息
+	LastProgress interface{} `json:"lastProgress"` // 最后阅读进度
+	LastReadTime string      `json:"lastReadTime"` // 最后阅读时间
+}
+
+// DeviceInfoResponse 设备信息响应
+type DeviceInfoResponse struct {
+	ID         string    `json:"id"`
+	DeviceType string    `json:"deviceType"`
+	FirstSeen  time.Time `json:"firstSeen"`
+	LastSeen   time.Time `json:"lastSeen"`
 }
 
 // Success 成功响应
@@ -43,6 +59,14 @@ func SuccessWithPage(c *gin.Context, total int64, page, size int, data interface
 		Data:    data,
 	}
 	Success(c, pageResponse)
+}
+
+// SuccessWithHistory 成功的阅读历史响应
+func SuccessWithHistory(c *gin.Context, history []ReadingHistoryResponse) {
+	Success(c, gin.H{
+		"history": history,
+		"total":   len(history),
+	})
 }
 
 // Error 错误响应

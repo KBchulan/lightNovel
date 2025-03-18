@@ -45,11 +45,14 @@ func main() {
 
 	// 创建Redis缓存
 	redisAddr := fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port)
-	redisCache := cache.NewRedisCache(redisAddr, cfg.Redis.Password, cfg.Redis.DB)
-	defer redisCache.Close()
+	multiLevelCache, err := cache.NewMultiLevelCache(redisAddr, cfg.Redis.Password, cfg.Redis.DB, "lightnovel:")
+	if err != nil {
+		log.Fatalf("Failed to create cache: %v", err)
+	}
+	defer multiLevelCache.Close()
 
 	// 创建服务和处理器
-	novelService := service.NewNovelService(db, redisCache, cfg)
+	novelService := service.NewNovelService(db, multiLevelCache, cfg)
 	novelHandler := v1.NewNovelHandler(novelService)
 	healthHandler := v1.NewHealthHandler()
 	wsHandler := v1.NewWebSocketHandler(cfg)
@@ -80,24 +83,31 @@ func main() {
 		api.GET("/health", healthHandler.Check)
 		api.GET("/metrics", healthHandler.Metrics)
 
-		// 小说相关
+		// 小说相关路由组
 		novels := api.Group("/novels")
 		{
-			novels.GET("", novelHandler.GetAllNovels)
-			novels.GET("/search", novelHandler.SearchNovels)
-			novels.GET("/latest", novelHandler.GetLatestNovels)
-			novels.GET("/popular", novelHandler.GetPopularNovels)
+			// 需要分页的路由
+			novels.GET("", middleware.ValidatePagination(), novelHandler.GetAllNovels)
+			novels.GET("/search", middleware.ValidatePagination(), novelHandler.SearchNovels)
+
+			// 需要限制数量的路由
+			novels.GET("/latest", middleware.ValidateLimit(10, 100), novelHandler.GetLatestNovels)
+			novels.GET("/popular", middleware.ValidateLimit(10, 100), novelHandler.GetPopularNovels)
+
+			// 基于ID的路由
 			novels.GET("/:id", novelHandler.GetNovelByID)
 			novels.GET("/:id/volumes", novelHandler.GetVolumesByNovelID)
 			novels.GET("/:id/volumes/:volume/chapters", novelHandler.GetChaptersByVolumeID)
 			novels.GET("/:id/volumes/:volume/chapters/:chapter", novelHandler.GetChapterByNumber)
 		}
 
-		// 用户相关
+		// 用户相关路由组
 		user := api.Group("/user")
+		user.Use(middleware.DeviceMiddleware(novelService)) // 为所有用户相关路由添加设备验证
 		{
 			user.GET("/bookmarks", novelHandler.GetUserBookmarks)
 			user.PATCH("/progress", novelHandler.UpdateReadingProgress)
+			user.GET("/history", middleware.ValidateLimit(10, 100), novelHandler.GetReadingHistory)
 		}
 	}
 

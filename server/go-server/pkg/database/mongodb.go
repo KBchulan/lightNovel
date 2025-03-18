@@ -99,6 +99,18 @@ func (db *MongoDB) CreateIndexes(ctx context.Context) error {
 		},
 	}
 
+	// 设备集合索引
+	deviceIndexes := []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "lastSeen", Value: -1}},
+			Options: options.Index().SetName("last_seen"),
+		},
+		{
+			Keys:    bson.D{{Key: "ip", Value: 1}},
+			Options: options.Index().SetName("ip"),
+		},
+	}
+
 	// 阅读进度索引
 	progressIndexes := []mongo.IndexModel{
 		{
@@ -109,7 +121,7 @@ func (db *MongoDB) CreateIndexes(ctx context.Context) error {
 			Options: options.Index().SetName("device_novel").SetUnique(true),
 		},
 		{
-			Keys:    bson.D{{Key: "lastReadAt", Value: -1}},
+			Keys:    bson.D{{Key: "currentProgress.lastReadAt", Value: -1}},
 			Options: options.Index().SetName("last_read"),
 		},
 	}
@@ -120,9 +132,9 @@ func (db *MongoDB) CreateIndexes(ctx context.Context) error {
 			Keys: bson.D{
 				{Key: "deviceId", Value: 1},
 				{Key: "novelId", Value: 1},
-				{Key: "chapterId", Value: 1},
+				{Key: "createdAt", Value: -1},
 			},
-			Options: options.Index().SetName("device_novel_chapter"),
+			Options: options.Index().SetName("device_novel_time"),
 		},
 	}
 
@@ -131,6 +143,7 @@ func (db *MongoDB) CreateIndexes(ctx context.Context) error {
 		"novels":           novelIndexes,
 		"volumes":          volumeIndexes,
 		"chapters":         chapterIndexes,
+		"devices":          deviceIndexes,
 		"reading_progress": progressIndexes,
 		"bookmarks":        bookmarkIndexes,
 	}

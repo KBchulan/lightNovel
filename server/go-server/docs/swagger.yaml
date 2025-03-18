@@ -1,5 +1,79 @@
 basePath: /api/v1
 definitions:
+  models.Bookmark:
+    properties:
+      chapterNumber:
+        type: integer
+      createdAt:
+        type: string
+      deviceId:
+        type: string
+      id:
+        type: string
+      note:
+        type: string
+      novelId:
+        type: string
+      position:
+        type: integer
+      updatedAt:
+        type: string
+      volumeNumber:
+        type: integer
+    type: object
+  models.Chapter:
+    properties:
+      chapterNumber:
+        type: integer
+      content:
+        type: string
+      createdAt:
+        type: string
+      hasImages:
+        type: boolean
+      id:
+        type: string
+      imageCount:
+        type: integer
+      imagePath:
+        type: string
+      novelId:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: string
+      volumeNumber:
+        type: integer
+    type: object
+  models.ChapterInfo:
+    properties:
+      chapterNumber:
+        type: integer
+      createdAt:
+        type: string
+      id:
+        type: string
+      novelId:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: string
+      volumeNumber:
+        type: integer
+    type: object
+  models.CurrentProgress:
+    properties:
+      chapterNumber:
+        type: integer
+      lastReadAt:
+        type: string
+      position:
+        type: integer
+      volumeNumber:
+        type: integer
+    type: object
   models.Novel:
     properties:
       author:
@@ -29,6 +103,36 @@ definitions:
       volumeCount:
         type: integer
     type: object
+  models.ReadingProgress:
+    properties:
+      createdAt:
+        type: string
+      currentProgress:
+        $ref: '#/definitions/models.CurrentProgress'
+      deviceId:
+        type: string
+      id:
+        type: string
+      novelId:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.Volume:
+    properties:
+      chapterCount:
+        type: integer
+      createdAt:
+        type: string
+      id:
+        type: string
+      novelId:
+        type: string
+      updatedAt:
+        type: string
+      volumeNumber:
+        type: integer
+    type: object
   response.PageResponse:
     properties:
       data: {}
@@ -49,9 +153,29 @@ definitions:
       message:
         type: string
     type: object
+  v1.UpdateProgressRequest:
+    properties:
+      chapterNumber:
+        type: integer
+      novelId:
+        type: string
+      position:
+        type: integer
+      volumeNumber:
+        type: integer
+    required:
+    - chapterNumber
+    - novelId
+    - volumeNumber
+    type: object
 info:
-  contact: {}
+  contact:
+    email: support@example.com
+    name: API Support
   description: 轻小说阅读API服务
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
   title: Light Novel API
   version: "1.0"
 paths:
@@ -64,20 +188,38 @@ paths:
       - default: 1
         description: 页码
         in: query
+        minimum: 1
         name: page
         type: integer
       - default: 10
         description: 每页数量
         in: query
+        maximum: 50
+        minimum: 1
         name: size
         type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 成功
           schema:
-            $ref: '#/definitions/response.PageResponse'
+            allOf:
+            - $ref: '#/definitions/response.PageResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Novel'
+                  type: array
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
       summary: 获取所有小说
       tags:
       - novels
@@ -96,10 +238,121 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 成功
           schema:
             $ref: '#/definitions/models.Novel'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 小说不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
       summary: 获取小说详情
+      tags:
+      - novels
+  /novels/{id}/volumes:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定小说的所有卷列表
+      parameters:
+      - description: 小说ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Volume'
+                  type: array
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 小说不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取小说卷列表
+      tags:
+      - novels
+  /novels/{id}/volumes/{volume}/chapters:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定卷的所有章节基本信息（不包含内容）
+      parameters:
+      - description: 小说ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 卷号
+        in: path
+        name: volume
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.ChapterInfo'
+            type: array
+      summary: 获取卷的所有章节
+      tags:
+      - novels
+  /novels/{id}/volumes/{volume}/chapters/{chapter}:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定章节的详细内容
+      parameters:
+      - description: 小说ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 卷号
+        in: path
+        name: volume
+        required: true
+        type: integer
+      - description: 章节号
+        in: path
+        name: chapter
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Chapter'
+      summary: 获取章节内容
       tags:
       - novels
   /novels/latest:
@@ -111,13 +364,30 @@ paths:
       - default: 10
         description: 限制数量
         in: query
+        maximum: 100
+        minimum: 1
         name: limit
         type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Novel'
+                  type: array
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
       summary: 获取最新小说
@@ -132,13 +402,30 @@ paths:
       - default: 10
         description: 限制数量
         in: query
+        maximum: 100
+        minimum: 1
         name: limit
         type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Novel'
+                  type: array
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
       summary: 获取热门小说
@@ -181,7 +468,7 @@ paths:
       - application/json
       description: 获取用户的所有书签
       parameters:
-      - description: 设备ID
+      - description: 设备ID，如果未提供则使用客户端IP
         in: header
         name: X-Device-ID
         type: string
@@ -189,36 +476,125 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Bookmark'
+                  type: array
+              type: object
+        "400":
+          description: 参数错误
           schema:
             $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
       summary: 获取用户书签
+      tags:
+      - user
+  /user/history:
+    get:
+      consumes:
+      - application/json
+      description: 获取用户的阅读历史记录
+      parameters:
+      - description: 设备ID，如果未提供则使用客户端IP
+        in: header
+        name: X-Device-ID
+        type: string
+      - default: 10
+        description: 限制数量
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.ReadingProgress'
+                  type: array
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取阅读历史
       tags:
       - user
   /user/progress:
     patch:
       consumes:
       - application/json
-      description: 更新用户的阅读进度
+      description: 更新用户的小说阅读进度
       parameters:
-      - description: 设备ID
+      - description: 设备ID，如果未提供则使用客户端IP
         in: header
         name: X-Device-ID
         type: string
-      - description: 阅读进度
+      - description: 阅读进度信息
         in: body
-        name: progress
+        name: body
         required: true
         schema:
-          type: object
+          $ref: '#/definitions/v1.UpdateProgressRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 更新成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: 参数错误
           schema:
             $ref: '#/definitions/response.Response'
+        "404":
+          description: 小说不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
       summary: 更新阅读进度
       tags:
       - user
+schemes:
+- http
+- https
+securityDefinitions:
+  ApiKeyAuth:
+    description: 设备ID用于识别用户，如果未提供则使用客户端IP
+    in: header
+    name: X-Device-ID
+    type: apiKey
 swagger: "2.0"
