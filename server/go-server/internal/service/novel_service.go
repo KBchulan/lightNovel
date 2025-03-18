@@ -820,3 +820,106 @@ func (s *NovelService) IncrementNovelReadCountBatch(ctx context.Context, novelID
 
 	return nil
 }
+
+// CreateBookmark 创建书签
+func (s *NovelService) CreateBookmark(ctx context.Context, deviceID string, novelID string, volumeNumber int, chapterNumber int, position int, note string) (*models.Bookmark, error) {
+	// 检查小说是否存在
+	_, err := s.GetNovelByID(ctx, novelID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 检查章节是否存在
+	_, err = s.GetChapterByNumber(ctx, novelID, volumeNumber, chapterNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	bookmark := &models.Bookmark{
+		ID:            primitive.NewObjectID(),
+		DeviceID:      deviceID,
+		NovelID:       novelID,
+		VolumeNumber:  volumeNumber,
+		ChapterNumber: chapterNumber,
+		Position:      position,
+		Note:          note,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+	}
+
+	_, err = s.db.GetCollection("bookmarks").InsertOne(ctx, bookmark)
+	if err != nil {
+		return nil, err
+	}
+
+	// 清除相关缓存
+	cacheKey := fmt.Sprintf("%s:%s", cache.BookmarkKey, deviceID)
+	s.cache.Delete(ctx, cacheKey)
+
+	return bookmark, nil
+}
+
+// DeleteBookmark 删除书签
+func (s *NovelService) DeleteBookmark(ctx context.Context, deviceID string, bookmarkID string) error {
+	objectID, err := primitive.ObjectIDFromHex(bookmarkID)
+	if err != nil {
+		return errors.NewError(errors.ErrInvalidParameter)
+	}
+
+	result, err := s.db.GetCollection("bookmarks").DeleteOne(ctx, bson.M{
+		"_id":      objectID,
+		"deviceId": deviceID,
+	})
+	if err != nil {
+		return err
+	}
+
+	if result.DeletedCount == 0 {
+		return errors.NewError(errors.ErrNotFound)
+	}
+
+	// 清除相关缓存
+	cacheKey := fmt.Sprintf("%s:%s", cache.BookmarkKey, deviceID)
+	s.cache.Delete(ctx, cacheKey)
+
+	return nil
+}
+
+// UpdateBookmark 更新书签
+func (s *NovelService) UpdateBookmark(ctx context.Context, deviceID string, bookmarkID string, note string) (*models.Bookmark, error) {
+	objectID, err := primitive.ObjectIDFromHex(bookmarkID)
+	if err != nil {
+		return nil, errors.NewError(errors.ErrInvalidParameter)
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"note":      note,
+			"updatedAt": time.Now(),
+		},
+	}
+
+	var bookmark models.Bookmark
+	err = s.db.GetCollection("bookmarks").FindOneAndUpdate(
+		ctx,
+		bson.M{
+			"_id":      objectID,
+			"deviceId": deviceID,
+		},
+		update,
+		options.FindOneAndUpdate().SetReturnDocument(options.After),
+	).Decode(&bookmark)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, errors.NewError(errors.ErrNotFound)
+		}
+		return nil, err
+	}
+
+	// 清除相关缓存
+	cacheKey := fmt.Sprintf("%s:%s", cache.BookmarkKey, deviceID)
+	s.cache.Delete(ctx, cacheKey)
+
+	return &bookmark, nil
+}

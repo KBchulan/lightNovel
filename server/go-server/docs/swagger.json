@@ -8,6 +8,52 @@
     },
     "basePath": "/api/v1",
     "paths": {
+        "/health": {
+            "get": {
+                "description": "获取系统运行状态，包括启动时间、运行时长等信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "获取系统健康状态",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/v1.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/metrics": {
+            "get": {
+                "description": "获取系统详细的性能指标，包括内存使用、goroutine数量等",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "获取系统性能指标",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/v1.MetricsResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/novels": {
             "get": {
                 "description": "获取小说列表，支持分页",
@@ -404,7 +450,7 @@
         },
         "/novels/{id}/volumes/{volume}/chapters/{chapter}": {
             "get": {
-                "description": "获取指定章节的详细内容",
+                "description": "获取指定章节的详细内容，包含文本内容和图片信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -440,9 +486,45 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "章节内容模型",
                         "schema": {
-                            "$ref": "#/definitions/models.Chapter"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.Chapter"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "hasImages": {
+                                            "type": "boolean"
+                                        },
+                                        "imageCount": {
+                                            "type": "integer"
+                                        },
+                                        "imagePath": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "章节不存在",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -504,6 +586,202 @@
                     },
                     "500": {
                         "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "在指定章节创建书签",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bookmarks"
+                ],
+                "summary": "创建书签",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID，如果未提供则使用客户端IP",
+                        "name": "X-Device-ID",
+                        "in": "header"
+                    },
+                    {
+                        "description": "书签信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.CreateBookmarkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Bookmark"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "小说或章节不存在",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/bookmarks/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "更新书签信息（如备注）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bookmarks"
+                ],
+                "summary": "更新书签",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID，如果未提供则使用客户端IP",
+                        "name": "X-Device-ID",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "书签ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.UpdateBookmarkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Bookmark"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "书签不存在",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除指定的书签",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bookmarks"
+                ],
+                "summary": "删除书签",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID，如果未提供则使用客户端IP",
+                        "name": "X-Device-ID",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "书签ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "书签不存在",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
                         }
@@ -651,6 +929,48 @@
                     },
                     "500": {
                         "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ws": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "建立WebSocket连接以接收实时更新通知（如小说更新、系统通知等）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "websocket"
+                ],
+                "summary": "WebSocket连接",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID，如果未提供则使用客户端IP",
+                        "name": "X-Device-ID",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "无效的请求",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
                         }
@@ -888,6 +1208,81 @@
                 },
                 "data": {},
                 "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.CreateBookmarkRequest": {
+            "type": "object",
+            "required": [
+                "chapterNumber",
+                "novelId",
+                "volumeNumber"
+            ],
+            "properties": {
+                "chapterNumber": {
+                    "type": "integer"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "novelId": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "integer"
+                },
+                "volumeNumber": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "uptime": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.MetricsResponse": {
+            "type": "object",
+            "properties": {
+                "goroutines": {
+                    "type": "integer"
+                },
+                "memory": {
+                    "type": "object",
+                    "properties": {
+                        "alloc": {
+                            "type": "integer"
+                        },
+                        "numGC": {
+                            "type": "integer"
+                        },
+                        "sys": {
+                            "type": "integer"
+                        },
+                        "totalAlloc": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "uptime": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.UpdateBookmarkRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
                     "type": "string"
                 }
             }

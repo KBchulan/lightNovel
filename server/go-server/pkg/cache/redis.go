@@ -20,6 +20,7 @@ const (
 	PopularNovelsKey  = "novel:popular"   // 热门小说
 	ReadingHistoryKey = "user:history:"   // 阅读历史
 	DeviceKey         = "device:info:"    // 设备信息
+	BookmarkKey       = "user:bookmark:"  // 用户书签
 )
 
 // RedisCache Redis缓存服务

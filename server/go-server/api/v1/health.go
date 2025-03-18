@@ -8,6 +8,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// HealthResponse 健康检查响应
+type HealthResponse struct {
+	Status    string    `json:"status"`
+	Timestamp time.Time `json:"timestamp"`
+	Uptime    string    `json:"uptime"`
+}
+
+// MetricsResponse 系统指标响应
+type MetricsResponse struct {
+	Memory struct {
+		Alloc      uint64 `json:"alloc"`
+		TotalAlloc uint64 `json:"totalAlloc"`
+		Sys        uint64 `json:"sys"`
+		NumGC      uint32 `json:"numGC"`
+	} `json:"memory"`
+	Goroutines int    `json:"goroutines"`
+	Uptime     string `json:"uptime"`
+}
+
 // HealthHandler 处理健康检查相关的请求
 type HealthHandler struct {
 	startTime time.Time
@@ -20,28 +39,39 @@ func NewHealthHandler() *HealthHandler {
 	}
 }
 
-// Check 健康检查端点
+// @Summary 获取系统健康状态
+// @Description 获取系统运行状态，包括启动时间、运行时长等信息
+// @Tags system
+// @Accept json
+// @Produce json
+// @Success 200 {object} HealthResponse "成功"
+// @Router /health [get]
 func (h *HealthHandler) Check(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status":    "ok",
-		"timestamp": time.Now(),
-		"uptime":    time.Since(h.startTime).String(),
+	c.JSON(http.StatusOK, HealthResponse{
+		Status:    "ok",
+		Timestamp: time.Now(),
+		Uptime:    time.Since(h.startTime).String(),
 	})
 }
 
-// Metrics 监控指标端点
+// @Summary 获取系统性能指标
+// @Description 获取系统详细的性能指标，包括内存使用、goroutine数量等
+// @Tags system
+// @Accept json
+// @Produce json
+// @Success 200 {object} MetricsResponse "成功"
+// @Router /metrics [get]
 func (h *HealthHandler) Metrics(c *gin.Context) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
-	c.JSON(http.StatusOK, gin.H{
-		"memory": gin.H{
-			"alloc":      m.Alloc,
-			"totalAlloc": m.TotalAlloc,
-			"sys":        m.Sys,
-			"numGC":      m.NumGC,
-		},
-		"goroutines": runtime.NumGoroutine(),
-		"uptime":     time.Since(h.startTime).String(),
-	})
+	response := MetricsResponse{}
+	response.Memory.Alloc = m.Alloc
+	response.Memory.TotalAlloc = m.TotalAlloc
+	response.Memory.Sys = m.Sys
+	response.Memory.NumGC = m.NumGC
+	response.Goroutines = runtime.NumGoroutine()
+	response.Uptime = time.Since(h.startTime).String()
+
+	c.JSON(http.StatusOK, response)
 }

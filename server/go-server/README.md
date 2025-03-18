@@ -1,6 +1,6 @@
 # 轻小说服务器
 
-基于Go语言开发的高性能轻小说API服务器，支持小说内容管理和阅读进度同步。
+基于Go语言开发的高性能轻小说API服务器，支持小说内容管理、阅读进度同步和实时更新通知。
 
 ## 技术栈
 
@@ -8,26 +8,35 @@
 - Gin Web Framework
 - MongoDB
 - Redis
-- Rate Limiter
+- WebSocket
+- Swagger
+- BigCache
 
 ## 核心功能
 
 1. 小说管理
-
    - 小说列表、搜索、详情
    - 最新小说、热门小说
    - 卷章节内容管理
-2. 用户功能
+   - 图片资源管理
 
+2. 用户功能
    - 基于设备ID的阅读进度同步
    - 阅读历史记录
    - 多设备支持
-   - 书签管理（开发中）
-3. 系统功能
+   - 书签管理（创建、更新、删除）
 
-   - Redis缓存加速
-   - 请求频率限制
+3. 实时通知
+   - WebSocket实时推送
+   - 小说更新通知
+   - 系统公告
+   - 心跳检测和自动重连
+
+4. 系统功能
+   - 多级缓存（本地+Redis）
+   - 分布式限流
    - 设备识别与管理
+   - 性能监控
 
 ## 性能指标
 
@@ -37,13 +46,14 @@
 - 平均响应时间: 25-42ms
 - 并发连接数: 200+
 - 数据吞吐量: 80MB/s
+- WebSocket连接: 5k+
 
 ## 环境要求
 
 - Go 1.23+
 - MongoDB 4.0+
 - Redis 6.0+
-- 内存: 1GB+
+- 内存: 2GB+
 - 系统: Linux (推荐)
 
 ## 配置说明
@@ -53,70 +63,85 @@
 ```yaml
 server:
   port: "8080"
-  mode: "release"
+  readTimeout: 10s
+  writeTimeout: 10s
 
 database:
   uri: "mongodb://localhost:27017"
   database: "lightnovel"
+  poolSize: 300
 
 redis:
   host: "localhost"
   port: "6379"
+  password: "your_password"
   db: 0
-
-rate_limit:
-  requests: 100
-  duration: "1m"
+  poolSize: 300
 
 cache:
-  ttl: "15m"
+  novelList: 30m
+  novelDetail: 1h
+  volumeList: 40m
+  chapterList: 40m
+  chapterDetail: 2h
+  searchResult: 20m
+  latestNovels: 10m
+  popularNovels: 1h
+
+rate:
+  limit: 1000
+  burst: 2000
+  window: 1s
 ```
 
 ## 项目结构
 
 ```
 go-server/
-├── api/            # API 处理器
-│   └── v1/         # API v1 版本
-├── config/         # 配置文件
-├── internal/       # 内部包
-│   ├── models/     # 数据模型
-│   └── service/    # 业务逻辑
-├── pkg/            # 公共包
-│   ├── database/   # 数据库相关
-│   └── middleware/ # 中间件
-└── test/           # 测试文件
-    └── api_test.sh # API测试脚本
+├── api/v1/              # API处理器
+│   ├── health.go        # 健康检查
+│   ├── novel_handler.go # 小说相关API
+│   └── websocket.go     # WebSocket处理
+├── config/              # 配置文件
+│   ├── config.go        # 配置加载器
+│   └── config.yaml      # 配置文件
+├── docs/                # API文档
+│   └── swagger.json     # Swagger文档
+├── internal/            # 内部包
+│   ├── models/          # 数据模型
+│   └── service/         # 业务逻辑
+├── pkg/                 # 公共包
+│   ├── cache/          # 缓存相关
+│   ├── database/       # 数据库相关
+│   ├── errors/         # 错误处理
+│   ├── middleware/     # 中间件
+│   ├── response/       # 响应处理
+│   └── websocket/      # WebSocket相关
+└── test/               # 测试文件
 ```
 
-## API测试
+## 快速开始
 
-项目提供了完整的API测试脚本，位于 `test/api_test.sh`。使用方法：
-
+1. 安装依赖
 ```bash
-# 添加执行权限
-chmod +x test/api_test.sh
-
-# 运行测试脚本
-./test/api_test.sh
+go mod download
 ```
 
-## 日志格式
-
-服务器日志格式如下：
-
-```
-[GIN] 2025/03/17 - 15:04:05 | 200 |      8.254ms |      172.0.0.1 | GET    /api/v1/health
+2. 修改配置
+```bash
+cp config/config.example.yaml config/config.yaml
+# 编辑 config.yaml 设置数据库等配置
 ```
 
-日志字段说明：
+3. 运行服务
+```bash
+go run main.go
+```
 
-- 时间戳
-- 状态码
-- 响应时间
-- 客户端IP
-- 请求方法
-- 请求路径
+4. 访问API文档
+```
+http://localhost:8080/swagger/index.html
+```
 
 ## API文档
 
@@ -136,16 +161,25 @@ GET /api/v1/novels/:id/volumes/:vid/chapters/:cid # 获取章节内容
 ### 用户相关
 
 ```
-GET /api/v1/user/bookmarks     # 获取书签
-GET /api/v1/user/history       # 获取阅读历史
-PATCH /api/v1/user/progress    # 更新阅读进度
+GET    /api/v1/user/bookmarks      # 获取书签列表
+POST   /api/v1/user/bookmarks      # 创建书签
+PUT    /api/v1/user/bookmarks/:id  # 更新书签
+DELETE /api/v1/user/bookmarks/:id  # 删除书签
+GET    /api/v1/user/history        # 获取阅读历史
+PATCH  /api/v1/user/progress       # 更新阅读进度
+```
+
+### WebSocket
+
+```
+GET /api/v1/ws  # WebSocket连接
 ```
 
 ### 系统监控
 
 ```
-GET /api/v1/health            # 健康检查
-GET /api/v1/metrics           # 性能指标
+GET /api/v1/health   # 健康检查
+GET /api/v1/metrics  # 性能指标
 ```
 
 ## 设备识别机制
@@ -153,19 +187,88 @@ GET /api/v1/metrics           # 性能指标
 系统使用设备ID来识别不同的用户设备：
 
 1. 主要识别方式：
-
    - 通过 `X-Device-ID` 请求头传递设备ID
    - 如果请求头不存在，则使用客户端IP作为备选标识
-2. 设备信息记录：
 
+2. 设备信息记录：
    - 设备ID（唯一标识）
    - IP地址
    - User-Agent
    - 设备类型（PC/Mobile/Tablet）
    - 首次访问时间
    - 最后访问时间
-3. 数据关联：
 
+3. 数据关联：
    - 阅读进度
    - 阅读历史
-   - 书签（开发中）
+   - 书签管理
+
+## 缓存机制
+
+1. 多级缓存：
+   - 本地缓存（BigCache）用于热点数据
+   - Redis缓存用于分布式数据共享
+   - 自动过期清理机制
+
+2. 缓存策略：
+   - 小说列表: 15分钟
+   - 小说详情: 30分钟
+   - 卷列表: 20分钟
+   - 章节列表: 20分钟
+   - 章节内容: 1小时
+   - 搜索结果: 10分钟
+   - 最新小说: 5分钟
+   - 热门小说: 30分钟
+
+## WebSocket服务
+
+1. 消息类型：
+   - 小说更新通知
+   - 系统公告
+
+2. 特性：
+   - 心跳检测（60秒超时）
+   - 自动重连机制
+   - 消息队列缓冲
+   - 并发控制
+
+## 安全特性
+
+1. 请求限制：
+   - 基于Redis的分布式限流
+   - 可配置的限流规则
+   - IP级别的访问控制
+
+2. 安全头：
+   - CORS保护
+   - XSS防护
+   - 点击劫持防护
+   - 内容类型嗅探防护
+
+## 日志格式
+
+服务器日志格式如下：
+
+```
+[GIN] 2024/03/17 - 15:04:05 | 200 | 8.254ms | 172.0.0.1 | GET /api/v1/health
+```
+
+字段说明：
+- 时间戳
+- 状态码
+- 响应时间
+- 客户端IP
+- 请求方法
+- 请求路径
+
+## 贡献指南
+
+1. Fork 项目
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 创建 Pull Request
+
+## 许可证
+
+本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件

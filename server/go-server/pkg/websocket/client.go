@@ -24,9 +24,10 @@ const (
 
 // Client WebSocket客户端连接
 type Client struct {
-	hub  *Hub
-	conn *websocket.Conn
-	send chan []byte
+	hub      *Hub
+	conn     *websocket.Conn
+	send     chan []byte
+	DeviceID string // 设备ID，用于标识客户端
 
 	// 心跳相关
 	lastPing time.Time

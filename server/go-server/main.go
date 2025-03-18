@@ -76,6 +76,9 @@ func main() {
 	)
 	r.Use(rateLimiter.RateLimit())
 
+	// 静态文件服务
+	r.Static("/novels", "../novels")
+
 	// API文档
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -112,6 +115,9 @@ func main() {
 		user.Use(middleware.DeviceMiddleware(novelService)) // 为所有用户相关路由添加设备验证
 		{
 			user.GET("/bookmarks", novelHandler.GetUserBookmarks)
+			user.POST("/bookmarks", novelHandler.CreateBookmark)
+			user.DELETE("/bookmarks/:id", novelHandler.DeleteBookmark)
+			user.PUT("/bookmarks/:id", novelHandler.UpdateBookmark)
 			user.PATCH("/progress", novelHandler.UpdateReadingProgress)
 			user.GET("/history", middleware.ValidateLimit(10, 100), novelHandler.GetReadingHistory)
 		}

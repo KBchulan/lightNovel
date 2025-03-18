@@ -26,6 +26,20 @@ import (
 // @name X-Device-ID
 // @description 设备ID用于识别用户，如果未提供则使用客户端IP
 
+// @tag.name static
+// @tag.description 静态资源服务
+
+// @Summary 获取图片资源
+// @Description 获取小说章节的图片资源
+// @Tags static
+// @Accept */*
+// @Produce image/jpeg,image/png,image/webp
+// @Param path path string true "图片路径，格式：novels/{小说名称}/volume_{卷号}/chapter_{章节号}/{图片序号}.jpg"
+// @Success 200 {file} binary "图片文件"
+// @Failure 404 {object} response.Response "图片不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /novels/{path} [get]
+
 type NovelHandler struct {
 	novelService *service.NovelService
 }
@@ -134,14 +148,18 @@ func (h *NovelHandler) GetChaptersByVolumeID(c *gin.Context) {
 }
 
 // @Summary 获取章节内容
-// @Description 获取指定章节的详细内容
+// @Description 获取指定章节的详细内容，包含文本内容和图片信息
 // @Tags novels
 // @Accept json
 // @Produce json
 // @Param id path string true "小说ID"
 // @Param volume path int true "卷号"
 // @Param chapter path int true "章节号"
-// @Success 200 {object} models.Chapter
+// @Success 200 {object} response.Response{data=models.Chapter} "成功，返回章节内容和图片信息"
+// @Success 200 {object} models.Chapter{hasImages=bool,imageCount=int,imagePath=string} "章节内容模型"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 404 {object} response.Response "章节不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /novels/{id}/volumes/{volume}/chapters/{chapter} [get]
 func (h *NovelHandler) GetChapterByNumber(c *gin.Context) {
 	novelID := c.Param("id")
@@ -352,4 +370,104 @@ func (h *NovelHandler) GetUserBookmarks(c *gin.Context) {
 	}
 
 	response.Success(c, bookmarks)
+}
+
+// CreateBookmarkRequest 创建书签请求
+type CreateBookmarkRequest struct {
+	NovelID       string `json:"novelId" binding:"required"`
+	VolumeNumber  int    `json:"volumeNumber" binding:"required"`
+	ChapterNumber int    `json:"chapterNumber" binding:"required"`
+	Position      int    `json:"position"`
+	Note          string `json:"note"`
+}
+
+// UpdateBookmarkRequest 更新书签请求
+type UpdateBookmarkRequest struct {
+	Note string `json:"note"`
+}
+
+// @Summary 创建书签
+// @Description 在指定章节创建书签
+// @Tags bookmarks
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param X-Device-ID header string false "设备ID，如果未提供则使用客户端IP"
+// @Param body body CreateBookmarkRequest true "书签信息"
+// @Success 200 {object} response.Response{data=models.Bookmark} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 404 {object} response.Response "小说或章节不存在"
+// @Router /user/bookmarks [post]
+func (h *NovelHandler) CreateBookmark(c *gin.Context) {
+	var req CreateBookmarkRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
+		return
+	}
+
+	deviceID := c.GetString("deviceID")
+	bookmark, err := h.novelService.CreateBookmark(c.Request.Context(), deviceID, req.NovelID, req.VolumeNumber, req.ChapterNumber, req.Position, req.Note)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, bookmark)
+}
+
+// @Summary 删除书签
+// @Description 删除指定的书签
+// @Tags bookmarks
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param X-Device-ID header string false "设备ID，如果未提供则使用客户端IP"
+// @Param id path string true "书签ID"
+// @Success 200 {object} response.Response "删除成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 404 {object} response.Response "书签不存在"
+// @Router /user/bookmarks/{id} [delete]
+func (h *NovelHandler) DeleteBookmark(c *gin.Context) {
+	deviceID := c.GetString("deviceID")
+	bookmarkID := c.Param("id")
+
+	err := h.novelService.DeleteBookmark(c.Request.Context(), deviceID, bookmarkID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{"message": "书签已删除"})
+}
+
+// @Summary 更新书签
+// @Description 更新书签信息（如备注）
+// @Tags bookmarks
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param X-Device-ID header string false "设备ID，如果未提供则使用客户端IP"
+// @Param id path string true "书签ID"
+// @Param body body UpdateBookmarkRequest true "更新信息"
+// @Success 200 {object} response.Response{data=models.Bookmark} "更新成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 404 {object} response.Response "书签不存在"
+// @Router /user/bookmarks/{id} [put]
+func (h *NovelHandler) UpdateBookmark(c *gin.Context) {
+	var req UpdateBookmarkRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
+		return
+	}
+
+	deviceID := c.GetString("deviceID")
+	bookmarkID := c.Param("id")
+
+	bookmark, err := h.novelService.UpdateBookmark(c.Request.Context(), deviceID, bookmarkID, req.Note)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, bookmark)
 }

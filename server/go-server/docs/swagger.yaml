@@ -153,6 +153,55 @@ definitions:
       message:
         type: string
     type: object
+  v1.CreateBookmarkRequest:
+    properties:
+      chapterNumber:
+        type: integer
+      note:
+        type: string
+      novelId:
+        type: string
+      position:
+        type: integer
+      volumeNumber:
+        type: integer
+    required:
+    - chapterNumber
+    - novelId
+    - volumeNumber
+    type: object
+  v1.HealthResponse:
+    properties:
+      status:
+        type: string
+      timestamp:
+        type: string
+      uptime:
+        type: string
+    type: object
+  v1.MetricsResponse:
+    properties:
+      goroutines:
+        type: integer
+      memory:
+        properties:
+          alloc:
+            type: integer
+          numGC:
+            type: integer
+          sys:
+            type: integer
+          totalAlloc:
+            type: integer
+        type: object
+      uptime:
+        type: string
+    type: object
+  v1.UpdateBookmarkRequest:
+    properties:
+      note:
+        type: string
+    type: object
   v1.UpdateProgressRequest:
     properties:
       chapterNumber:
@@ -174,6 +223,36 @@ info:
   title: Light Novel API
   version: "1.0"
 paths:
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: 获取系统运行状态，包括启动时间、运行时长等信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/v1.HealthResponse'
+      summary: 获取系统健康状态
+      tags:
+      - system
+  /metrics:
+    get:
+      consumes:
+      - application/json
+      description: 获取系统详细的性能指标，包括内存使用、goroutine数量等
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/v1.MetricsResponse'
+      summary: 获取系统性能指标
+      tags:
+      - system
   /novels:
     get:
       consumes:
@@ -323,7 +402,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取指定章节的详细内容
+      description: 获取指定章节的详细内容，包含文本内容和图片信息
       parameters:
       - description: 小说ID
         in: path
@@ -344,9 +423,30 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 章节内容模型
           schema:
-            $ref: '#/definitions/models.Chapter'
+            allOf:
+            - $ref: '#/definitions/models.Chapter'
+            - properties:
+                hasImages:
+                  type: boolean
+                imageCount:
+                  type: integer
+                imagePath:
+                  type: string
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 章节不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
       summary: 获取章节内容
       tags:
       - novels
@@ -494,6 +594,126 @@ paths:
       summary: 获取用户书签
       tags:
       - user
+    post:
+      consumes:
+      - application/json
+      description: 在指定章节创建书签
+      parameters:
+      - description: 设备ID，如果未提供则使用客户端IP
+        in: header
+        name: X-Device-ID
+        type: string
+      - description: 书签信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/v1.CreateBookmarkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Bookmark'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 小说或章节不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 创建书签
+      tags:
+      - bookmarks
+  /user/bookmarks/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定的书签
+      parameters:
+      - description: 设备ID，如果未提供则使用客户端IP
+        in: header
+        name: X-Device-ID
+        type: string
+      - description: 书签ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 书签不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 删除书签
+      tags:
+      - bookmarks
+    put:
+      consumes:
+      - application/json
+      description: 更新书签信息（如备注）
+      parameters:
+      - description: 设备ID，如果未提供则使用客户端IP
+        in: header
+        name: X-Device-ID
+        type: string
+      - description: 书签ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 更新信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/v1.UpdateBookmarkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Bookmark'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 书签不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 更新书签
+      tags:
+      - bookmarks
   /user/history:
     get:
       consumes:
@@ -583,4 +803,30 @@ paths:
       summary: 更新阅读进度
       tags:
       - user
+  /ws:
+    get:
+      consumes:
+      - application/json
+      description: 建立WebSocket连接以接收实时更新通知（如小说更新、系统通知等）
+      parameters:
+      - description: 设备ID，如果未提供则使用客户端IP
+        in: header
+        name: X-Device-ID
+        type: string
+      produces:
+      - application/json
+      responses:
+        "101":
+          description: Switching Protocols
+          schema:
+            type: string
+        "400":
+          description: 无效的请求
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: WebSocket连接
+      tags:
+      - websocket
 swagger: "2.0"
