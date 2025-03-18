@@ -15,24 +15,25 @@
 ## 核心功能
 
 1. 小说管理
+
    - 小说列表、搜索、详情
    - 最新小说、热门小说
    - 卷章节内容管理
    - 图片资源管理
-
 2. 用户功能
+
    - 基于设备ID的阅读进度同步
    - 阅读历史记录
    - 多设备支持
    - 书签管理（创建、更新、删除）
-
 3. 实时通知
+
    - WebSocket实时推送
    - 小说更新通知
    - 系统公告
    - 心跳检测和自动重连
-
 4. 系统功能
+
    - 多级缓存（本地+Redis）
    - 分布式限流
    - 设备识别与管理
@@ -123,22 +124,26 @@ go-server/
 ## 快速开始
 
 1. 安装依赖
+
 ```bash
 go mod download
 ```
 
 2. 修改配置
+
 ```bash
 cp config/config.example.yaml config/config.yaml
 # 编辑 config.yaml 设置数据库等配置
 ```
 
 3. 运行服务
+
 ```bash
 go run main.go
 ```
 
 4. 访问API文档
+
 ```
 http://localhost:8080/swagger/index.html
 ```
@@ -160,14 +165,35 @@ GET /api/v1/novels/:id/volumes/:vid/chapters/:cid # 获取章节内容
 
 ### 用户相关
 
-```
-GET    /api/v1/user/bookmarks      # 获取书签列表
-POST   /api/v1/user/bookmarks      # 创建书签
-PUT    /api/v1/user/bookmarks/:id  # 更新书签
-DELETE /api/v1/user/bookmarks/:id  # 删除书签
-GET    /api/v1/user/history        # 获取阅读历史
-PATCH  /api/v1/user/progress       # 更新阅读进度
-```
+#### 收藏管理
+
+- 获取收藏列表: `GET /api/v1/user/favorites`
+- 添加收藏: `POST /api/v1/user/favorites/:id`
+- 取消收藏: `DELETE /api/v1/user/favorites/:id`
+- 检查收藏状态: `GET /api/v1/user/favorites/:id/check`
+
+#### 书签管理
+
+- 获取书签列表: `GET /api/v1/user/bookmarks`
+- 创建书签: `POST /api/v1/user/bookmarks`
+- 更新书签: `PUT /api/v1/user/bookmarks/:id`
+- 删除书签: `DELETE /api/v1/user/bookmarks/:id`
+
+#### 阅读历史
+
+- 获取阅读历史: `GET /api/v1/user/history`
+- 更新阅读进度: `PATCH /api/v1/user/progress`
+
+### 设备识别
+
+- 所有用户相关接口都需要在请求头中包含 `X-Device-ID`
+- 如果未提供设备ID，系统将使用客户端IP作为设备标识
+
+### 缓存机制
+
+- 小说列表和详情使用 Redis 缓存
+- 缓存时间：小说列表 5 分钟，小说详情 30 分钟
+- 用户相关的收藏、书签、历史记录等数据不缓存，实时从数据库获取
 
 ### WebSocket
 
@@ -187,30 +213,33 @@ GET /api/v1/metrics  # 性能指标
 系统使用设备ID来识别不同的用户设备：
 
 1. 主要识别方式：
+
    - 通过 `X-Device-ID` 请求头传递设备ID
    - 如果请求头不存在，则使用客户端IP作为备选标识
-
 2. 设备信息记录：
+
    - 设备ID（唯一标识）
    - IP地址
    - User-Agent
    - 设备类型（PC/Mobile/Tablet）
    - 首次访问时间
    - 最后访问时间
-
 3. 数据关联：
+
    - 阅读进度
    - 阅读历史
    - 书签管理
+   - 收藏列表
 
 ## 缓存机制
 
 1. 多级缓存：
+
    - 本地缓存（BigCache）用于热点数据
    - Redis缓存用于分布式数据共享
    - 自动过期清理机制
-
 2. 缓存策略：
+
    - 小说列表: 15分钟
    - 小说详情: 30分钟
    - 卷列表: 20分钟
@@ -219,14 +248,16 @@ GET /api/v1/metrics  # 性能指标
    - 搜索结果: 10分钟
    - 最新小说: 5分钟
    - 热门小说: 30分钟
+   - 收藏列表: 15分钟
 
 ## WebSocket服务
 
 1. 消息类型：
+
    - 小说更新通知
    - 系统公告
-
 2. 特性：
+
    - 心跳检测（60秒超时）
    - 自动重连机制
    - 消息队列缓冲
@@ -235,11 +266,12 @@ GET /api/v1/metrics  # 性能指标
 ## 安全特性
 
 1. 请求限制：
+
    - 基于Redis的分布式限流
    - 可配置的限流规则
    - IP级别的访问控制
-
 2. 安全头：
+
    - CORS保护
    - XSS防护
    - 点击劫持防护
@@ -254,6 +286,7 @@ GET /api/v1/metrics  # 性能指标
 ```
 
 字段说明：
+
 - 时间戳
 - 状态码
 - 响应时间

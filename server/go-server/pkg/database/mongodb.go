@@ -138,6 +138,21 @@ func (db *MongoDB) CreateIndexes(ctx context.Context) error {
 		},
 	}
 
+	// 收藏索引
+	favoriteIndexes := []mongo.IndexModel{
+		{
+			Keys: bson.D{
+				{Key: "deviceId", Value: 1},
+				{Key: "novelId", Value: 1},
+			},
+			Options: options.Index().SetName("device_novel_favorite").SetUnique(true),
+		},
+		{
+			Keys:    bson.D{{Key: "createdAt", Value: -1}},
+			Options: options.Index().SetName("favorite_time"),
+		},
+	}
+
 	// 创建索引
 	collections := map[string][]mongo.IndexModel{
 		"novels":           novelIndexes,
@@ -146,6 +161,7 @@ func (db *MongoDB) CreateIndexes(ctx context.Context) error {
 		"devices":          deviceIndexes,
 		"reading_progress": progressIndexes,
 		"bookmarks":        bookmarkIndexes,
+		"favorites":        favoriteIndexes,
 	}
 
 	for collection, indexes := range collections {

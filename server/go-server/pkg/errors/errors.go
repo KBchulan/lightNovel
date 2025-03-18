@@ -13,6 +13,7 @@ const (
 	ErrNotFound
 	ErrTimeout
 	ErrTooManyRequests
+	ErrAlreadyExists
 
 	// 业务错误码 (1000+)
 	ErrNovelNotFound ErrorCode = iota + 1000
@@ -31,6 +32,7 @@ var errorMessages = map[ErrorCode]string{
 	ErrNotFound:                "资源不存在",
 	ErrTimeout:                 "请求超时",
 	ErrTooManyRequests:         "请求过于频繁",
+	ErrAlreadyExists:           "资源已存在",
 	ErrNovelNotFound:           "小说不存在",
 	ErrVolumeNotFound:          "卷不存在",
 	ErrChapterNotFound:         "章节不存在",

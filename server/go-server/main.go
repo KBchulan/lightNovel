@@ -114,6 +114,13 @@ func main() {
 		user := api.Group("/user")
 		user.Use(middleware.DeviceMiddleware(novelService)) // 为所有用户相关路由添加设备验证
 		{
+			// 收藏相关
+			user.GET("/favorites", novelHandler.GetUserFavorites)
+			user.POST("/favorites/:id", novelHandler.AddFavorite)
+			user.DELETE("/favorites/:id", novelHandler.RemoveFavorite)
+			user.GET("/favorites/:id/check", novelHandler.IsFavorite)
+
+			// 书签相关
 			user.GET("/bookmarks", novelHandler.GetUserBookmarks)
 			user.POST("/bookmarks", novelHandler.CreateBookmark)
 			user.DELETE("/bookmarks/:id", novelHandler.DeleteBookmark)

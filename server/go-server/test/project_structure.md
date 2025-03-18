@@ -86,6 +86,26 @@
 
 ### 2. 用户相关接口
 
+#### 获取收藏列表
+- 路径: `GET /api/v1/user/favorites`
+- 头部: X-Device-ID
+- 返回: 用户的收藏列表
+
+#### 添加收藏
+- 路径: `POST /api/v1/user/favorites/:id`
+- 头部: X-Device-ID
+- 返回: 添加状态
+
+#### 取消收藏
+- 路径: `DELETE /api/v1/user/favorites/:id`
+- 头部: X-Device-ID
+- 返回: 删除状态
+
+#### 检查收藏状态
+- 路径: `GET /api/v1/user/favorites/:id/check`
+- 头部: X-Device-ID
+- 返回: 是否已收藏（布尔值）
+
 #### 获取书签列表
 - 路径: `GET /api/v1/user/bookmarks`
 - 头部: X-Device-ID
@@ -94,27 +114,13 @@
 #### 创建书签
 - 路径: `POST /api/v1/user/bookmarks`
 - 头部: X-Device-ID
-- 请求体:
-  ```json
-  {
-    "novelId": "string",
-    "volumeNumber": 1,
-    "chapterNumber": 1,
-    "position": 0,
-    "note": "string"
-  }
-  ```
+- 参数: novelId, volumeNumber, chapterNumber, position, note
 - 返回: 创建的书签信息
 
 #### 更新书签
 - 路径: `PUT /api/v1/user/bookmarks/:id`
 - 头部: X-Device-ID
-- 请求体:
-  ```json
-  {
-    "note": "string"
-  }
-  ```
+- 参数: note
 - 返回: 更新后的书签信息
 
 #### 删除书签
@@ -125,22 +131,13 @@
 #### 获取阅读历史
 - 路径: `GET /api/v1/user/history`
 - 头部: X-Device-ID
-- 参数: 
-  - limit: 返回数量（默认10，最大100）
+- 参数: limit（可选，默认10）
 - 返回: 用户的阅读历史记录
 
 #### 更新阅读进度
 - 路径: `PATCH /api/v1/user/progress`
 - 头部: X-Device-ID
-- 请求体:
-  ```json
-  {
-    "novelId": "string",
-    "volumeNumber": 1,
-    "chapterNumber": 1,
-    "position": 0
-  }
-  ```
+- 参数: novelId, volumeNumber, chapterNumber, position
 - 返回: 更新状态
 
 ### 3. WebSocket接口

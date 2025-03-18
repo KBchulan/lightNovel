@@ -471,3 +471,129 @@ func (h *NovelHandler) UpdateBookmark(c *gin.Context) {
 
 	response.Success(c, bookmark)
 }
+
+// getDeviceAndNovelID 获取设备ID和小说ID
+func (h *NovelHandler) getDeviceAndNovelID(c *gin.Context) (string, string, error) {
+	deviceID := c.GetHeader("device_id")
+	if deviceID == "" {
+		return "", "", errors.NewError(errors.ErrInvalidParameter)
+	}
+
+	novelID := c.Param("id")
+	if novelID == "" {
+		return "", "", errors.NewError(errors.ErrInvalidParameter)
+	}
+
+	return deviceID, novelID, nil
+}
+
+// GetUserFavorites 获取用户收藏列表
+// @Summary 获取用户收藏列表
+// @Description 获取用户收藏的小说列表
+// @Tags 用户
+// @Accept json
+// @Produce json
+// @Param device_id header string true "设备ID"
+// @Success 200 {object} response.Response{data=[]models.Novel} "成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /api/v1/user/favorites [get]
+func (h *NovelHandler) GetUserFavorites(c *gin.Context) {
+	deviceID, _, err := h.getDeviceAndNovelID(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	novels, err := h.novelService.GetUserFavorites(c, deviceID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, novels)
+}
+
+// AddFavorite 添加收藏
+// @Summary 添加收藏
+// @Description 添加小说到收藏列表
+// @Tags 用户
+// @Accept json
+// @Produce json
+// @Param device_id header string true "设备ID"
+// @Param novel_id path string true "小说ID"
+// @Success 200 {object} response.Response "成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /api/v1/user/favorites/{novel_id} [post]
+func (h *NovelHandler) AddFavorite(c *gin.Context) {
+	deviceID, novelID, err := h.getDeviceAndNovelID(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	err = h.novelService.AddFavorite(c, deviceID, novelID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, nil)
+}
+
+// RemoveFavorite 取消收藏
+// @Summary 取消收藏
+// @Description 从收藏列表中移除小说
+// @Tags 用户
+// @Accept json
+// @Produce json
+// @Param device_id header string true "设备ID"
+// @Param novel_id path string true "小说ID"
+// @Success 200 {object} response.Response "成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /api/v1/user/favorites/{novel_id} [delete]
+func (h *NovelHandler) RemoveFavorite(c *gin.Context) {
+	deviceID, novelID, err := h.getDeviceAndNovelID(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	err = h.novelService.RemoveFavorite(c, deviceID, novelID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, nil)
+}
+
+// IsFavorite 检查是否已收藏
+// @Summary 检查是否已收藏
+// @Description 检查小说是否已收藏
+// @Tags 用户
+// @Accept json
+// @Produce json
+// @Param device_id header string true "设备ID"
+// @Param novel_id path string true "小说ID"
+// @Success 200 {object} response.Response{data=bool} "成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /api/v1/user/favorites/{novel_id}/check [get]
+func (h *NovelHandler) IsFavorite(c *gin.Context) {
+	deviceID, novelID, err := h.getDeviceAndNovelID(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	isFavorite, err := h.novelService.IsFavorite(c, deviceID, novelID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, isFavorite)
+}

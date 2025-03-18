@@ -923,3 +923,99 @@ func (s *NovelService) UpdateBookmark(ctx context.Context, deviceID string, book
 
 	return &bookmark, nil
 }
+
+// GetUserFavorites 获取用户收藏的小说列表
+func (s *NovelService) GetUserFavorites(ctx context.Context, deviceID string) ([]models.Favorite, error) {
+	var favorites []models.Favorite
+	cacheKey := cache.FavoriteKey + deviceID
+
+	// 尝试从缓存获取
+	err := s.cache.Get(ctx, cacheKey, &favorites)
+	if err == nil && len(favorites) > 0 {
+		return favorites, nil
+	}
+
+	// 从数据库获取
+	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}})
+	cursor, err := s.db.GetCollection("favorites").Find(ctx,
+		bson.M{"deviceId": deviceID},
+		opts,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	if err = cursor.All(ctx, &favorites); err != nil {
+		return nil, err
+	}
+
+	// 设置缓存
+	s.cache.Set(ctx, cacheKey, favorites, s.cfg.Cache.FavoriteList)
+	return favorites, nil
+}
+
+// AddFavorite 添加收藏
+func (s *NovelService) AddFavorite(ctx context.Context, deviceID string, novelID string) error {
+	// 检查小说是否存在
+	_, err := s.GetNovelByID(ctx, novelID)
+	if err != nil {
+		return err
+	}
+
+	favorite := &models.Favorite{
+		ID:        primitive.NewObjectID(),
+		DeviceID:  deviceID,
+		NovelID:   novelID,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	_, err = s.db.GetCollection("favorites").InsertOne(ctx, favorite)
+	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return errors.NewError(errors.ErrAlreadyExists)
+		}
+		return err
+	}
+
+	// 清除相关缓存
+	s.cache.Delete(ctx, cache.FavoriteKey+deviceID)
+	return nil
+}
+
+// RemoveFavorite 取消收藏
+func (s *NovelService) RemoveFavorite(ctx context.Context, deviceID string, novelID string) error {
+	result, err := s.db.GetCollection("favorites").DeleteOne(ctx, bson.M{
+		"deviceId": deviceID,
+		"novelId":  novelID,
+	})
+	if err != nil {
+		return err
+	}
+
+	if result.DeletedCount == 0 {
+		return errors.NewError(errors.ErrNotFound)
+	}
+
+	// 清除相关缓存
+	s.cache.Delete(ctx, cache.FavoriteKey+deviceID)
+	return nil
+}
+
+// IsFavorite 检查是否已收藏
+func (s *NovelService) IsFavorite(ctx context.Context, deviceID string, novelID string) (bool, error) {
+	var favorite models.Favorite
+	err := s.db.GetCollection("favorites").FindOne(ctx, bson.M{
+		"deviceId": deviceID,
+		"novelId":  novelID,
+	}).Decode(&favorite)
+
+	if err == nil {
+		return true, nil
+	}
+	if err == mongo.ErrNoDocuments {
+		return false, nil
+	}
+	return false, err
+}

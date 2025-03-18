@@ -223,6 +223,148 @@ info:
   title: Light Novel API
   version: "1.0"
 paths:
+  /api/v1/user/favorites:
+    get:
+      consumes:
+      - application/json
+      description: 获取用户收藏的小说列表
+      parameters:
+      - description: 设备ID
+        in: header
+        name: device_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Novel'
+                  type: array
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取用户收藏列表
+      tags:
+      - 用户
+  /api/v1/user/favorites/{novel_id}:
+    delete:
+      consumes:
+      - application/json
+      description: 从收藏列表中移除小说
+      parameters:
+      - description: 设备ID
+        in: header
+        name: device_id
+        required: true
+        type: string
+      - description: 小说ID
+        in: path
+        name: novel_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 取消收藏
+      tags:
+      - 用户
+    post:
+      consumes:
+      - application/json
+      description: 添加小说到收藏列表
+      parameters:
+      - description: 设备ID
+        in: header
+        name: device_id
+        required: true
+        type: string
+      - description: 小说ID
+        in: path
+        name: novel_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 添加收藏
+      tags:
+      - 用户
+  /api/v1/user/favorites/{novel_id}/check:
+    get:
+      consumes:
+      - application/json
+      description: 检查小说是否已收藏
+      parameters:
+      - description: 设备ID
+        in: header
+        name: device_id
+        required: true
+        type: string
+      - description: 小说ID
+        in: path
+        name: novel_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  type: boolean
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 检查是否已收藏
+      tags:
+      - 用户
   /health:
     get:
       consumes:

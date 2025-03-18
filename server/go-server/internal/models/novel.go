@@ -97,3 +97,12 @@ type Bookmark struct {
 	CreatedAt     time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt     time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
+
+// Favorite 收藏模型
+type Favorite struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	DeviceID  string             `bson:"deviceId" json:"deviceId"`
+	NovelID   string             `bson:"novelId" json:"novelId"`
+	CreatedAt time.Time          `bson:"createdAt" json:"createdAt"`
+	UpdatedAt time.Time          `bson:"updatedAt" json:"updatedAt"`
+}

@@ -36,14 +36,19 @@ type RedisConfig struct {
 }
 
 type CacheConfig struct {
-	NovelList     time.Duration `mapstructure:"novelList"`     // 小说列表缓存时间
-	NovelDetail   time.Duration `mapstructure:"novelDetail"`   // 小说详情缓存时间
-	VolumeList    time.Duration `mapstructure:"volumeList"`    // 卷列表缓存时间
-	ChapterList   time.Duration `mapstructure:"chapterList"`   // 章节列表缓存时间
-	ChapterDetail time.Duration `mapstructure:"chapterDetail"` // 章节内容缓存时间
-	SearchResult  time.Duration `mapstructure:"searchResult"`  // 搜索结果缓存时间
-	LatestNovels  time.Duration `mapstructure:"latestNovels"`  // 最新小说缓存时间
-	PopularNovels time.Duration `mapstructure:"popularNovels"` // 热门小说缓存时间
+	RedisURL      string        `yaml:"redis_url"`
+	RedisPassword string        `yaml:"redis_password"`
+	RedisDB       int           `yaml:"redis_db"`
+	NovelList     time.Duration `yaml:"novel_list"`
+	NovelDetail   time.Duration `yaml:"novel_detail"`
+	VolumeList    time.Duration `yaml:"volume_list"`
+	ChapterList   time.Duration `yaml:"chapter_list"`
+	Chapter       time.Duration `yaml:"chapter"`
+	SearchResult  time.Duration `yaml:"search_result"`
+	FavoriteList  time.Duration `yaml:"favorite_list"`
+	ChapterDetail time.Duration `yaml:"chapter_detail"`
+	LatestNovels  time.Duration `yaml:"latest_novels"`
+	PopularNovels time.Duration `yaml:"popular_novels"`
 }
 
 type RateConfig struct {
