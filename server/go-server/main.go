@@ -28,21 +28,6 @@ func main() {
 	// 设置为发布模式
 	gin.SetMode(gin.ReleaseMode)
 
-	// 禁用控制台颜色
-	gin.DisableConsoleColor()
-
-	// 设置 Gin 的路由模式为发布模式
-	gin.SetMode(gin.ReleaseMode)
-
-	// 创建一个不带中间件的路由
-	r := gin.New()
-
-	// 只使用必要的中间件
-	r.Use(gin.Recovery())
-	r.Use(middleware.Logger())
-	r.Use(middleware.SecurityHeaders())
-	r.Use(middleware.CORS())
-
 	// 加载配置
 	cfg := config.LoadConfig()
 
@@ -72,6 +57,15 @@ func main() {
 	novelHandler := v1.NewNovelHandler(novelService)
 	healthHandler := v1.NewHealthHandler()
 	wsHandler := v1.NewWebSocketHandler(cfg)
+
+	// 创建路由
+	r := gin.New()
+
+	// 使用中间件
+	r.Use(gin.Recovery())
+	r.Use(middleware.Logger())
+	r.Use(middleware.SecurityHeaders())
+	r.Use(middleware.CORS())
 
 	// 创建限流器
 	rateLimiter := middleware.NewRateLimiter(

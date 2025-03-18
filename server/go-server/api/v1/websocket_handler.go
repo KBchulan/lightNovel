@@ -39,8 +39,7 @@ var (
 			}
 			// 生产环境检查允许的域名
 			allowedOrigins := []string{
-				"https://your-domain.com",
-				"https://api.your-domain.com",
+				// TODO: 生产环境允许的域名 http
 			}
 			return isAllowedOrigin(origin, allowedOrigins)
 		},

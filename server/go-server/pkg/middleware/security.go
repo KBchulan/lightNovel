@@ -209,18 +209,30 @@ func SecurityHeaders() gin.HandlerFunc {
 // CORS 跨域中间件
 func CORS() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 在生产环境中使用具体的域名
-		if gin.Mode() == gin.ReleaseMode {
-			c.Header("Access-Control-Allow-Origin", "https://your-domain.com")
-		} else {
-			c.Header("Access-Control-Allow-Origin", "*")
+		// 允许的域名列表
+		allowedOrigins := []string{
+			"http://localhost:3001", // 前端开发服务器
 		}
 
-		// 限制允许的方法
+		origin := c.Request.Header.Get("Origin")
+		// 开发环境允许所有来源
+		if gin.Mode() != gin.ReleaseMode {
+			c.Header("Access-Control-Allow-Origin", "*")
+		} else {
+			// 生产环境检查允许的域名
+			for _, allowed := range allowedOrigins {
+				if origin == allowed {
+					c.Header("Access-Control-Allow-Origin", origin)
+					break
+				}
+			}
+		}
+
+		// 允许的HTTP方法
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 
-		// 限制允许的请求头
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		// 允许的请求头
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Device-ID")
 
 		// 允许携带凭证
 		c.Header("Access-Control-Allow-Credentials", "true")

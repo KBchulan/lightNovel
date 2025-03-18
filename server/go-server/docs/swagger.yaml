@@ -169,13 +169,8 @@ definitions:
     - volumeNumber
     type: object
 info:
-  contact:
-    email: support@example.com
-    name: API Support
+  contact: {}
   description: 轻小说阅读API服务
-  license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
   title: Light Novel API
   version: "1.0"
 paths:
@@ -588,13 +583,4 @@ paths:
       summary: 更新阅读进度
       tags:
       - user
-schemes:
-- http
-- https
-securityDefinitions:
-  ApiKeyAuth:
-    description: 设备ID用于识别用户，如果未提供则使用客户端IP
-    in: header
-    name: X-Device-ID
-    type: apiKey
 swagger: "2.0"

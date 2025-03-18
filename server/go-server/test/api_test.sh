@@ -35,14 +35,14 @@ echo "=== 开始API测试 ==="
 
 # 2. 小说相关接口测试
 ## 2.1 基本功能测试
-# test_endpoint "获取小说列表" "curl -i \"$BASE_URL/novels?page=1&size=10\""
-# test_endpoint "搜索小说" "curl -i \"$BASE_URL/novels/search?keyword=百合&page=1&size=10\""
-# test_endpoint "最新小说" "curl -i \"$BASE_URL/novels/latest?limit=10\""
-# test_endpoint "热门小说" "curl -i \"$BASE_URL/novels/popular?limit=10\""
-# test_endpoint "小说详情" "curl -i $BASE_URL/novels/$NOVEL_ID"
-# test_endpoint "卷列表" "curl -i $BASE_URL/novels/$NOVEL_ID/volumes"
-# test_endpoint "章节列表" "curl -i $BASE_URL/novels/$NOVEL_ID/volumes/1/chapters"
-# test_endpoint "章节内容" "curl -i $BASE_URL/novels/$NOVEL_ID/volumes/1/chapters/1"
+test_endpoint "获取小说列表" "curl -i \"$BASE_URL/novels?page=1&size=10\""
+test_endpoint "搜索小说" "curl -i \"$BASE_URL/novels/search?keyword=百合&page=1&size=10\""
+test_endpoint "最新小说" "curl -i \"$BASE_URL/novels/latest?limit=10\""
+test_endpoint "热门小说" "curl -i \"$BASE_URL/novels/popular?limit=10\""
+test_endpoint "小说详情" "curl -i $BASE_URL/novels/$NOVEL_ID"
+test_endpoint "卷列表" "curl -i $BASE_URL/novels/$NOVEL_ID/volumes"
+test_endpoint "章节列表" "curl -i $BASE_URL/novels/$NOVEL_ID/volumes/1/chapters"
+test_endpoint "章节内容" "curl -i $BASE_URL/novels/$NOVEL_ID/volumes/1/chapters/1"
 # 
 ## 2.2 边界值测试
 # test_endpoint "小说列表-最大分页" "curl -i \"$BASE_URL/novels?page=1&size=50\""
@@ -52,9 +52,9 @@ echo "=== 开始API测试 ==="
 # test_endpoint "热门小说-最大数量" "curl -i \"$BASE_URL/novels/popular?limit=50\""
 
 # 3. 用户相关接口测试
-test_endpoint "获取书签" "curl -i -H \"X-Device-ID: $DEVICE_ID\" $BASE_URL/user/bookmarks"
-test_endpoint "获取阅读历史" "curl -i -H \"X-Device-ID: $DEVICE_ID\" $BASE_URL/user/history"
-test_endpoint "更新阅读进度" "curl -i -X PATCH -H \"X-Device-ID: $DEVICE_ID\" -H \"Content-Type: application/json\" -d '{\"novelId\":\"$NOVEL_ID\",\"volumeNumber\":1,\"chapterNumber\":1,\"position\":100}' $BASE_URL/user/progress"
+# test_endpoint "获取书签" "curl -i -H \"X-Device-ID: $DEVICE_ID\" $BASE_URL/user/bookmarks"
+# test_endpoint "获取阅读历史" "curl -i -H \"X-Device-ID: $DEVICE_ID\" $BASE_URL/user/history"
+# test_endpoint "更新阅读进度" "curl -i -X PATCH -H \"X-Device-ID: $DEVICE_ID\" -H \"Content-Type: application/json\" -d '{\"novelId\":\"$NOVEL_ID\",\"volumeNumber\":1,\"chapterNumber\":1,\"position\":100}' $BASE_URL/user/progress"
 
 # 4. WebSocket测试
 # if command -v websocat &> /dev/null; then

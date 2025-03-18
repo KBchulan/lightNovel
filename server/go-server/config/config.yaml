@@ -6,14 +6,14 @@ server:
 database:
   uri: "mongodb://localhost:27017"
   database: "lightnovel"
-  poolSize: 200
+  poolSize: 300
 
 redis:
   host: "localhost"
   port: "6379"
   password: "whx051021"
   db: 0
-  poolSize: 200
+  poolSize: 300
 
 cache:
   novelList: 30m

@@ -9,14 +9,7 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "contact": {
-            "name": "API Support",
-            "email": "support@example.com"
-        },
-        "license": {
-            "name": "MIT",
-            "url": "https://opensource.org/licenses/MIT"
-        },
+        "contact": {},
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -928,14 +921,6 @@ const docTemplate = `{
                 }
             }
         }
-    },
-    "securityDefinitions": {
-        "ApiKeyAuth": {
-            "description": "设备ID用于识别用户，如果未提供则使用客户端IP",
-            "type": "apiKey",
-            "name": "X-Device-ID",
-            "in": "header"
-        }
     }
 }`
 
@@ -944,7 +929,7 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "",
 	BasePath:         "/api/v1",
-	Schemes:          []string{"http", "https"},
+	Schemes:          []string{},
 	Title:            "Light Novel API",
 	Description:      "轻小说阅读API服务",
 	InfoInstanceName: "swagger",

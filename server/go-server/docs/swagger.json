@@ -1,20 +1,9 @@
 {
-    "schemes": [
-        "http",
-        "https"
-    ],
     "swagger": "2.0",
     "info": {
         "description": "轻小说阅读API服务",
         "title": "Light Novel API",
-        "contact": {
-            "name": "API Support",
-            "email": "support@example.com"
-        },
-        "license": {
-            "name": "MIT",
-            "url": "https://opensource.org/licenses/MIT"
-        },
+        "contact": {},
         "version": "1.0"
     },
     "basePath": "/api/v1",
@@ -924,14 +913,6 @@
                     "type": "integer"
                 }
             }
-        }
-    },
-    "securityDefinitions": {
-        "ApiKeyAuth": {
-            "description": "设备ID用于识别用户，如果未提供则使用客户端IP",
-            "type": "apiKey",
-            "name": "X-Device-ID",
-            "in": "header"
         }
     }
 }
