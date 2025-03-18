@@ -272,3 +272,8 @@ type cacheTask struct {
 func (t *cacheTask) Execute(ctx context.Context) error {
 	return t.fn(ctx)
 }
+
+// GetRedisClient 获取Redis客户端实例
+func (c *MultiLevelCache) GetRedisClient() *redis.Client {
+	return c.redis
+}

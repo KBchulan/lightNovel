@@ -47,9 +47,9 @@ type CacheConfig struct {
 }
 
 type RateConfig struct {
-	Limit  float64 `mapstructure:"limit"`  // 每秒请求数
-	Burst  int     `mapstructure:"burst"`  // 突发请求数
-	Window int     `mapstructure:"window"` // 时间窗口（秒）
+	Limit  float64       `mapstructure:"limit"`  // 每秒请求数
+	Burst  int           `mapstructure:"burst"`  // 突发请求数
+	Window time.Duration `mapstructure:"window"` // 时间窗口
 }
 
 func LoadConfig() *Config {
@@ -124,6 +124,6 @@ func setDefaultConfig(config *Config) {
 		config.Rate.Burst = 200
 	}
 	if config.Rate.Window == 0 {
-		config.Rate.Window = 1
+		config.Rate.Window = 1 * time.Second
 	}
 }

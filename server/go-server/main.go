@@ -11,6 +11,7 @@ import (
 	"lightnovel/pkg/database"
 	"lightnovel/pkg/middleware"
 	"log"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -67,7 +68,12 @@ func main() {
 	r.Use(middleware.CORS())
 
 	// 创建限流器
-	rateLimiter := middleware.NewRateLimiter(rate.Limit(cfg.Rate.Limit), cfg.Rate.Burst)
+	rateLimiter := middleware.NewRateLimiter(
+		rate.Limit(cfg.Rate.Limit),
+		cfg.Rate.Burst,
+		middleware.WithRedis(multiLevelCache.GetRedisClient(), "ratelimit:"),
+		middleware.WithCleanup(5*time.Minute),
+	)
 	r.Use(rateLimiter.RateLimit())
 
 	// API文档

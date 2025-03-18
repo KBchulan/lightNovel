@@ -26,6 +26,6 @@ cache:
   popularNovels: 1h
 
 rate:
-  limit: 200
-  burst: 400
-  window: 1 
+  limit: 1000000
+  burst: 1000000
+  window: 1
