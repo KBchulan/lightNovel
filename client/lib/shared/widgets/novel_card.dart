@@ -160,30 +160,25 @@ class _CoverImageState extends State<_CoverImage> {
       );
     }
 
-    return Image.network(
-      _currentUrl,
-      key: ValueKey('${_currentUrl}_$_uniqueKey'),
-      fit: BoxFit.cover,
-      cacheWidth: 300,
-      cacheHeight: 400,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Container(
-          color: Colors.grey[200],
-          child: const Center(
+    return Container(
+      color: Colors.grey[200],
+      child: Image.network(
+        _currentUrl,
+        key: ValueKey('${_currentUrl}_$_uniqueKey'),
+        fit: BoxFit.contain,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const Center(
             child: CircularProgressIndicator(),
-          ),
-        );
-      },
-      errorBuilder: (context, error, stackTrace) {
-        _tryNextFormat();
-        return Container(
-          color: Colors.grey[200],
-          child: const Center(
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          _tryNextFormat();
+          return const Center(
             child: CircularProgressIndicator(),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 } 
