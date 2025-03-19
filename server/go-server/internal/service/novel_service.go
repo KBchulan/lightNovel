@@ -19,6 +19,8 @@ import (
 	"lightnovel/pkg/database"
 	"lightnovel/pkg/errors"
 	"lightnovel/pkg/websocket"
+
+	"github.com/google/uuid"
 )
 
 // NovelService 小说服务
@@ -499,46 +501,46 @@ func (s *NovelService) IncrementNovelReadCount(ctx context.Context, novelID stri
 	return nil
 }
 
-// GetOrCreateDevice 获取或创建设备信息
-func (s *NovelService) GetOrCreateDevice(ctx context.Context, deviceID, ip, userAgent string) (*models.Device, error) {
+// FindDeviceByIP 通过IP地址查找设备
+func (s *NovelService) FindDeviceByIP(ctx context.Context, ip string) (*models.Device, error) {
 	var device models.Device
-	cacheKey := cache.DeviceKey + deviceID
+	err := s.db.GetCollection("devices").FindOne(ctx, bson.M{"ip": ip}).Decode(&device)
+	if err == mongo.ErrNoDocuments {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &device, nil
+}
 
-	// 尝试从缓存获取
-	err := s.cache.Get(ctx, cacheKey, &device)
-	if err == nil && device.ID != "" {
-		// 如果IP或UserAgent发生变化，更新数据库和缓存
-		if device.IP != ip || device.UserAgent != userAgent {
-			device.IP = ip
-			device.UserAgent = userAgent
-			device.LastSeen = time.Now()
-
-			_, err = s.db.GetCollection("devices").UpdateOne(ctx,
-				bson.M{"_id": deviceID},
-				bson.M{
-					"$set": bson.M{
-						"ip":        ip,
-						"userAgent": userAgent,
-						"lastSeen":  time.Now(),
-					},
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			// 更新缓存
-			if err := s.cache.Set(ctx, cacheKey, device, 24*time.Hour); err != nil {
-				log.Printf("Failed to update device cache: %v", err)
-			}
-		}
-		return &device, nil
+// CreateNewDevice 创建新的设备记录
+func (s *NovelService) CreateNewDevice(ctx context.Context, ip string, userAgent string) (*models.Device, error) {
+	deviceID := uuid.New().String()
+	device := &models.Device{
+		ID:         deviceID,
+		IP:         ip,
+		UserAgent:  userAgent,
+		DeviceType: getDeviceType(userAgent),
+		FirstSeen:  time.Now(),
+		LastSeen:   time.Now(),
 	}
 
+	_, err := s.db.GetCollection("devices").InsertOne(ctx, device)
+	if err != nil {
+		return nil, err
+	}
+
+	return device, nil
+}
+
+// GetOrCreateDevice 获取或创建设备信息
+func (s *NovelService) GetOrCreateDevice(ctx context.Context, deviceID string, ip string, userAgent string) (*models.Device, error) {
+	var device models.Device
 	collection := s.db.GetCollection("devices")
 
 	// 尝试查找现有设备
-	err = collection.FindOne(ctx, bson.M{"_id": deviceID}).Decode(&device)
+	err := collection.FindOne(ctx, bson.M{"_id": deviceID}).Decode(&device)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
 			return nil, err
@@ -559,10 +561,6 @@ func (s *NovelService) GetOrCreateDevice(ctx context.Context, deviceID, ip, user
 		}
 	} else {
 		// 更新最后访问时间和IP
-		device.IP = ip
-		device.UserAgent = userAgent
-		device.LastSeen = time.Now()
-
 		_, err = collection.UpdateOne(ctx,
 			bson.M{"_id": deviceID},
 			bson.M{
@@ -578,10 +576,6 @@ func (s *NovelService) GetOrCreateDevice(ctx context.Context, deviceID, ip, user
 		}
 	}
 
-	// 设置缓存
-	if err := s.cache.Set(ctx, cacheKey, device, 24*time.Hour); err != nil {
-		log.Printf("Failed to set device cache: %v", err)
-	}
 	return &device, nil
 }
 

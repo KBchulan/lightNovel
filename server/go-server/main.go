@@ -66,6 +66,7 @@ func main() {
 	r.Use(middleware.Logger())
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.CORS())
+	r.Use(middleware.DeviceMiddleware(novelService)) // 添加设备中间件到全局
 
 	// 创建限流器
 	rateLimiter := middleware.NewRateLimiter(
@@ -112,7 +113,6 @@ func main() {
 
 		// 用户相关路由组
 		user := api.Group("/user")
-		user.Use(middleware.DeviceMiddleware(novelService)) // 为所有用户相关路由添加设备验证
 		{
 			// 收藏相关
 			user.GET("/favorites", novelHandler.GetUserFavorites)
