@@ -115,11 +115,22 @@ class _CoverImageState extends State<_CoverImage> {
   int _currentFormatIndex = 0;
   bool _hasError = false;
   static const _formats = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+  final String _uniqueKey = DateTime.now().millisecondsSinceEpoch.toString();
 
   @override
   void initState() {
     super.initState();
     _currentUrl = widget.initialUrl;
+  }
+
+  @override
+  void didUpdateWidget(_CoverImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialUrl != widget.initialUrl) {
+      _currentUrl = widget.initialUrl;
+      _currentFormatIndex = 0;
+      _hasError = false;
+    }
   }
 
   void _tryNextFormat() {
@@ -151,7 +162,10 @@ class _CoverImageState extends State<_CoverImage> {
 
     return Image.network(
       _currentUrl,
+      key: ValueKey('${_currentUrl}_$_uniqueKey'),
       fit: BoxFit.cover,
+      cacheWidth: 300,
+      cacheHeight: 400,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return Container(
