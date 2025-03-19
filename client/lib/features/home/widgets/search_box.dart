@@ -16,11 +16,13 @@ final searchBoxFocusProvider = StateProvider<bool>((ref) => false);
 class SearchBox extends ConsumerStatefulWidget {
   final void Function(String) onSubmitted;
   final String? hintText;
+  final bool autofocus;
 
   const SearchBox({
     super.key,
     required this.onSubmitted,
     this.hintText,
+    this.autofocus = false,
   });
 
   @override
@@ -35,6 +37,9 @@ class _SearchBoxState extends ConsumerState<SearchBox> {
   void initState() {
     super.initState();
     _focusNode.addListener(_onFocusChange);
+    if (widget.autofocus) {
+      _focusNode.requestFocus();
+    }
   }
 
   @override

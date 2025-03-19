@@ -22,7 +22,7 @@ final apiClientProvider = AutoDisposeProvider<ApiClient>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ApiClientRef = AutoDisposeProviderRef<ApiClient>;
-String _$novelNotifierHash() => r'0722e7ddc4d216788f1fc804b30719d9644b2020';
+String _$novelNotifierHash() => r'cde192e940f089b98aa54a4de9adb2103a8eb2da';
 
 /// See also [NovelNotifier].
 @ProviderFor(NovelNotifier)

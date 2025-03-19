@@ -120,4 +120,31 @@ class DbUploader:
                 {'$set': {**chapter_info, 'updatedAt': datetime.utcnow()}}
             )
         else:
-            chapters.insert_one(chapter_info) 
+            chapters.insert_one(chapter_info)
+
+    def delete_novel_by_title(self, title: str):
+        """删除指定标题的小说及其所有相关数据"""
+        try:
+            # 1. 先找到novel
+            novel = self.db.novels.find_one({'title': title})
+            if not novel:
+                logger.warning(f"未找到标题为 '{title}' 的小说")
+                return
+                
+            novel_id = str(novel['_id'])
+            
+            # 2. 删除所有相关章节
+            chapters_result = self.db.chapters.delete_many({'novelId': novel_id})
+            logger.info(f"删除了 {chapters_result.deleted_count} 个章节")
+            
+            # 3. 删除所有相关卷
+            volumes_result = self.db.volumes.delete_many({'novelId': novel_id})
+            logger.info(f"删除了 {volumes_result.deleted_count} 个卷")
+            
+            # 4. 最后删除小说本身
+            self.db.novels.delete_one({'_id': novel['_id']})
+            logger.info(f"删除了小说 '{title}'")
+            
+        except Exception as e:
+            logger.error(f"删除小说数据时出错: {str(e)}")
+            raise 

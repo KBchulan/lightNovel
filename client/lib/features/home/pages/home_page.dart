@@ -16,6 +16,7 @@ import '../../../shared/widgets/novel_card.dart';
 import '../widgets/animated_filter_chip.dart';
 import '../../../shared/props/novel_tags.dart';
 import '../widgets/search_box.dart';
+import '../widgets/search_page.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -42,12 +43,23 @@ class _HomePageState extends ConsumerState<HomePage> {
               const Text('首页'),
               const SizedBox(width: 12),
               Expanded(
-                child: SearchBox(
-                  onSubmitted: (value) {
-                    if (value.isNotEmpty) {
-                      ref.read(novelNotifierProvider.notifier).searchNovels(value);
-                    }
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const SearchPage(),
+                      ),
+                    );
                   },
+                  child: AbsorbPointer(
+                    child: SearchBox(
+                      onSubmitted: (value) {
+                        if (value.isNotEmpty) {
+                          ref.read(novelNotifierProvider.notifier).searchNovels(value);
+                        }
+                      },
+                    ),
+                  ),
                 ),
               ),
             ],

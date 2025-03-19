@@ -18,34 +18,21 @@ part 'novel_provider.g.dart';
 
 @riverpod
 class NovelNotifier extends _$NovelNotifier {
+  ApiClient get _apiClient => ref.read(apiClientProvider);
+
   @override
-  Future<List<Novel>> build() async {
-    return _fetchNovels();
+  FutureOr<List<Novel>> build() async {
+    return _apiClient.getNovels();
   }
 
-  Future<List<Novel>> _fetchNovels() async {
-    final apiClient = ref.read(apiClientProvider);
-    return apiClient.getNovels();
-  }
-
-  Future<List<Novel>> fetchLatestNovels() async {
-    final apiClient = ref.read(apiClientProvider);
-    return apiClient.getLatestNovels();
-  }
-
-  Future<List<Novel>> fetchPopularNovels() async {
-    final apiClient = ref.read(apiClientProvider);
-    return apiClient.getPopularNovels();
-  }
-
-  Future<List<Novel>> searchNovels(String keyword) async {
-    final apiClient = ref.read(apiClientProvider);
-    return apiClient.searchNovels(keyword: keyword);
+  Future<void> searchNovels(String keyword) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _apiClient.searchNovels(keyword: keyword));
   }
 
   Future<void> refresh() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _fetchNovels());
+    state = await AsyncValue.guard(() => _apiClient.getNovels());
   }
 }
 

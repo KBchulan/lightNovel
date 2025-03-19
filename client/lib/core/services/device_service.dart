@@ -8,8 +8,12 @@
 // @history
 // ****************************************************************************
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 import 'storage_service.dart';
+
+part 'device_service.g.dart';
 
 class DeviceService {
   static const String _deviceIdKey = 'device_id';
@@ -52,4 +56,10 @@ class DeviceService {
       'brightness': window.platformBrightness.toString(),
     };
   }
+}
+
+@riverpod
+DeviceService deviceService(Ref ref) {
+  final storage = ref.watch(storageServiceProvider);
+  return DeviceService(storage);
 }

@@ -39,11 +39,20 @@ def process_novel(epub_path: str):
 
 def main():
     parser = argparse.ArgumentParser(description='轻小说EPUB处理工具')
-    parser.add_argument('epub_path', help='EPUB文件路径')
+    parser.add_argument('--delete', help='要删除的小说标题')
+    parser.add_argument('--epub', help='EPUB文件路径')
     args = parser.parse_args()
     
     try:
-        process_novel(args.epub_path)
+        if args.delete:
+            # 删除小说
+            db_uploader = DbUploader()
+            db_uploader.delete_novel_by_title(args.delete)
+        elif args.epub:
+            # 处理EPUB文件
+            process_novel(args.epub)
+        else:
+            parser.print_help()
     except Exception as e:
         logger.error(f"程序执行失败: {str(e)}")
         exit(1)
