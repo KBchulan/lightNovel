@@ -23,7 +23,14 @@ class AppConfig {
     return 'https://120.27.201.149/api/v1'; // 阿里云服务器
   }
 
-  // WebSocket配置
+  // 静态资源路径
+  static String get staticUrl {
+    if (isDebug) {
+      return 'http://localhost:8080'; // 本地服务器
+    }
+    return 'https://120.27.201.149'; // 阿里云服务器
+  }
+
   static String get wsUrl {
     if (isDebug) {
       return 'ws://localhost:8080/api/v1/ws'; // 本地服务器

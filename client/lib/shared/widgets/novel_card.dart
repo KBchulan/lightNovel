@@ -26,13 +26,13 @@ class NovelCard extends StatelessWidget {
     if (novel.cover.isNotEmpty) {
       return novel.cover.startsWith('http')
           ? novel.cover
-          : '${AppConfig.apiBaseUrl}${novel.cover}';
+          : '${AppConfig.staticUrl}${novel.cover}';
     }
 
     // 如果没有封面，尝试使用第一章第一张图片作为封面
     final encodedTitle = Uri.encodeComponent(novel.title);
     const formats = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-    return 'http://localhost:8080/novels/$encodedTitle/volume_1/chapter_1/001.${formats[0]}';
+    return '${AppConfig.staticUrl}/novels/$encodedTitle/volume_1/chapter_1/001.${formats[0]}';
   }
 
   @override
