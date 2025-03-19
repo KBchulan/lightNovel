@@ -1,3 +1,11 @@
+// ****************************************************************************
+//
+// @file       history_page.dart
+// @brief      历史记录页面
+//
+// @author     KBchulan
+// @date       2025/03/19
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
