@@ -5,7 +5,7 @@
 //
 // @author     KBchulan
 // @date       2025/03/19
-// @history    
+// @history
 // ****************************************************************************
 
 class NovelTags {
@@ -14,6 +14,7 @@ class NovelTags {
   static const youth = '青春';
   static const campus = '校园';
   static const romance = '恋爱';
+  static const changeSex = '性转';
   static const femaleView = '女性视角';
 
   static const List<String> allTags = [
@@ -22,6 +23,7 @@ class NovelTags {
     youth,
     campus,
     romance,
+    changeSex,
     femaleView,
   ];
-} 
+}

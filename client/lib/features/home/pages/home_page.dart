@@ -95,7 +95,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                       itemCount: filteredNovels.length,
                       itemBuilder: (context, index) {
-                        final novel = filteredNovels[index];
+                        // 倒着排序
+                        final novel = filteredNovels[filteredNovels.length - index - 1];
                         return NovelCard(
                           novel: novel,
                           onTap: () {
