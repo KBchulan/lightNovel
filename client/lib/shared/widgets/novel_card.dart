@@ -1,16 +1,16 @@
 // ****************************************************************************
 //
 // @file       novel_card.dart
-// @brief      小说卡片
+// @brief      通用小说卡片组件
 //
 // @author     KBchulan
 // @date       2025/03/19
-// @history
+// @history    
 // ****************************************************************************
 
 import 'package:flutter/material.dart';
-import '../../../core/models/novel.dart';
-import '../../../config/app_config.dart';
+import '../../core/models/novel.dart';
+import '../../config/app_config.dart';
 
 class NovelCard extends StatelessWidget {
   final Novel novel;
@@ -43,7 +43,7 @@ class NovelCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: SizedBox(
-          height: 220, // 设置固定高度
+          height: 220,
           child: Column(
             children: [
               Expanded(
@@ -118,4 +118,4 @@ class NovelCard extends StatelessWidget {
       ),
     );
   }
-}
+} 

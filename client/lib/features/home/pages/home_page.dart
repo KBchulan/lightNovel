@@ -12,7 +12,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/novel_provider.dart';
-import '../widgets/novel_card.dart';
+import '../../../shared/widgets/novel_card.dart';
 import '../widgets/search_box.dart';
 
 class HomePage extends ConsumerStatefulWidget {
