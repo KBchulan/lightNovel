@@ -1,0 +1,66 @@
+class AppConfig {
+  static const String appName = 'LightNovel';
+  static const String appVersion = '1.0.0';
+
+  // API配置
+  static const bool isDebug = true; // 是否为调试模式
+
+  // 在调试模式下使用本地服务器，否则使用生产服务器
+  static String get apiBaseUrl {
+    if (isDebug) {
+      return 'http://localhost:8080/api/v1';
+    }
+    return 'https://api.your-domain.com/api/v1';
+  }
+
+  // WebSocket配置
+  static String get wsUrl {
+    if (isDebug) {
+      return 'ws://localhost:8080/api/v1/ws';
+    }
+    return 'wss://api.your-domain.com/api/v1/ws';
+  }
+
+  // 缓存配置
+  static const int maxCacheSize = 100 * 1024 * 1024; // 100MB
+  static const Duration cacheDuration = Duration(days: 7);
+
+  // 阅读设置默认值
+  static const double defaultFontSize = 18.0;
+  static const double defaultLineHeight = 1.5;
+  static const String defaultFontFamily = 'NotoSansSC';
+
+  // 主题配置
+  static const bool defaultIsDarkMode = false;
+  static const String defaultThemeColor = 'blue';
+
+  // 阅读器配置
+  static const bool defaultShowStatus = true;
+  static const bool defaultKeepScreenOn = true;
+  static const bool defaultShowProgress = true;
+
+  // API超时设置
+  static const Duration connectionTimeout = Duration(seconds: 5);
+  static const Duration receiveTimeout = Duration(seconds: 5);
+
+  // 本地存储键
+  static const String deviceIdKey = 'device_id';
+  static const String themeKey = 'theme';
+  static const String fontSizeKey = 'font_size';
+  static const String lineHeightKey = 'line_height';
+  static const String fontFamilyKey = 'font_family';
+  static const String readingModeKey = 'reading_mode';
+  static const String keepScreenOnKey = 'keep_screen_on';
+  static const String showStatusKey = 'show_status';
+  static const String showProgressKey = 'show_progress';
+
+  // 个人信息
+  static const String authorName = 'Your Name';
+  static const String authorEmail = 'your.email@example.com';
+  static const String githubUrl = 'https://github.com/yourusername';
+
+  // 更新检查
+  static const String updateCheckUrl =
+      'https://api.github.com/repos/yourusername/lightnovel/releases/latest';
+  static const Duration updateCheckInterval = Duration(days: 1);
+}

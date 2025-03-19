@@ -209,36 +209,20 @@ func SecurityHeaders() gin.HandlerFunc {
 // CORS 跨域中间件
 func CORS() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 允许的域名列表
-		allowedOrigins := []string{
-			"http://localhost:3001", // 前端开发服务器
-		}
-
-		origin := c.Request.Header.Get("Origin")
-		// 开发环境允许所有来源
+		// 开发和生产环境允许所有来源
 		if gin.Mode() != gin.ReleaseMode {
 			c.Header("Access-Control-Allow-Origin", "*")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Device-ID, Accept, X-Requested-With")
+			c.Header("Access-Control-Expose-Headers", "Content-Length, Content-Type, X-Device-ID")
+			c.Header("Access-Control-Max-Age", "86400")
 		} else {
-			// 生产环境检查允许的域名
-			for _, allowed := range allowedOrigins {
-				if origin == allowed {
-					c.Header("Access-Control-Allow-Origin", origin)
-					break
-				}
-			}
+			c.Header("Access-Control-Allow-Origin", "*")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Device-ID, Accept, X-Requested-With")
+			c.Header("Access-Control-Expose-Headers", "Content-Length, Content-Type, X-Device-ID")
+			c.Header("Access-Control-Max-Age", "86400")
 		}
-
-		// 允许的HTTP方法
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-
-		// 允许的请求头
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Device-ID")
-
-		// 允许携带凭证
-		c.Header("Access-Control-Allow-Credentials", "true")
-
-		// 预检请求缓存时间
-		c.Header("Access-Control-Max-Age", "86400") // 24小时
 
 		// 处理预检请求
 		if c.Request.Method == "OPTIONS" {

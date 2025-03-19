@@ -39,15 +39,7 @@ var (
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
-			origin := r.Header.Get("Origin")
-			if gin.Mode() == gin.DebugMode {
-				return true
-			}
-			allowedOrigins := []string{
-				"http://localhost:3000",
-				"https://yourdomain.com",
-			}
-			return isAllowedOrigin(origin, allowedOrigins)
+			return true
 		},
 	}
 )
