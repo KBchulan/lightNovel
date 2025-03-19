@@ -1,3 +1,13 @@
+// ****************************************************************************
+//
+// @file       settings_page.dart
+// @brief      设置页面
+//
+// @author     KBchulan
+// @date       2025/03/19
+// @history
+// ****************************************************************************
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
@@ -65,4 +75,4 @@ class SettingsPage extends ConsumerWidget {
       ),
     );
   }
-} 
+}

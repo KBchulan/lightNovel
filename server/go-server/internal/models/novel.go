@@ -46,7 +46,7 @@ type Chapter struct {
 	UpdatedAt     time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
 
-// ChapterInfo 章节基本信息（不包含内容）
+// ChapterInfo 章节基本信息
 type ChapterInfo struct {
 	ID            primitive.ObjectID `json:"id"`
 	NovelID       primitive.ObjectID `json:"novelId"`

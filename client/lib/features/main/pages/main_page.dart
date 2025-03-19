@@ -1,3 +1,13 @@
+// ****************************************************************************
+//
+// @file       main_page.dart
+// @brief      主页
+//
+// @author     KBchulan
+// @date       2025/03/19
+// @history
+// ****************************************************************************
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../home/pages/home_page.dart';
@@ -55,4 +65,4 @@ class _MainPageState extends ConsumerState<MainPage> {
       ),
     );
   }
-} 
+}

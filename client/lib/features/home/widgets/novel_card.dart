@@ -1,3 +1,13 @@
+// ****************************************************************************
+//
+// @file       novel_card.dart
+// @brief      小说卡片
+//
+// @author     KBchulan
+// @date       2025/03/19
+// @history
+// ****************************************************************************
+
 import 'package:flutter/material.dart';
 import '../../../core/models/novel.dart';
 import '../../../config/app_config.dart';
@@ -7,15 +17,15 @@ class NovelCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const NovelCard({
-    Key? key,
+    super.key,
     required this.novel,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   String? _getCoverUrl() {
     if (novel.cover.isNotEmpty) {
-      return novel.cover.startsWith('http') 
-          ? novel.cover 
+      return novel.cover.startsWith('http')
+          ? novel.cover
           : '${AppConfig.apiBaseUrl}${novel.cover}';
     }
 
@@ -27,7 +37,7 @@ class NovelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final coverUrl = _getCoverUrl();
-    
+
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -88,7 +98,7 @@ class NovelCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (novel.author.isNotEmpty) 
+                      if (novel.author.isNotEmpty)
                         Text(
                           novel.author,
                           style: TextStyle(
@@ -108,4 +118,4 @@ class NovelCard extends StatelessWidget {
       ),
     );
   }
-} 
+}

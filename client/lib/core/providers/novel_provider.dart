@@ -1,3 +1,14 @@
+// ****************************************************************************
+//
+// @file       novel_provider.dart
+// @brief      提供给其他文件小说信息
+//
+// @author     KBchulan
+// @date       2025/03/19
+// @history    
+// ****************************************************************************
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../api/api_client.dart';
 import '../models/novel.dart';
@@ -39,7 +50,7 @@ class NovelNotifier extends _$NovelNotifier {
 }
 
 @riverpod
-ApiClient apiClient(ApiClientRef ref) {
+ApiClient apiClient(Ref ref) {
   final deviceService = ref.watch(deviceServiceProvider);
   return ApiClient(deviceService);
 }
@@ -54,27 +65,21 @@ class FavoriteNotifier extends _$FavoriteNotifier {
   Future<void> fetchFavorites() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final response = await ref.read(apiClientProvider).get('/user/favorites');
-      return (response as List)
-          .map((e) => Novel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return await ref.read(apiClientProvider).getFavorites();
     });
   }
 
   Future<void> addFavorite(String novelId) async {
-    await ref.read(apiClientProvider).post('/user/favorites/$novelId');
+    await ref.read(apiClientProvider).addFavorite(novelId);
     fetchFavorites();
   }
 
   Future<void> removeFavorite(String novelId) async {
-    await ref.read(apiClientProvider).delete('/user/favorites/$novelId');
+    await ref.read(apiClientProvider).removeFavorite(novelId);
     fetchFavorites();
   }
 
   Future<bool> checkFavorite(String novelId) async {
-    final response = await ref.read(apiClientProvider).get(
-      '/user/favorites/$novelId/check',
-    );
-    return response as bool;
+    return await ref.read(apiClientProvider).checkFavorite(novelId);
   }
-} 
+}

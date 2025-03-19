@@ -1,3 +1,13 @@
+// ****************************************************************************
+//
+// @file       storage_service.dart
+// @brief      缓存服务
+//
+// @author     KBchulan
+// @date       2025/03/19
+// @history
+// ****************************************************************************
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,7 +18,7 @@ class StorageService {
 
   // 内存缓存
   final Map<String, dynamic> _memoryCache = {};
-  
+
   // 获取应用文档目录
   Future<String> get _localPath async {
     final directory = await Directory.systemTemp.createTemp('app_storage');
@@ -25,7 +35,7 @@ class StorageService {
   Future<void> saveData(String key, dynamic value) async {
     // 保存到内存缓存
     _memoryCache[key] = value;
-    
+
     // 保存到文件
     final file = await _getFile(key);
     final data = json.encode(value);
@@ -38,7 +48,7 @@ class StorageService {
     if (_memoryCache.containsKey(key)) {
       return _memoryCache[key] as T;
     }
-    
+
     try {
       final file = await _getFile(key);
       if (await file.exists()) {
@@ -57,7 +67,7 @@ class StorageService {
   Future<void> removeData(String key) async {
     // 从内存缓存删除
     _memoryCache.remove(key);
-    
+
     // 从文件删除
     try {
       final file = await _getFile(key);
@@ -73,7 +83,7 @@ class StorageService {
   Future<void> clearAll() async {
     // 清除内存缓存
     _memoryCache.clear();
-    
+
     // 清除文件
     try {
       final path = await _localPath;
@@ -85,4 +95,4 @@ class StorageService {
       print('Error clearing data: $e');
     }
   }
-} 
+}

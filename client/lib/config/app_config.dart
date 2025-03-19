@@ -1,28 +1,38 @@
+// ****************************************************************************
+//
+// @file       app_config.dart
+// @brief      App配置
+//
+// @author     KBchulan
+// @date       2025/03/19
+// @history
+// ****************************************************************************
+
 class AppConfig {
   static const String appName = 'LightNovel';
   static const String appVersion = '1.0.0';
 
   // API配置
-  static const bool isDebug = true; // 是否为调试模式
+  static const bool isDebug = true; // 打开调试模式
 
   // 在调试模式下使用本地服务器，否则使用生产服务器
   static String get apiBaseUrl {
     if (isDebug) {
-      return 'http://localhost:8080/api/v1';
+      return 'http://localhost:8080/api/v1'; // 本地服务器
     }
-    return 'https://api.your-domain.com/api/v1';
+    return 'https://120.27.201.149/api/v1'; // 阿里云服务器
   }
 
   // WebSocket配置
   static String get wsUrl {
     if (isDebug) {
-      return 'ws://localhost:8080/api/v1/ws';
+      return 'ws://localhost:8080/api/v1/ws'; // 本地服务器
     }
-    return 'wss://api.your-domain.com/api/v1/ws';
+    return 'wss://120.27.201.149/api/v1/ws'; // 阿里云服务器
   }
 
   // 缓存配置
-  static const int maxCacheSize = 100 * 1024 * 1024; // 100MB
+  static const int maxCacheSize = 100 * 1024 * 1024;
   static const Duration cacheDuration = Duration(days: 7);
 
   // 阅读设置默认值
@@ -31,7 +41,7 @@ class AppConfig {
   static const String defaultFontFamily = 'NotoSansSC';
 
   // 主题配置
-  static const bool defaultIsDarkMode = false;
+  static const bool defaultIsDarkMode = true;
   static const String defaultThemeColor = 'blue';
 
   // 阅读器配置
@@ -55,12 +65,12 @@ class AppConfig {
   static const String showProgressKey = 'show_progress';
 
   // 个人信息
-  static const String authorName = 'Your Name';
-  static const String authorEmail = 'your.email@example.com';
-  static const String githubUrl = 'https://github.com/yourusername';
+  static const String authorName = 'KBchulan';
+  static const String authorEmail = '18737519552@163.com';
+  static const String githubUrl = 'https://github.com/KBchulan';
 
   // 更新检查
   static const String updateCheckUrl =
-      'https://api.github.com/repos/yourusername/lightnovel/releases/latest';
+      'https://api.github.com/repos/KBchulan/lightNovel/releases/latest';
   static const Duration updateCheckInterval = Duration(days: 1);
 }

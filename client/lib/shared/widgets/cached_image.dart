@@ -1,8 +1,17 @@
+// ****************************************************************************
+//
+// @file       cached_image.dart
+// @brief      缓存图片
+//
+// @author     KBchulan
+// @date       2025/03/19
+// @history
+// ****************************************************************************
+
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../../core/services/storage_service.dart';
-
 class CachedImage extends StatefulWidget {
   final String url;
   final double? width;
@@ -12,14 +21,14 @@ class CachedImage extends StatefulWidget {
   final Widget? errorWidget;
 
   const CachedImage({
-    Key? key,
+    super.key,
     required this.url,
     this.width,
     this.height,
     this.fit,
     this.placeholder,
     this.errorWidget,
-  }) : super(key: key);
+  });
 
   @override
   State<CachedImage> createState() => _CachedImageState();

@@ -1,3 +1,13 @@
+// ****************************************************************************
+//
+// @file       router.dart
+// @brief      路由
+//
+// @author     KBchulan
+// @date       2025/03/19
+// @history
+// ****************************************************************************
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../features/home/pages/home_page.dart';
@@ -6,7 +16,8 @@ import '../features/history/pages/history_page.dart';
 import '../features/settings/pages/settings_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
-final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> _shellNavigatorKey =
+    GlobalKey<NavigatorState>();
 
 final router = GoRouter(
   navigatorKey: _rootNavigatorKey,
@@ -21,21 +32,22 @@ final router = GoRouter(
         GoRoute(
           path: '/',
           builder: (context, state) => const HomePage(),
-          routes: [
-            // 子路由在这里添加
-          ],
+          routes: const [],
         ),
         GoRoute(
           path: '/bookshelf',
           builder: (context, state) => const BookshelfPage(),
+          routes: const [],
         ),
         GoRoute(
           path: '/history',
           builder: (context, state) => const HistoryPage(),
+          routes: const [],
         ),
         GoRoute(
           path: '/settings',
           builder: (context, state) => const SettingsPage(),
+          routes: const [],
         ),
       ],
     ),
@@ -107,4 +119,4 @@ class ScaffoldWithNavBar extends StatelessWidget {
         break;
     }
   }
-} 
+}

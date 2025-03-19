@@ -1,27 +1,28 @@
 // ****************************************************************************
 //
-// @file       volume.dart
-// @brief      卷模型
+// @file       favorite.dart
+// @brief      收藏模型
 //
 // @author     KBchulan
 // @date       2025/03/19
 // @history
 // ****************************************************************************
+
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-part 'volume.freezed.dart';
-part 'volume.g.dart';
+part 'favorite.freezed.dart';
+part 'favorite.g.dart';
 
 @freezed
-class Volume with _$Volume {
-  const factory Volume({
+class Favorite with _$Favorite {
+  const factory Favorite({
     required String id,
+    required String deviceId,
     required String novelId,
-    required int volumeNumber,
-    required int chapterCount,
     required DateTime createdAt,
     required DateTime updatedAt,
-  }) = _Volume;
+  }) = _Favorite;
 
-  factory Volume.fromJson(Map<String, dynamic> json) => _$VolumeFromJson(json);
+  factory Favorite.fromJson(Map<String, dynamic> json) =>
+      _$FavoriteFromJson(json);
 }

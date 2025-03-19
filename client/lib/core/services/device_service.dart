@@ -1,3 +1,12 @@
+// ****************************************************************************
+//
+// @file       device_service.dart
+// @brief      设备服务
+//
+// @author     KBchulan
+// @date       2025/03/19
+// @history
+// ****************************************************************************
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'storage_service.dart';
@@ -5,13 +14,13 @@ import 'storage_service.dart';
 class DeviceService {
   static const String _deviceIdKey = 'device_id';
   final StorageService _storage;
-  
+
   DeviceService(this._storage);
 
   Future<String> getDeviceId() async {
     // 先从本地存储获取
     String? deviceId = await _storage.getData<String>(_deviceIdKey);
-    
+
     if (deviceId != null) {
       return deviceId;
     }
@@ -43,4 +52,4 @@ class DeviceService {
       'brightness': window.platformBrightness.toString(),
     };
   }
-} 
+}

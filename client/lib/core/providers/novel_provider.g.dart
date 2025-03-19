@@ -6,7 +6,7 @@ part of 'novel_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$apiClientHash() => r'7752760ab9884b85b8a4f7f11735696c16b60757';
+String _$apiClientHash() => r'895715fb1b3c5f39decfad436c14ff40752cfa27';
 
 /// See also [apiClient].
 @ProviderFor(apiClient)
@@ -38,7 +38,7 @@ final novelNotifierProvider =
 );
 
 typedef _$NovelNotifier = AutoDisposeAsyncNotifier<List<Novel>>;
-String _$favoriteNotifierHash() => r'450861946b098422c7606d658b24d44ae309c4db';
+String _$favoriteNotifierHash() => r'34a160f450ec0396536ae2440fe536d715267bce';
 
 /// See also [FavoriteNotifier].
 @ProviderFor(FavoriteNotifier)

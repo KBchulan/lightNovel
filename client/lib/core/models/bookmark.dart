@@ -1,27 +1,32 @@
 // ****************************************************************************
 //
-// @file       volume.dart
-// @brief      卷模型
+// @file       bookmark.dart
+// @brief      书签模型
 //
 // @author     KBchulan
 // @date       2025/03/19
 // @history
 // ****************************************************************************
+
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-part 'volume.freezed.dart';
-part 'volume.g.dart';
+part 'bookmark.freezed.dart';
+part 'bookmark.g.dart';
 
 @freezed
-class Volume with _$Volume {
-  const factory Volume({
+class Bookmark with _$Bookmark {
+  const factory Bookmark({
     required String id,
+    required String deviceId,
     required String novelId,
     required int volumeNumber,
-    required int chapterCount,
+    required int chapterNumber,
+    required int position,
+    required String note,
     required DateTime createdAt,
     required DateTime updatedAt,
-  }) = _Volume;
+  }) = _Bookmark;
 
-  factory Volume.fromJson(Map<String, dynamic> json) => _$VolumeFromJson(json);
+  factory Bookmark.fromJson(Map<String, dynamic> json) =>
+      _$BookmarkFromJson(json);
 }

@@ -1,3 +1,13 @@
+// ****************************************************************************
+//
+// @file       app_theme.dart
+// @brief      应用主题
+//
+// @author     KBchulan
+// @date       2025/03/19
+// @history
+// ****************************************************************************
+
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -73,4 +83,4 @@ class AppTheme {
       error: Color(0xFFCF6679),
     ),
   );
-} 
+}

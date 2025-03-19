@@ -1,3 +1,13 @@
+// ****************************************************************************
+//
+// @file       main.dart
+// @brief      主函数
+//
+// @author     KBchulan
+// @date       2025/03/19
+// @history
+// ****************************************************************************
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
