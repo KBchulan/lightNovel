@@ -12,6 +12,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../../core/services/storage_service.dart';
+
 class CachedImage extends StatefulWidget {
   final String url;
   final double? width;
@@ -58,7 +59,7 @@ class _CachedImageState extends State<CachedImage> {
         widget.url,
         options: Options(responseType: ResponseType.bytes),
       );
-      
+
       if (response.data != null) {
         final bytes = Uint8List.fromList(response.data!);
         // 保存到缓存
@@ -79,7 +80,7 @@ class _CachedImageState extends State<CachedImage> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return widget.placeholder ?? const CircularProgressIndicator();
         }
-        
+
         if (snapshot.hasError || snapshot.data == null) {
           return widget.errorWidget ?? const Icon(Icons.error);
         }

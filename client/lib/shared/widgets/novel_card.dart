@@ -5,7 +5,7 @@
 //
 // @author     KBchulan
 // @date       2025/03/19
-// @history    
+// @history
 // ****************************************************************************
 
 import 'package:flutter/material.dart';
@@ -13,6 +13,7 @@ import '../../core/models/novel.dart';
 import '../../config/app_config.dart';
 
 class NovelCard extends StatelessWidget {
+  static const _imageFormats = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
   final Novel novel;
   final VoidCallback onTap;
 
@@ -31,8 +32,7 @@ class NovelCard extends StatelessWidget {
 
     // 如果没有封面，尝试使用第一章第一张图片作为封面
     final encodedTitle = Uri.encodeComponent(novel.title);
-    const formats = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-    return '${AppConfig.staticUrl}/novels/$encodedTitle/volume_1/chapter_1/001.${formats[0]}';
+    return '${AppConfig.staticUrl}/novels/$encodedTitle/volume_1/chapter_1/001.${_imageFormats[0]}';
   }
 
   @override
@@ -114,8 +114,7 @@ class _CoverImageState extends State<_CoverImage> {
   late String _currentUrl;
   int _currentFormatIndex = 0;
   bool _hasError = false;
-  static const _formats = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-  final String _uniqueKey = DateTime.now().millisecondsSinceEpoch.toString();
+  final _uniqueKey = UniqueKey();
 
   @override
   void initState() {
@@ -134,7 +133,7 @@ class _CoverImageState extends State<_CoverImage> {
   }
 
   void _tryNextFormat() {
-    if (_currentFormatIndex >= _formats.length - 1) {
+    if (_currentFormatIndex >= NovelCard._imageFormats.length - 1) {
       setState(() => _hasError = true);
       return;
     }
@@ -142,7 +141,7 @@ class _CoverImageState extends State<_CoverImage> {
     _currentFormatIndex++;
     final baseUrl = _currentUrl.substring(0, _currentUrl.lastIndexOf('.'));
     setState(() {
-      _currentUrl = '$baseUrl.${_formats[_currentFormatIndex]}';
+      _currentUrl = '$baseUrl.${NovelCard._imageFormats[_currentFormatIndex]}';
       _hasError = false;
     });
   }
@@ -181,4 +180,4 @@ class _CoverImageState extends State<_CoverImage> {
       ),
     );
   }
-} 
+}
