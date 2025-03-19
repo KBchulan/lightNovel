@@ -11,7 +11,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/search_history_provider.dart';
-import '../../../core/providers/search_result_provider.dart';
+import '../../../core/providers/novel_provider.dart';
 import '../../../shared/widgets/page_transitions.dart';
 import 'search_box.dart';
 import 'search_result_page.dart';
@@ -23,9 +23,9 @@ class SearchPage extends ConsumerWidget {
     if (value.isEmpty) return;
     
     ref.read(searchHistoryProvider.notifier).addSearch(value);
-    ref.read(searchResultProvider.notifier).search(value);
+    ref.read(novelNotifierProvider.notifier).searchNovels(value);
     
-    Navigator.of(context).pushReplacement(
+    Navigator.of(context).push(
       SlideUpPageRoute(
         page: SearchResultPage(keyword: value),
       ),

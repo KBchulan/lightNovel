@@ -20,9 +20,12 @@ part 'novel_provider.g.dart';
 class NovelNotifier extends _$NovelNotifier {
   ApiClient get _apiClient => ref.read(apiClientProvider);
 
+  List<Novel>? _homeNovels;
+
   @override
   FutureOr<List<Novel>> build() async {
-    return _apiClient.getNovels();
+    _homeNovels = await _apiClient.getNovels();
+    return _homeNovels ?? [];
   }
 
   Future<void> searchNovels(String keyword) async {
@@ -32,7 +35,17 @@ class NovelNotifier extends _$NovelNotifier {
 
   Future<void> refresh() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _apiClient.getNovels());
+    if (_homeNovels != null) {
+      state = AsyncValue.data(_homeNovels!);
+    } else {
+      state = await AsyncValue.guard(() => _apiClient.getNovels());
+    }
+  }
+
+  Future<void> refreshHome() async {
+    state = const AsyncValue.loading();
+    _homeNovels = await _apiClient.getNovels();
+    state = AsyncValue.data(_homeNovels ?? []);
   }
 }
 

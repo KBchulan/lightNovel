@@ -10,7 +10,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/providers/search_result_provider.dart';
+import '../../../core/providers/novel_provider.dart';
 import '../../../shared/widgets/novel_card.dart';
 import 'search_box.dart';
 
@@ -24,7 +24,7 @@ class SearchResultPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final searchResultsAsync = ref.watch(searchResultProvider);
+    final searchResultsAsync = ref.watch(novelNotifierProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -36,15 +36,15 @@ class SearchResultPage extends ConsumerWidget {
                 hintText: keyword,
                 onSubmitted: (value) {
                   if (value.isNotEmpty && value != keyword) {
-                    ref.read(searchResultProvider.notifier).search(value);
+                    ref.read(novelNotifierProvider.notifier).searchNovels(value);
                   }
                 },
               ),
             ),
             TextButton(
               onPressed: () {
-                ref.read(searchResultProvider.notifier).clear();
-                Navigator.pop(context);
+                ref.read(novelNotifierProvider.notifier).refresh();
+                Navigator.of(context).popUntil((route) => route.isFirst);
               },
               child: const Text('取消'),
             ),
@@ -107,7 +107,7 @@ class SearchResultPage extends ConsumerWidget {
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () {
-                        ref.read(searchResultProvider.notifier).search(keyword);
+                        ref.read(novelNotifierProvider.notifier).searchNovels(keyword);
                       },
                       child: const Text('重试'),
                     ),
