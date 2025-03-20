@@ -12,7 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../api/api_client.dart';
 import '../models/novel.dart';
-import 'device_provider.dart';
+import 'api_provider.dart';
 
 part 'novel_provider.g.dart';
 
@@ -47,12 +47,6 @@ class NovelNotifier extends _$NovelNotifier {
     _homeNovels = await _apiClient.getNovels();
     state = AsyncValue.data(_homeNovels ?? []);
   }
-}
-
-@riverpod
-ApiClient apiClient(Ref ref) {
-  final deviceService = ref.watch(deviceServiceProvider);
-  return ApiClient(deviceService);
 }
 
 @riverpod

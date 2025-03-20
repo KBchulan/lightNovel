@@ -6,22 +6,6 @@ part of 'novel_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$apiClientHash() => r'895715fb1b3c5f39decfad436c14ff40752cfa27';
-
-/// See also [apiClient].
-@ProviderFor(apiClient)
-final apiClientProvider = AutoDisposeProvider<ApiClient>.internal(
-  apiClient,
-  name: r'apiClientProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$apiClientHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef ApiClientRef = AutoDisposeProviderRef<ApiClient>;
 String _$novelNotifierHash() => r'497ff1157fdeb7311da047cd84250fb1f5bf5a50';
 
 /// See also [NovelNotifier].
