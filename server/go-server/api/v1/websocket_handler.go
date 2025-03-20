@@ -61,15 +61,14 @@ func NewWebSocketHandler(cfg *config.Config) *WebSocketHandler {
 }
 
 // @Summary WebSocket连接
-// @Description 建立WebSocket连接以接收实时更新通知（如小说更新、系统通知等）
+// @Description 建立WebSocket连接以接收实时更新通知
 // @Tags websocket
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
 // @Param X-Device-ID header string false "设备ID，如果未提供则使用客户端IP"
 // @Success 101 {string} string "Switching Protocols"
 // @Failure 400 {object} response.Response "无效的请求"
-// @Router /ws [get]
+// @Router /api/v1/ws [get]
 func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
 	if deviceID == "" {
@@ -89,6 +88,26 @@ func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 
 	go client.WritePump()
 	go client.ReadPump()
+}
+
+// @Summary 获取WebSocket状态
+// @Description 获取当前WebSocket连接的状态信息
+// @Tags websocket
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=map[string]interface{}} "成功"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /api/v1/ws/status [get]
+func (h *WebSocketHandler) GetStatus(c *gin.Context) {
+	status := map[string]interface{}{
+		"connections":  h.hub.GetActiveConnections(),
+		"messagesSent": h.hub.GetMessagesSent(),
+		"uptime":       time.Since(h.hub.GetStartTime()).String(),
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"data": status,
+	})
 }
 
 // BroadcastNovelUpdate 广播小说更新消息

@@ -88,6 +88,7 @@ func main() {
 	{
 		// WebSocket连接
 		api.GET("/ws", wsHandler.HandleConnection)
+		api.GET("/ws/status", wsHandler.GetStatus)
 
 		// 健康检查
 		api.GET("/health", healthHandler.Check)
@@ -116,9 +117,9 @@ func main() {
 		{
 			// 收藏相关
 			user.GET("/favorites", novelHandler.GetUserFavorites)
-			user.POST("/favorites/:id", novelHandler.AddFavorite)
-			user.DELETE("/favorites/:id", novelHandler.RemoveFavorite)
-			user.GET("/favorites/:id/check", novelHandler.IsFavorite)
+			user.POST("/favorites/:novel_id", novelHandler.AddFavorite)
+			user.DELETE("/favorites/:novel_id", novelHandler.RemoveFavorite)
+			user.GET("/favorites/:novel_id/check", novelHandler.IsFavorite)
 
 			// 书签相关
 			user.GET("/bookmarks", novelHandler.GetUserBookmarks)
@@ -127,6 +128,31 @@ func main() {
 			user.PUT("/bookmarks/:id", novelHandler.UpdateBookmark)
 			user.PATCH("/progress", novelHandler.UpdateReadingProgress)
 			user.GET("/history", middleware.ValidateLimit(10, 100), novelHandler.GetReadingHistory)
+
+			// 阅读记录相关路由组
+			reading := user.Group("/reading")
+			{
+				// 阅读记录
+				records := reading.Group("/records")
+				{
+					records.POST("", novelHandler.AddReadRecord)
+					records.GET("/:novel-id", middleware.ValidatePagination(), novelHandler.GetReadRecords)
+					records.DELETE("/:novel-id/:record-id", novelHandler.DeleteReadRecord)
+				}
+
+				// 已读章节
+				chapters := reading.Group("/chapters")
+				{
+					chapters.GET("/:novel-id", novelHandler.GetReadChapters)
+				}
+
+				// 阅读统计
+				stats := reading.Group("/stats")
+				{
+					stats.GET("", middleware.ValidatePagination(), novelHandler.GetReadingStats)
+					stats.GET("/:novel-id", novelHandler.GetReadingStat)
+				}
+			}
 		}
 	}
 

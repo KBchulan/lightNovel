@@ -167,10 +167,10 @@ GET /api/v1/novels/:id/volumes/:vid/chapters/:cid # 获取章节内容
 
 #### 收藏管理
 
-- 获取收藏列表: `GET /api/v1/user/favorites`
-- 添加收藏: `POST /api/v1/user/favorites/:id`
-- 取消收藏: `DELETE /api/v1/user/favorites/:id`
-- 检查收藏状态: `GET /api/v1/user/favorites/:id/check`
+- 获取收藏列表: `GET /api/v1/favorites`
+- 添加收藏: `POST /api/v1/favorites/:id`
+- 取消收藏: `DELETE /api/v1/favorites/:id`
+- 检查收藏状态: `GET /api/v1/favorites/:id/check`
 
 #### 书签管理
 
@@ -198,7 +198,45 @@ GET /api/v1/novels/:id/volumes/:vid/chapters/:cid # 获取章节内容
 ### WebSocket
 
 ```
-GET /api/v1/ws  # WebSocket连接
+GET /api/v1/ws      # WebSocket连接
+GET /api/v1/ws/status  # 获取连接状态
+```
+
+#### WebSocket消息格式
+
+1. 小说更新通知
+
+```json
+{
+  "type": "novel_update",
+  "data": {
+    "novelId": "string",
+    "title": "string",
+    "updateType": "new_chapter|new_volume|content_update",
+    "description": "string"
+  },
+  "time": "2024-03-17T15:04:05Z"
+}
+```
+
+2. 系统公告
+
+```json
+{
+  "type": "system_notice",
+  "data": {
+    "level": "info|warning|error",
+    "content": "string"
+  },
+  "time": "2024-03-17T15:04:05Z"
+}
+```
+
+### 阅读记录
+
+```
+GET /api/v1/reading/stats           # 获取阅读统计
+POST /api/v1/reading/records/batch  # 批量获取阅读记录
 ```
 
 ### 系统监控

@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/v1/user/favorites": {
+        "/api/v1/favorites": {
             "get": {
                 "description": "获取用户收藏的小说列表",
                 "consumes": [
@@ -32,7 +32,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "设备ID",
-                        "name": "device_id",
+                        "name": "X-Device-ID",
                         "in": "header",
                         "required": true
                     }
@@ -74,7 +74,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/user/favorites/{novel_id}": {
+        "/api/v1/favorites/{novel_id}": {
             "post": {
                 "description": "添加小说到收藏列表",
                 "consumes": [
@@ -91,7 +91,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "设备ID",
-                        "name": "device_id",
+                        "name": "X-Device-ID",
                         "in": "header",
                         "required": true
                     },
@@ -140,7 +140,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "设备ID",
-                        "name": "device_id",
+                        "name": "X-Device-ID",
                         "in": "header",
                         "required": true
                     },
@@ -174,7 +174,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/user/favorites/{novel_id}/check": {
+        "/api/v1/favorites/{novel_id}/check": {
             "get": {
                 "description": "检查小说是否已收藏",
                 "consumes": [
@@ -191,7 +191,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "设备ID",
-                        "name": "device_id",
+                        "name": "X-Device-ID",
                         "in": "header",
                         "required": true
                     },
@@ -226,6 +226,126 @@ const docTemplate = `{
                         "description": "请求参数错误",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/reading/records": {
+            "post": {
+                "description": "添加一条阅读记录，同时更新阅读统计和已读章节记录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "阅读记录"
+                ],
+                "summary": "添加阅读记录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID",
+                        "name": "device-id",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "阅读记录信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.AddReadRecordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ws": {
+            "get": {
+                "description": "建立WebSocket连接以接收实时更新通知",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "websocket"
+                ],
+                "summary": "WebSocket连接",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID，如果未提供则使用客户端IP",
+                        "name": "X-Device-ID",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "无效的请求",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ws/status": {
+            "get": {
+                "description": "获取当前WebSocket连接的状态信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "websocket"
+                ],
+                "summary": "获取WebSocket状态",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "500": {
@@ -759,6 +879,342 @@ const docTemplate = `{
                 }
             }
         },
+        "/reading/chapters/{novel-id}": {
+            "get": {
+                "description": "获取指定小说的已读章节列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "summary": "获取已读章节列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID",
+                        "name": "X-Device-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "小说ID",
+                        "name": "novel-id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.ReadChapterRecord"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/reading/records/{novel-id}": {
+            "get": {
+                "description": "获取用户的阅读记录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "summary": "获取阅读记录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID",
+                        "name": "X-Device-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "小说ID",
+                        "name": "novel-id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码，默认1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量，默认20",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.ReadRecord"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/reading/records/{novel-id}/{record-id}": {
+            "delete": {
+                "description": "删除指定的阅读记录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "summary": "删除阅读记录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID",
+                        "name": "X-Device-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "小说ID",
+                        "name": "novel-id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "记录ID",
+                        "name": "record-id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "记录不存在",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/reading/stats": {
+            "get": {
+                "description": "获取用户的所有阅读统计列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "summary": "获取阅读统计列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID",
+                        "name": "X-Device-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码，默认1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量，默认20",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.ReadingStat"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/reading/stats/{novel-id}": {
+            "get": {
+                "description": "获取指定小说的阅读统计信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "summary": "获取阅读统计",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID",
+                        "name": "X-Device-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "小说ID",
+                        "name": "novel-id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.ReadingStat"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "统计不存在",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/user/bookmarks": {
             "get": {
                 "security": [
@@ -1164,48 +1620,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/ws": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "建立WebSocket连接以接收实时更新通知（如小说更新、系统通知等）",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "websocket"
-                ],
-                "summary": "WebSocket连接",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "设备ID，如果未提供则使用客户端IP",
-                        "name": "X-Device-ID",
-                        "in": "header"
-                    }
-                ],
-                "responses": {
-                    "101": {
-                        "description": "Switching Protocols",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "400": {
-                        "description": "无效的请求",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
@@ -1365,6 +1779,79 @@ const docTemplate = `{
                 }
             }
         },
+        "models.ReadChapterRecord": {
+            "type": "object",
+            "properties": {
+                "chapterNumber": {
+                    "type": "integer"
+                },
+                "deviceId": {
+                    "type": "string"
+                },
+                "firstReadAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "isComplete": {
+                    "type": "boolean"
+                },
+                "lastPosition": {
+                    "type": "integer"
+                },
+                "lastReadAt": {
+                    "type": "string"
+                },
+                "novelId": {
+                    "type": "string"
+                },
+                "readCount": {
+                    "type": "integer"
+                },
+                "volumeNumber": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.ReadRecord": {
+            "type": "object",
+            "properties": {
+                "chapterNumber": {
+                    "type": "integer"
+                },
+                "deviceId": {
+                    "type": "string"
+                },
+                "endPosition": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "isComplete": {
+                    "type": "boolean"
+                },
+                "novelId": {
+                    "type": "string"
+                },
+                "readAt": {
+                    "type": "string"
+                },
+                "readDuration": {
+                    "type": "integer"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "startPosition": {
+                    "type": "integer"
+                },
+                "volumeNumber": {
+                    "type": "integer"
+                }
+            }
+        },
         "models.ReadingProgress": {
             "type": "object",
             "properties": {
@@ -1382,6 +1869,50 @@ const docTemplate = `{
                 },
                 "novelId": {
                     "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ReadingStat": {
+            "type": "object",
+            "properties": {
+                "chapterRead": {
+                    "type": "integer"
+                },
+                "completeCount": {
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "deviceId": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lastActiveDate": {
+                    "type": "string"
+                },
+                "novelId": {
+                    "type": "string"
+                },
+                "readDays": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "readProgress": {
+                    "type": "number"
+                },
+                "totalChapters": {
+                    "type": "integer"
+                },
+                "totalReadTime": {
+                    "type": "integer"
                 },
                 "updatedAt": {
                     "type": "string"
@@ -1438,6 +1969,52 @@ const docTemplate = `{
                 "data": {},
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "v1.AddReadRecordRequest": {
+            "type": "object",
+            "required": [
+                "chapterNumber",
+                "novelId",
+                "readDuration",
+                "source",
+                "volumeNumber"
+            ],
+            "properties": {
+                "chapterNumber": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "endPosition": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "isComplete": {
+                    "type": "boolean"
+                },
+                "novelId": {
+                    "type": "string"
+                },
+                "readDuration": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "source": {
+                    "type": "string",
+                    "enum": [
+                        "web",
+                        "app",
+                        "other"
+                    ]
+                },
+                "startPosition": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "volumeNumber": {
+                    "type": "integer",
+                    "minimum": 1
                 }
             }
         },

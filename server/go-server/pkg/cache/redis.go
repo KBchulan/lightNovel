@@ -22,6 +22,9 @@ const (
 	DeviceKey         = "device:info:"    // 设备信息
 	BookmarkKey       = "user:bookmark:"  // 用户书签
 	FavoriteKey       = "user:favorite:"  // 用户收藏
+	ReadRecordKey     = "user:record:"    // 阅读记录
+	ReadChapterKey    = "user:chapter:"   // 已读章节
+	ReadingStatKey    = "user:stat:"      // 阅读统计
 )
 
 // RedisCache Redis缓存服务

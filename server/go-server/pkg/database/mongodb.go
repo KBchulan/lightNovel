@@ -162,6 +162,88 @@ func (db *MongoDB) CreateIndexes(ctx context.Context) error {
 		"reading_progress": progressIndexes,
 		"bookmarks":        bookmarkIndexes,
 		"favorites":        favoriteIndexes,
+		"read_records": {
+			{
+				Keys: bson.D{
+					{Key: "deviceId", Value: 1},
+					{Key: "novelId", Value: 1},
+					{Key: "readAt", Value: -1},
+				},
+				Options: options.Index().SetName("device_novel_time"),
+			},
+			{
+				Keys:    bson.D{{Key: "readAt", Value: -1}},
+				Options: options.Index().SetName("read_time"),
+			},
+			{
+				Keys:    bson.D{{Key: "readDuration", Value: -1}},
+				Options: options.Index().SetName("read_duration"),
+			},
+			{
+				Keys:    bson.D{{Key: "isComplete", Value: 1}},
+				Options: options.Index().SetName("complete_status"),
+			},
+			{
+				Keys:    bson.D{{Key: "source", Value: 1}},
+				Options: options.Index().SetName("read_source"),
+			},
+		},
+		"read_chapters": {
+			{
+				Keys: bson.D{
+					{Key: "deviceId", Value: 1},
+					{Key: "novelId", Value: 1},
+					{Key: "volumeNumber", Value: 1},
+					{Key: "chapterNumber", Value: 1},
+				},
+				Options: options.Index().SetName("device_novel_chapter").SetUnique(true),
+			},
+			{
+				Keys:    bson.D{{Key: "lastReadAt", Value: -1}},
+				Options: options.Index().SetName("last_read_time"),
+			},
+			{
+				Keys:    bson.D{{Key: "readCount", Value: -1}},
+				Options: options.Index().SetName("read_count"),
+			},
+			{
+				Keys:    bson.D{{Key: "isComplete", Value: 1}},
+				Options: options.Index().SetName("chapter_complete"),
+			},
+			{
+				Keys:    bson.D{{Key: "lastPosition", Value: 1}},
+				Options: options.Index().SetName("last_position"),
+			},
+		},
+		"reading_stats": {
+			{
+				Keys: bson.D{
+					{Key: "deviceId", Value: 1},
+					{Key: "novelId", Value: 1},
+				},
+				Options: options.Index().SetName("device_novel_stats").SetUnique(true),
+			},
+			{
+				Keys:    bson.D{{Key: "lastActiveDate", Value: -1}},
+				Options: options.Index().SetName("last_active"),
+			},
+			{
+				Keys:    bson.D{{Key: "totalReadTime", Value: -1}},
+				Options: options.Index().SetName("total_read_time"),
+			},
+			{
+				Keys:    bson.D{{Key: "chapterRead", Value: -1}},
+				Options: options.Index().SetName("chapter_read"),
+			},
+			{
+				Keys:    bson.D{{Key: "completeCount", Value: -1}},
+				Options: options.Index().SetName("complete_count"),
+			},
+			{
+				Keys:    bson.D{{Key: "readProgress", Value: -1}},
+				Options: options.Index().SetName("read_progress"),
+			},
+		},
 	}
 
 	for collection, indexes := range collections {

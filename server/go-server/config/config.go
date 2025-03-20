@@ -49,6 +49,9 @@ type CacheConfig struct {
 	ChapterDetail time.Duration `yaml:"chapter_detail"`
 	LatestNovels  time.Duration `yaml:"latest_novels"`
 	PopularNovels time.Duration `yaml:"popular_novels"`
+	ReadRecord    time.Duration `yaml:"read_record"`
+	ReadChapter   time.Duration `yaml:"read_chapter"`
+	ReadingStat   time.Duration `yaml:"reading_stat"`
 }
 
 type RateConfig struct {
@@ -119,6 +122,15 @@ func setDefaultConfig(config *Config) {
 	}
 	if config.Cache.PopularNovels == 0 {
 		config.Cache.PopularNovels = 30 * time.Minute
+	}
+	if config.Cache.ReadRecord == 0 {
+		config.Cache.ReadRecord = 30 * time.Minute
+	}
+	if config.Cache.ReadChapter == 0 {
+		config.Cache.ReadChapter = 1 * time.Hour
+	}
+	if config.Cache.ReadingStat == 0 {
+		config.Cache.ReadingStat = 30 * time.Minute
 	}
 
 	// 设置默认限流配置

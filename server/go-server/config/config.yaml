@@ -24,6 +24,9 @@ cache:
   searchResult: 20m
   latestNovels: 10m
   popularNovels: 1h
+  readRecord: 1h
+  readChapter: 24h
+  readingStat: 1h
 
 rate:
   limit: 1000000

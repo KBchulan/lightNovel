@@ -103,6 +103,54 @@ definitions:
       volumeCount:
         type: integer
     type: object
+  models.ReadChapterRecord:
+    properties:
+      chapterNumber:
+        type: integer
+      deviceId:
+        type: string
+      firstReadAt:
+        type: string
+      id:
+        type: string
+      isComplete:
+        type: boolean
+      lastPosition:
+        type: integer
+      lastReadAt:
+        type: string
+      novelId:
+        type: string
+      readCount:
+        type: integer
+      volumeNumber:
+        type: integer
+    type: object
+  models.ReadRecord:
+    properties:
+      chapterNumber:
+        type: integer
+      deviceId:
+        type: string
+      endPosition:
+        type: integer
+      id:
+        type: string
+      isComplete:
+        type: boolean
+      novelId:
+        type: string
+      readAt:
+        type: string
+      readDuration:
+        type: integer
+      source:
+        type: string
+      startPosition:
+        type: integer
+      volumeNumber:
+        type: integer
+    type: object
   models.ReadingProgress:
     properties:
       createdAt:
@@ -115,6 +163,35 @@ definitions:
         type: string
       novelId:
         type: string
+      updatedAt:
+        type: string
+    type: object
+  models.ReadingStat:
+    properties:
+      chapterRead:
+        type: integer
+      completeCount:
+        type: integer
+      createdAt:
+        type: string
+      deviceId:
+        type: string
+      id:
+        type: string
+      lastActiveDate:
+        type: string
+      novelId:
+        type: string
+      readDays:
+        items:
+          type: string
+        type: array
+      readProgress:
+        type: number
+      totalChapters:
+        type: integer
+      totalReadTime:
+        type: integer
       updatedAt:
         type: string
     type: object
@@ -152,6 +229,40 @@ definitions:
       data: {}
       message:
         type: string
+    type: object
+  v1.AddReadRecordRequest:
+    properties:
+      chapterNumber:
+        minimum: 1
+        type: integer
+      endPosition:
+        minimum: 0
+        type: integer
+      isComplete:
+        type: boolean
+      novelId:
+        type: string
+      readDuration:
+        minimum: 1
+        type: integer
+      source:
+        enum:
+        - web
+        - app
+        - other
+        type: string
+      startPosition:
+        minimum: 0
+        type: integer
+      volumeNumber:
+        minimum: 1
+        type: integer
+    required:
+    - chapterNumber
+    - novelId
+    - readDuration
+    - source
+    - volumeNumber
     type: object
   v1.CreateBookmarkRequest:
     properties:
@@ -223,7 +334,7 @@ info:
   title: Light Novel API
   version: "1.0"
 paths:
-  /api/v1/user/favorites:
+  /api/v1/favorites:
     get:
       consumes:
       - application/json
@@ -231,7 +342,7 @@ paths:
       parameters:
       - description: 设备ID
         in: header
-        name: device_id
+        name: X-Device-ID
         required: true
         type: string
       produces:
@@ -259,7 +370,7 @@ paths:
       summary: 获取用户收藏列表
       tags:
       - 用户
-  /api/v1/user/favorites/{novel_id}:
+  /api/v1/favorites/{novel_id}:
     delete:
       consumes:
       - application/json
@@ -267,7 +378,7 @@ paths:
       parameters:
       - description: 设备ID
         in: header
-        name: device_id
+        name: X-Device-ID
         required: true
         type: string
       - description: 小说ID
@@ -300,7 +411,7 @@ paths:
       parameters:
       - description: 设备ID
         in: header
-        name: device_id
+        name: X-Device-ID
         required: true
         type: string
       - description: 小说ID
@@ -326,7 +437,7 @@ paths:
       summary: 添加收藏
       tags:
       - 用户
-  /api/v1/user/favorites/{novel_id}/check:
+  /api/v1/favorites/{novel_id}/check:
     get:
       consumes:
       - application/json
@@ -334,7 +445,7 @@ paths:
       parameters:
       - description: 设备ID
         in: header
-        name: device_id
+        name: X-Device-ID
         required: true
         type: string
       - description: 小说ID
@@ -365,6 +476,82 @@ paths:
       summary: 检查是否已收藏
       tags:
       - 用户
+  /api/v1/reading/records:
+    post:
+      consumes:
+      - application/json
+      description: 添加一条阅读记录，同时更新阅读统计和已读章节记录
+      parameters:
+      - description: 设备ID
+        in: header
+        name: device-id
+        required: true
+        type: string
+      - description: 阅读记录信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.AddReadRecordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 添加阅读记录
+      tags:
+      - 阅读记录
+  /api/v1/ws:
+    get:
+      consumes:
+      - application/json
+      description: 建立WebSocket连接以接收实时更新通知
+      parameters:
+      - description: 设备ID，如果未提供则使用客户端IP
+        in: header
+        name: X-Device-ID
+        type: string
+      produces:
+      - application/json
+      responses:
+        "101":
+          description: Switching Protocols
+          schema:
+            type: string
+        "400":
+          description: 无效的请求
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: WebSocket连接
+      tags:
+      - websocket
+  /api/v1/ws/status:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前WebSocket连接的状态信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取WebSocket状态
+      tags:
+      - websocket
   /health:
     get:
       consumes:
@@ -699,6 +886,218 @@ paths:
       summary: 搜索小说
       tags:
       - novels
+  /reading/chapters/{novel-id}:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定小说的已读章节列表
+      parameters:
+      - description: 设备ID
+        in: header
+        name: X-Device-ID
+        required: true
+        type: string
+      - description: 小说ID
+        in: path
+        name: novel-id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.ReadChapterRecord'
+                  type: array
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取已读章节列表
+      tags:
+      - reading
+  /reading/records/{novel-id}:
+    get:
+      consumes:
+      - application/json
+      description: 获取用户的阅读记录
+      parameters:
+      - description: 设备ID
+        in: header
+        name: X-Device-ID
+        required: true
+        type: string
+      - description: 小说ID
+        in: path
+        name: novel-id
+        required: true
+        type: string
+      - description: 页码，默认1
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量，默认20
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.ReadRecord'
+                  type: array
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取阅读记录
+      tags:
+      - reading
+  /reading/records/{novel-id}/{record-id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定的阅读记录
+      parameters:
+      - description: 设备ID
+        in: header
+        name: X-Device-ID
+        required: true
+        type: string
+      - description: 小说ID
+        in: path
+        name: novel-id
+        required: true
+        type: string
+      - description: 记录ID
+        in: path
+        name: record-id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 记录不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 删除阅读记录
+      tags:
+      - reading
+  /reading/stats:
+    get:
+      consumes:
+      - application/json
+      description: 获取用户的所有阅读统计列表
+      parameters:
+      - description: 设备ID
+        in: header
+        name: X-Device-ID
+        required: true
+        type: string
+      - description: 页码，默认1
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量，默认20
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.ReadingStat'
+                  type: array
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取阅读统计列表
+      tags:
+      - reading
+  /reading/stats/{novel-id}:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定小说的阅读统计信息
+      parameters:
+      - description: 设备ID
+        in: header
+        name: X-Device-ID
+        required: true
+        type: string
+      - description: 小说ID
+        in: path
+        name: novel-id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.ReadingStat'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 统计不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取阅读统计
+      tags:
+      - reading
   /user/bookmarks:
     get:
       consumes:
@@ -945,30 +1344,4 @@ paths:
       summary: 更新阅读进度
       tags:
       - user
-  /ws:
-    get:
-      consumes:
-      - application/json
-      description: 建立WebSocket连接以接收实时更新通知（如小说更新、系统通知等）
-      parameters:
-      - description: 设备ID，如果未提供则使用客户端IP
-        in: header
-        name: X-Device-ID
-        type: string
-      produces:
-      - application/json
-      responses:
-        "101":
-          description: Switching Protocols
-          schema:
-            type: string
-        "400":
-          description: 无效的请求
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - ApiKeyAuth: []
-      summary: WebSocket连接
-      tags:
-      - websocket
 swagger: "2.0"

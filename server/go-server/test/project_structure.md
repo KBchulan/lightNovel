@@ -87,22 +87,22 @@
 ### 2. 用户相关接口
 
 #### 获取收藏列表
-- 路径: `GET /api/v1/user/favorites`
+- 路径: `GET /api/v1/favorites`
 - 头部: X-Device-ID
 - 返回: 用户的收藏列表
 
 #### 添加收藏
-- 路径: `POST /api/v1/user/favorites/:id`
+- 路径: `POST /api/v1/favorites/:id`
 - 头部: X-Device-ID
 - 返回: 添加状态
 
 #### 取消收藏
-- 路径: `DELETE /api/v1/user/favorites/:id`
+- 路径: `DELETE /api/v1/favorites/:id`
 - 头部: X-Device-ID
 - 返回: 删除状态
 
 #### 检查收藏状态
-- 路径: `GET /api/v1/user/favorites/:id/check`
+- 路径: `GET /api/v1/favorites/:id/check`
 - 头部: X-Device-ID
 - 返回: 是否已收藏（布尔值）
 
@@ -147,6 +147,20 @@
 - 头部: X-Device-ID（可选）
 - 说明: 建立WebSocket连接以接收实时更新通知
 
+#### 获取连接状态
+- 路径: `GET /api/v1/ws/status`
+- 返回: 当前WebSocket连接状态信息
+```json
+{
+  "code": 0,
+  "data": {
+    "connections": 42,
+    "messagesSent": 1234,
+    "uptime": "24h0m0s"
+  }
+}
+```
+
 #### 消息类型
 1. 小说更新消息
 ```json
@@ -171,6 +185,47 @@
     "content": "string"
   },
   "time": "2024-03-17T15:04:05Z"
+}
+```
+
+### 5. 阅读记录接口
+
+#### 批量获取阅读记录
+- 路径: `POST /api/v1/reading/records/batch`
+- 头部: X-Device-ID
+- 请求体:
+```json
+{
+  "novelIds": ["id1", "id2", "id3"]
+}
+```
+- 返回: 多个小说的阅读记录
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "id1": [...],
+    "id2": [...],
+    "id3": [...]
+  }
+}
+```
+
+#### 获取阅读统计
+- 路径: `GET /api/v1/reading/stats`
+- 头部: X-Device-ID
+- 返回: 用户的阅读统计信息
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "totalReadTime": 3600,
+    "totalChapters": 42,
+    "readProgress": 0.75,
+    "lastActiveDate": "2024-03-17T15:04:05Z"
+  }
 }
 ```
 

@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"sync"
+	"time"
 )
 
 // Hub 维护活动的WebSocket连接集合
@@ -20,6 +21,10 @@ type Hub struct {
 
 	// 互斥锁保护clients map
 	mu sync.RWMutex
+
+	// 统计信息
+	messagesSent int64
+	startTime    time.Time
 }
 
 // NewHub 创建一个新的Hub
@@ -29,6 +34,7 @@ func NewHub() *Hub {
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
+		startTime:  time.Now(),
 	}
 }
 
@@ -55,6 +61,7 @@ func (h *Hub) Run() {
 				if client.IsAlive() {
 					select {
 					case client.send <- message:
+						h.messagesSent++
 					default:
 						h.mu.RUnlock()
 						h.mu.Lock()
@@ -82,4 +89,16 @@ func (h *Hub) GetActiveConnections() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return len(h.clients)
+}
+
+// GetMessagesSent 获取已发送消息数量
+func (h *Hub) GetMessagesSent() int64 {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.messagesSent
+}
+
+// GetStartTime 获取服务启动时间
+func (h *Hub) GetStartTime() time.Time {
+	return h.startTime
 }

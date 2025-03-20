@@ -22,6 +22,20 @@ const (
 	ErrInvalidParameter
 	ErrCacheOperationFailed
 	ErrDatabaseOperationFailed
+
+	// 阅读记录相关错误码
+	ErrReadRecordNotFound
+	ErrReadRecordExists
+	ErrInvalidReadDuration
+
+	// 已读章节相关错误码
+	ErrReadChapterNotFound
+	ErrReadChapterExists
+	ErrInvalidReadCount
+
+	// 阅读统计相关错误码
+	ErrReadingStatNotFound
+	ErrInvalidDateRange
 )
 
 // 错误码对应的消息
@@ -39,6 +53,14 @@ var errorMessages = map[ErrorCode]string{
 	ErrInvalidParameter:        "无效的参数",
 	ErrCacheOperationFailed:    "缓存操作失败",
 	ErrDatabaseOperationFailed: "数据库操作失败",
+	ErrReadRecordNotFound:      "阅读记录不存在",
+	ErrReadRecordExists:        "阅读记录已存在",
+	ErrInvalidReadDuration:     "无效的阅读时长",
+	ErrReadChapterNotFound:     "已读章节记录不存在",
+	ErrReadChapterExists:       "已读章节记录已存在",
+	ErrInvalidReadCount:        "无效的阅读次数",
+	ErrReadingStatNotFound:     "阅读统计不存在",
+	ErrInvalidDateRange:        "无效的日期范围",
 }
 
 // BusinessError 业务错误类型
