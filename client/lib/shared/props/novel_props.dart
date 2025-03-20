@@ -22,7 +22,7 @@ class NovelProps {
           : '${AppConfig.staticUrl}${novel.cover}';
     }
 
-    // 如果没有封面，尝试使用第一章第一张图片作为封面
+    // 如果没有封面，使用第一章第一张图片作为封面
     final encodedTitle = Uri.encodeComponent(novel.title);
     return '${AppConfig.staticUrl}/novels/$encodedTitle/volume_1/chapter_1/001.${_imageFormats[0]}';
   }
@@ -117,6 +117,7 @@ class _CoverImageState extends State<_CoverImage> {
       );
     }
 
+    // 使用Container包裹Image，确保居中显示
     return Container(
       width: widget.width,
       height: widget.height,
@@ -125,6 +126,7 @@ class _CoverImageState extends State<_CoverImage> {
         _currentUrl,
         key: ValueKey('${_currentUrl}_$_uniqueKey'),
         fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
           return const Center(

@@ -26,9 +26,11 @@ class NovelDetailPage extends StatelessWidget {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 300,
+            expandedHeight: 400,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
+              expandedTitleScale: 1.0,
+              collapseMode: CollapseMode.parallax,
               background: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -44,7 +46,7 @@ class NovelDetailPage extends StatelessWidget {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withOpacity(0.7),
+                          Colors.black.withAlpha(179),
                         ],
                       ),
                     ),
@@ -149,12 +151,8 @@ class NovelDetailPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    novel.description,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                    ),
+                  _ExpandableDescription(
+                    description: novel.description,
                   ),
                   const SizedBox(height: 16),
 
@@ -180,6 +178,67 @@ class NovelDetailPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ExpandableDescription extends StatefulWidget {
+  final String description;
+
+  const _ExpandableDescription({
+    required this.description,
+  });
+
+  @override
+  State<_ExpandableDescription> createState() => _ExpandableDescriptionState();
+}
+
+class _ExpandableDescriptionState extends State<_ExpandableDescription> {
+  bool _isExpanded = false;
+  static const _maxLines = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.description,
+          style: const TextStyle(
+            fontSize: 14,
+            height: 1.5,
+          ),
+          maxLines: _isExpanded ? null : _maxLines,
+          overflow: _isExpanded ? null : TextOverflow.ellipsis,
+        ),
+        if (widget.description.length > 100) ...[
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _isExpanded ? '收起' : '展开',
+                  style: TextStyle(
+                    color: Theme.of(context).primaryColor,
+                    fontSize: 14,
+                  ),
+                ),
+                Icon(
+                  _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  color: Theme.of(context).primaryColor,
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 } 
