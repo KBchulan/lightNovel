@@ -9,16 +9,33 @@
 // ****************************************************************************
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/novel.dart';
+import '../../../core/models/chapter_info.dart';
 import '../../../shared/props/novel_props.dart';
+import '../../../core/providers/volume_provider.dart';
 
-class NovelDetailPage extends StatelessWidget {
+class NovelDetailPage extends ConsumerStatefulWidget {
   final Novel novel;
 
   const NovelDetailPage({
     super.key,
     required this.novel,
   });
+
+  @override
+  ConsumerState<NovelDetailPage> createState() => _NovelDetailPageState();
+}
+
+class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
+  @override
+  void initState() {
+    super.initState();
+    // 加载卷列表
+    Future.microtask(() {
+      ref.read(volumeNotifierProvider.notifier).fetchVolumes(widget.novel.id);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +45,14 @@ class NovelDetailPage extends StatelessWidget {
           SliverAppBar(
             expandedHeight: 400,
             pinned: true,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.share),
+                onPressed: () {
+                  // TODO: 实现分享功能
+                },
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               expandedTitleScale: 1.0,
               collapseMode: CollapseMode.parallax,
@@ -35,7 +60,7 @@ class NovelDetailPage extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   NovelProps.getCoverImage(
-                    novel,
+                    widget.novel,
                     width: double.infinity,
                     height: double.infinity,
                   ),
@@ -59,7 +84,7 @@ class NovelDetailPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          novel.title,
+                          widget.novel.title,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24,
@@ -68,7 +93,7 @@ class NovelDetailPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          novel.author,
+                          widget.novel.author,
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 16,
@@ -76,7 +101,7 @@ class NovelDetailPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '更新时间：${NovelProps.formatDateTime(novel.updatedAt)}',
+                          '更新时间：${NovelProps.formatDateTime(widget.novel.updatedAt)}',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 14,
@@ -96,22 +121,19 @@ class NovelDetailPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 标签
-                  if (novel.tags.isNotEmpty) ...[
-                    SizedBox(
-                      height: 30,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: novel.tags.length,
-                        separatorBuilder: (context, index) => 
-                            const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          return Chip(
-                            label: Text(novel.tags[index]),
-                            materialTapTargetSize: 
-                                MaterialTapTargetSize.shrinkWrap,
-                          );
-                        },
-                      ),
+                  if (widget.novel.tags.isNotEmpty) ...[
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: widget.novel.tags.map((tag) {
+                        return Chip(
+                          label: Text(tag),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          labelStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                        );
+                      }).toList(),
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -152,31 +174,147 @@ class NovelDetailPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   _ExpandableDescription(
-                    description: novel.description,
+                    description: widget.novel.description,
                   ),
                   const SizedBox(height: 16),
 
                   // 目录
-                  const Text(
-                    '目录',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    title: Text('共 ${novel.volumeCount} 卷'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      // TODO: 跳转到目录页面
-                    },
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        '目录',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _VolumeList(novel: widget.novel),
+                    ],
                   ),
                 ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _VolumeList extends ConsumerStatefulWidget {
+  final Novel novel;
+
+  const _VolumeList({
+    required this.novel,
+  });
+
+  @override
+  ConsumerState<_VolumeList> createState() => _VolumeListState();
+}
+
+class _VolumeListState extends ConsumerState<_VolumeList> {
+  final Map<int, List<ChapterInfo>> _chapters = {};
+  final Set<int> _expandedVolumes = {};
+
+  Future<void> _toggleVolume(int volumeNumber) async {
+    if (_expandedVolumes.contains(volumeNumber)) {
+      setState(() {
+        _expandedVolumes.remove(volumeNumber);
+      });
+      return;
+    }
+
+    if (!_chapters.containsKey(volumeNumber)) {
+      final chapters = await ref.read(volumeNotifierProvider.notifier).fetchChapters(
+        widget.novel.id,
+        volumeNumber,
+      );
+      setState(() {
+        _chapters[volumeNumber] = chapters;
+      });
+    }
+
+    setState(() {
+      _expandedVolumes.add(volumeNumber);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final volumesAsync = ref.watch(volumeNotifierProvider);
+
+    return volumesAsync.when(
+      data: (volumes) {
+        if (volumes.isEmpty) {
+          return const SizedBox(
+            height: 40,
+            child: Center(
+              child: Text('暂无卷'),
+            ),
+          );
+        }
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: volumes.map((volume) {
+            final isExpanded = _expandedVolumes.contains(volume.volumeNumber);
+            final chapters = _chapters[volume.volumeNumber] ?? [];
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  visualDensity: const VisualDensity(vertical: -4),
+                  title: Text(
+                    '第 ${volume.volumeNumber} 卷',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                  subtitle: Text('共 ${volume.chapterCount} 话'),
+                  trailing: Icon(
+                    isExpanded ? Icons.expand_less : Icons.expand_more,
+                  ),
+                  onTap: () => _toggleVolume(volume.volumeNumber),
+                ),
+                if (isExpanded)
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: chapters.map((chapter) => ListTile(
+                      contentPadding: const EdgeInsets.only(left: 16),
+                      visualDensity: const VisualDensity(vertical: -4),
+                      title: Text(
+                        '第 ${chapter.chapterNumber} 话 ${chapter.title}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                        ),
+                      ),
+                      onTap: () {
+                        // TODO: 跳转到章节阅读页面
+                      },
+                    )).toList(),
+                  ),
+              ],
+            );
+          }).toList(),
+        );
+      },
+      loading: () => const SizedBox(
+        height: 40,
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (error, stack) => SizedBox(
+        height: 40,
+        child: Center(
+          child: Text('加载失败: ${error.toString()}'),
+        ),
       ),
     );
   }
