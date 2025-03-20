@@ -17,6 +17,7 @@ import '../widgets/animated_filter_chip.dart';
 import '../../../shared/props/novel_tags.dart';
 import '../widgets/search_box.dart';
 import '../widgets/search_page.dart';
+import '../../novel/pages/novel_detail_page.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -112,7 +113,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                         return NovelCard(
                           novel: novel,
                           onTap: () {
-                            // TODO: 导航到小说详情页
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => NovelDetailPage(novel: novel),
+                              ),
+                            );
                           },
                         );
                       },
