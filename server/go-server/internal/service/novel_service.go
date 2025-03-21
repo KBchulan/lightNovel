@@ -207,7 +207,7 @@ func ExtractChapterTitle(content string) string {
 		}
 	}
 
-	return "第1章" // 默认标题
+	return "第1话" // 默认标题
 }
 
 // UpdateChapterTitle 更新章节标题
@@ -219,7 +219,7 @@ func (s *NovelService) UpdateChapterTitle(ctx context.Context, chapter *models.C
 	// 从内容中提取标题
 	title := ExtractChapterTitle(chapter.Content)
 	if title == "" {
-		title = fmt.Sprintf("第%d章", chapter.ChapterNumber)
+		title = fmt.Sprintf("第%d话", chapter.ChapterNumber)
 	}
 
 	// 更新数据库
@@ -278,7 +278,7 @@ func (s *NovelService) GetChaptersByVolumeID(ctx context.Context, novelID string
 		if ch.Title == "" {
 			if err := s.UpdateChapterTitle(ctx, &ch); err != nil {
 				// 如果更新失败，使用默认标题
-				ch.Title = fmt.Sprintf("第%d章", ch.ChapterNumber)
+				ch.Title = fmt.Sprintf("第%d话", ch.ChapterNumber)
 			}
 		}
 
@@ -329,7 +329,7 @@ func (s *NovelService) GetChapterByNumber(ctx context.Context, novelID string, v
 	if chapter.Title == "" {
 		if err := s.UpdateChapterTitle(ctx, &chapter); err != nil {
 			// 如果更新失败，使用默认标题
-			chapter.Title = fmt.Sprintf("第%d章", chapter.ChapterNumber)
+			chapter.Title = fmt.Sprintf("第%d话", chapter.ChapterNumber)
 		}
 	}
 

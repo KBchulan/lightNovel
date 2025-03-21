@@ -8,7 +8,6 @@
 // @history    
 // ****************************************************************************
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../api/api_client.dart';
 import '../models/novel.dart';

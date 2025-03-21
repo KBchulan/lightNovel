@@ -120,7 +120,7 @@ class NovelShareSheet extends StatelessWidget {
         content: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 color: Colors.white.withAlpha(30),
                 shape: BoxShape.circle,
