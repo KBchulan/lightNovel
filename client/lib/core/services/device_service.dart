@@ -25,19 +25,19 @@ class DeviceService {
   DeviceService(this._storage);
 
   Future<String> getDeviceId() async {
-    // 1. 检查内存缓存
+    // 检查内存缓存
     if (_cachedDeviceId != null) {
       return _cachedDeviceId!;
     }
 
-    // 2. 检查文件存储
+    // 检查文件存储
     final fileId = await _readDeviceIdFromFile();
     if (fileId != null) {
       _cachedDeviceId = fileId;
       return fileId;
     }
 
-    // 3. 检查持久化存储
+    // 检查持久化存储
     String? deviceId = await _storage.getData<String>(_deviceIdKey);
     if (deviceId != null) {
       _cachedDeviceId = deviceId;
@@ -45,7 +45,7 @@ class DeviceService {
       return deviceId;
     }
 
-    // 4. 生成新的UUID
+    // 生成新的UUID
     deviceId = const Uuid().v4();
     _cachedDeviceId = deviceId;
     await _storage.saveData(_deviceIdKey, deviceId);
@@ -56,11 +56,11 @@ class DeviceService {
   Future<String?> _readDeviceIdFromFile() async {
     try {
       final directory = await _getApplicationDocumentsDirectory();
-      debugPrint('📁 尝试读取设备ID文件，目录: ${directory.path}');
+      debugPrint('📁 尝试读取设备ID文件,目录: ${directory.path}');
       final file = File('${directory.path}/$_deviceIdFileName');
       
       if (await file.exists()) {
-        debugPrint('📄 设备ID文件存在，正在读取...');
+        debugPrint('📄 设备ID文件存在,正在读取...');
         final content = await file.readAsString();
         // 提取UUID（跳过注释行）
         final lines = content.split('\n');

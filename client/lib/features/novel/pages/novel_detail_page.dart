@@ -14,6 +14,7 @@ import '../../../core/models/novel.dart';
 import '../../../core/models/chapter_info.dart';
 import '../../../shared/props/novel_props.dart';
 import '../../../core/providers/volume_provider.dart';
+import '../widgets/novel_share_sheet.dart';
 
 class NovelDetailPage extends ConsumerStatefulWidget {
   final Novel novel;
@@ -49,7 +50,11 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
               IconButton(
                 icon: const Icon(Icons.share),
                 onPressed: () {
-                  // TODO: 实现分享功能
+                  showModalBottomSheet(
+                    context: context,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => NovelShareSheet(novel: widget.novel),
+                  );
                 },
               ),
             ],
