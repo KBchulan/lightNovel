@@ -31,7 +31,7 @@ class AppConfig {
     return 'https://120.27.201.149:8080'; // 阿里云服务器
   }
 
-  static String get wsUrl {
+  static String get wsBaseUrl {
     if (isDebug) {
       return 'ws://localhost:8080/api/v1/ws'; // 本地服务器
     }
@@ -57,8 +57,8 @@ class AppConfig {
   static const bool defaultShowProgress = true;
 
   // API超时设置
-  static const Duration connectionTimeout = Duration(seconds: 5);
-  static const Duration receiveTimeout = Duration(seconds: 5);
+  static const Duration connectionTimeout = Duration(seconds: 30);
+  static const Duration receiveTimeout = Duration(seconds: 30);
 
   // 本地存储键
   static const String deviceIdKey = 'device_id';

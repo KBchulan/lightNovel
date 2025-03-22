@@ -23,8 +23,9 @@ mixin _$ReadingProgress {
   String get id => throw _privateConstructorUsedError;
   String get deviceId => throw _privateConstructorUsedError;
   String get novelId => throw _privateConstructorUsedError;
-  CurrentProgress get currentProgress => throw _privateConstructorUsedError;
-  DateTime get createdAt => throw _privateConstructorUsedError;
+  int get volumeNumber => throw _privateConstructorUsedError;
+  int get chapterNumber => throw _privateConstructorUsedError;
+  int get position => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
 
   /// Serializes this ReadingProgress to a JSON map.
@@ -47,11 +48,10 @@ abstract class $ReadingProgressCopyWith<$Res> {
       {String id,
       String deviceId,
       String novelId,
-      CurrentProgress currentProgress,
-      DateTime createdAt,
+      int volumeNumber,
+      int chapterNumber,
+      int position,
       DateTime updatedAt});
-
-  $CurrentProgressCopyWith<$Res> get currentProgress;
 }
 
 /// @nodoc
@@ -72,8 +72,9 @@ class _$ReadingProgressCopyWithImpl<$Res, $Val extends ReadingProgress>
     Object? id = null,
     Object? deviceId = null,
     Object? novelId = null,
-    Object? currentProgress = null,
-    Object? createdAt = null,
+    Object? volumeNumber = null,
+    Object? chapterNumber = null,
+    Object? position = null,
     Object? updatedAt = null,
   }) {
     return _then(_value.copyWith(
@@ -89,29 +90,23 @@ class _$ReadingProgressCopyWithImpl<$Res, $Val extends ReadingProgress>
           ? _value.novelId
           : novelId // ignore: cast_nullable_to_non_nullable
               as String,
-      currentProgress: null == currentProgress
-          ? _value.currentProgress
-          : currentProgress // ignore: cast_nullable_to_non_nullable
-              as CurrentProgress,
-      createdAt: null == createdAt
-          ? _value.createdAt
-          : createdAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
+      volumeNumber: null == volumeNumber
+          ? _value.volumeNumber
+          : volumeNumber // ignore: cast_nullable_to_non_nullable
+              as int,
+      chapterNumber: null == chapterNumber
+          ? _value.chapterNumber
+          : chapterNumber // ignore: cast_nullable_to_non_nullable
+              as int,
+      position: null == position
+          ? _value.position
+          : position // ignore: cast_nullable_to_non_nullable
+              as int,
       updatedAt: null == updatedAt
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
     ) as $Val);
-  }
-
-  /// Create a copy of ReadingProgress
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @pragma('vm:prefer-inline')
-  $CurrentProgressCopyWith<$Res> get currentProgress {
-    return $CurrentProgressCopyWith<$Res>(_value.currentProgress, (value) {
-      return _then(_value.copyWith(currentProgress: value) as $Val);
-    });
   }
 }
 
@@ -127,12 +122,10 @@ abstract class _$$ReadingProgressImplCopyWith<$Res>
       {String id,
       String deviceId,
       String novelId,
-      CurrentProgress currentProgress,
-      DateTime createdAt,
+      int volumeNumber,
+      int chapterNumber,
+      int position,
       DateTime updatedAt});
-
-  @override
-  $CurrentProgressCopyWith<$Res> get currentProgress;
 }
 
 /// @nodoc
@@ -151,8 +144,9 @@ class __$$ReadingProgressImplCopyWithImpl<$Res>
     Object? id = null,
     Object? deviceId = null,
     Object? novelId = null,
-    Object? currentProgress = null,
-    Object? createdAt = null,
+    Object? volumeNumber = null,
+    Object? chapterNumber = null,
+    Object? position = null,
     Object? updatedAt = null,
   }) {
     return _then(_$ReadingProgressImpl(
@@ -168,14 +162,18 @@ class __$$ReadingProgressImplCopyWithImpl<$Res>
           ? _value.novelId
           : novelId // ignore: cast_nullable_to_non_nullable
               as String,
-      currentProgress: null == currentProgress
-          ? _value.currentProgress
-          : currentProgress // ignore: cast_nullable_to_non_nullable
-              as CurrentProgress,
-      createdAt: null == createdAt
-          ? _value.createdAt
-          : createdAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
+      volumeNumber: null == volumeNumber
+          ? _value.volumeNumber
+          : volumeNumber // ignore: cast_nullable_to_non_nullable
+              as int,
+      chapterNumber: null == chapterNumber
+          ? _value.chapterNumber
+          : chapterNumber // ignore: cast_nullable_to_non_nullable
+              as int,
+      position: null == position
+          ? _value.position
+          : position // ignore: cast_nullable_to_non_nullable
+              as int,
       updatedAt: null == updatedAt
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
@@ -191,8 +189,9 @@ class _$ReadingProgressImpl implements _ReadingProgress {
       {required this.id,
       required this.deviceId,
       required this.novelId,
-      required this.currentProgress,
-      required this.createdAt,
+      required this.volumeNumber,
+      required this.chapterNumber,
+      required this.position,
       required this.updatedAt});
 
   factory _$ReadingProgressImpl.fromJson(Map<String, dynamic> json) =>
@@ -205,15 +204,17 @@ class _$ReadingProgressImpl implements _ReadingProgress {
   @override
   final String novelId;
   @override
-  final CurrentProgress currentProgress;
+  final int volumeNumber;
   @override
-  final DateTime createdAt;
+  final int chapterNumber;
+  @override
+  final int position;
   @override
   final DateTime updatedAt;
 
   @override
   String toString() {
-    return 'ReadingProgress(id: $id, deviceId: $deviceId, novelId: $novelId, currentProgress: $currentProgress, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'ReadingProgress(id: $id, deviceId: $deviceId, novelId: $novelId, volumeNumber: $volumeNumber, chapterNumber: $chapterNumber, position: $position, updatedAt: $updatedAt)';
   }
 
   @override
@@ -225,10 +226,12 @@ class _$ReadingProgressImpl implements _ReadingProgress {
             (identical(other.deviceId, deviceId) ||
                 other.deviceId == deviceId) &&
             (identical(other.novelId, novelId) || other.novelId == novelId) &&
-            (identical(other.currentProgress, currentProgress) ||
-                other.currentProgress == currentProgress) &&
-            (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt) &&
+            (identical(other.volumeNumber, volumeNumber) ||
+                other.volumeNumber == volumeNumber) &&
+            (identical(other.chapterNumber, chapterNumber) ||
+                other.chapterNumber == chapterNumber) &&
+            (identical(other.position, position) ||
+                other.position == position) &&
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt));
   }
@@ -236,7 +239,7 @@ class _$ReadingProgressImpl implements _ReadingProgress {
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(runtimeType, id, deviceId, novelId,
-      currentProgress, createdAt, updatedAt);
+      volumeNumber, chapterNumber, position, updatedAt);
 
   /// Create a copy of ReadingProgress
   /// with the given fields replaced by the non-null parameter values.
@@ -260,8 +263,9 @@ abstract class _ReadingProgress implements ReadingProgress {
       {required final String id,
       required final String deviceId,
       required final String novelId,
-      required final CurrentProgress currentProgress,
-      required final DateTime createdAt,
+      required final int volumeNumber,
+      required final int chapterNumber,
+      required final int position,
       required final DateTime updatedAt}) = _$ReadingProgressImpl;
 
   factory _ReadingProgress.fromJson(Map<String, dynamic> json) =
@@ -274,9 +278,11 @@ abstract class _ReadingProgress implements ReadingProgress {
   @override
   String get novelId;
   @override
-  CurrentProgress get currentProgress;
+  int get volumeNumber;
   @override
-  DateTime get createdAt;
+  int get chapterNumber;
+  @override
+  int get position;
   @override
   DateTime get updatedAt;
 

@@ -10,21 +10,21 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import '../models/novel.dart';
 import '../models/volume.dart';
 import '../models/chapter.dart';
 import '../models/chapter_info.dart';
 import '../models/bookmark.dart';
 import '../models/reading_progress.dart';
-import '../models/read_chapter_record.dart';
-import '../models/read_record.dart';
-import '../models/reading_stat.dart';
+import '../models/read_history.dart';
 import '../services/device_service.dart';
 import '../../config/app_config.dart';
 
 class ApiClient {
   final Dio _dio;
   final DeviceService _deviceService;
+  WebSocketChannel? _wsChannel;
 
   ApiClient(this._deviceService)
       : _dio = Dio(BaseOptions(
@@ -48,6 +48,31 @@ class ApiClient {
         onError: _onError,
       ),
     );
+  }
+
+  // 连接WebSocket
+  Future<WebSocketChannel> connectWebSocket() async {
+    if (_wsChannel != null) {
+      return _wsChannel!;
+    }
+
+    final deviceId = await _deviceService.getDeviceId();
+    final wsUrl = Uri.parse('${AppConfig.wsBaseUrl}/ws')
+        .replace(queryParameters: {'deviceId': deviceId});
+
+    try {
+      _wsChannel = WebSocketChannel.connect(wsUrl);
+      return _wsChannel!;
+    } catch (e) {
+      debugPrint('❌ WebSocket连接错误: $e');
+      rethrow;
+    }
+  }
+
+  // 关闭WebSocket连接
+  Future<void> closeWebSocket() async {
+    await _wsChannel?.sink.close();
+    _wsChannel = null;
   }
 
   Future<void> _onRequest(
@@ -546,11 +571,10 @@ class ApiClient {
   }
 
   // 获取阅读历史
-  Future<List<ReadingProgress>> getReadingHistory({int limit = 10}) async {
+  Future<List<ReadHistory>> getReadHistory() async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/user/history',
-        queryParameters: {'limit': limit},
+        '/user/reading/history',
       );
 
       final data = response.data;
@@ -563,7 +587,7 @@ class ApiClient {
 
       final historyList = data['data'] as List;
       return historyList
-          .map((json) => ReadingProgress.fromJson(json as Map<String, dynamic>))
+          .map((json) => ReadHistory.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
       debugPrint('❌ 获取阅读历史错误: $e');
@@ -571,18 +595,78 @@ class ApiClient {
     }
   }
 
+  // 更新阅读历史
+  Future<void> updateReadHistory(String novelId, {DateTime? lastRead}) async {
+    try {
+      await _dio.put<Map<String, dynamic>>(
+        '/user/reading/history/$novelId',
+        data: {
+          if (lastRead != null) 'lastRead': lastRead.toIso8601String(),
+        },
+      );
+    } catch (e) {
+      debugPrint('❌ 更新阅读历史错误: $e');
+      rethrow;
+    }
+  }
+
+  // 删除阅读历史
+  Future<void> deleteReadHistory(String novelId) async {
+    try {
+      await _dio.delete<Map<String, dynamic>>(
+        '/user/reading/history/$novelId',
+      );
+    } catch (e) {
+      debugPrint('❌ 删除阅读历史错误: $e');
+      rethrow;
+    }
+  }
+
+  // 清空阅读历史
+  Future<void> clearReadHistory() async {
+    try {
+      await _dio.delete<Map<String, dynamic>>(
+        '/user/reading/history',
+      );
+    } catch (e) {
+      debugPrint('❌ 清空阅读历史错误: $e');
+      rethrow;
+    }
+  }
+
+  // 获取阅读进度
+  Future<ReadingProgress> getReadProgress(String novelId) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/user/reading/progress/$novelId',
+      );
+
+      final data = response.data;
+      if (data == null || data['data'] == null) {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          error: '响应数据格式错误',
+        );
+      }
+
+      return ReadingProgress.fromJson(data['data'] as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('❌ 获取阅读进度错误: $e');
+      rethrow;
+    }
+  }
+
   // 更新阅读进度
-  Future<void> updateReadingProgress({
+  Future<void> updateReadProgress({
     required String novelId,
     required int volumeNumber,
     required int chapterNumber,
     required int position,
   }) async {
     try {
-      await _dio.patch<Map<String, dynamic>>(
-        '/user/progress',
+      await _dio.put<Map<String, dynamic>>(
+        '/user/reading/progress/$novelId',
         data: {
-          'novelId': novelId,
           'volumeNumber': volumeNumber,
           'chapterNumber': chapterNumber,
           'position': position,
@@ -634,154 +718,6 @@ class ApiClient {
       return data;
     } catch (e) {
       debugPrint('❌ 获取系统性能指标错误: $e');
-      rethrow;
-    }
-  }
-
-  // 获取已读章节列表
-  Future<List<ReadChapterRecord>> getReadChapters(String novelId) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        '/user/reading/chapters/$novelId',
-      );
-
-      final data = response.data;
-      if (data == null || data['data'] == null) {
-        throw DioException(
-          requestOptions: response.requestOptions,
-          error: '响应数据格式错误',
-        );
-      }
-
-      final chaptersList = data['data'] as List;
-      return chaptersList
-          .map((json) => ReadChapterRecord.fromJson(json as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      debugPrint('❌ 获取已读章节列表错误: $e');
-      rethrow;
-    }
-  }
-
-  // 获取阅读记录
-  Future<List<ReadRecord>> getReadRecords(String novelId, {int? page, int? pageSize}) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        '/user/reading/records/$novelId',
-        queryParameters: {
-          if (page != null) 'page': page,
-          if (pageSize != null) 'page_size': pageSize,
-        },
-      );
-
-      final data = response.data;
-      if (data == null || data['data'] == null) {
-        throw DioException(
-          requestOptions: response.requestOptions,
-          error: '响应数据格式错误',
-        );
-      }
-
-      final recordsList = data['data'] as List;
-      return recordsList
-          .map((json) => ReadRecord.fromJson(json as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      debugPrint('❌ 获取阅读记录错误: $e');
-      rethrow;
-    }
-  }
-
-  // 删除阅读记录
-  Future<void> deleteReadRecord(String novelId, String recordId) async {
-    try {
-      await _dio.delete<Map<String, dynamic>>(
-        '/user/reading/records/$novelId/$recordId',
-      );
-    } catch (e) {
-      debugPrint('❌ 删除阅读记录错误: $e');
-      rethrow;
-    }
-  }
-
-  // 添加阅读记录
-  Future<void> addReadRecord({
-    required String novelId,
-    required int volumeNumber,
-    required int chapterNumber,
-    required int readDuration,
-    required String source,
-    int? startPosition,
-    int? endPosition,
-    bool? isComplete,
-  }) async {
-    try {
-      await _dio.post<Map<String, dynamic>>(
-        '/user/reading/records',
-        data: {
-          'novelId': novelId,
-          'volumeNumber': volumeNumber,
-          'chapterNumber': chapterNumber,
-          'readDuration': readDuration,
-          'source': source,
-          if (startPosition != null) 'startPosition': startPosition,
-          if (endPosition != null) 'endPosition': endPosition,
-          if (isComplete != null) 'isComplete': isComplete,
-        },
-      );
-    } catch (e) {
-      debugPrint('❌ 添加阅读记录错误: $e');
-      rethrow;
-    }
-  }
-
-  // 获取阅读统计
-  Future<ReadingStat> getReadingStat(String novelId) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        '/user/reading/stats/$novelId',
-      );
-
-      final data = response.data;
-      if (data == null || data['data'] == null) {
-        throw DioException(
-          requestOptions: response.requestOptions,
-          error: '响应数据格式错误',
-        );
-      }
-
-      return ReadingStat.fromJson(data['data'] as Map<String, dynamic>);
-    } catch (e) {
-      debugPrint('❌ 获取阅读统计错误: $e');
-      rethrow;
-    }
-  }
-
-  // 获取阅读统计列表
-  Future<List<ReadingStat>> getReadingStats({int? page, int? pageSize}) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        '/user/reading/stats',
-        queryParameters: {
-          if (page != null) 'page': page,
-          if (pageSize != null) 'page_size': pageSize,
-        },
-      );
-
-      final data = response.data;
-      if (data == null || data['data'] == null) {
-        throw DioException(
-          requestOptions: response.requestOptions,
-          error: '响应数据格式错误',
-        );
-      }
-
-      final statsList = data['data'] as List;
-      return statsList
-          .map((json) => ReadingStat.fromJson(json as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      debugPrint('❌ 获取阅读统计列表错误: $e');
       rethrow;
     }
   }

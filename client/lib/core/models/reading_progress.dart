@@ -9,7 +9,6 @@
 // ****************************************************************************
 
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'current_progress.dart';
 
 part 'reading_progress.freezed.dart';
 part 'reading_progress.g.dart';
@@ -20,8 +19,9 @@ class ReadingProgress with _$ReadingProgress {
     required String id,
     required String deviceId,
     required String novelId,
-    required CurrentProgress currentProgress,
-    required DateTime createdAt,
+    required int volumeNumber,
+    required int chapterNumber,
+    required int position,
     required DateTime updatedAt,
   }) = _ReadingProgress;
 

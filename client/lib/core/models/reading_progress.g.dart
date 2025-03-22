@@ -12,9 +12,9 @@ _$ReadingProgressImpl _$$ReadingProgressImplFromJson(
       id: json['id'] as String,
       deviceId: json['deviceId'] as String,
       novelId: json['novelId'] as String,
-      currentProgress: CurrentProgress.fromJson(
-          json['currentProgress'] as Map<String, dynamic>),
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      volumeNumber: (json['volumeNumber'] as num).toInt(),
+      chapterNumber: (json['chapterNumber'] as num).toInt(),
+      position: (json['position'] as num).toInt(),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
 
@@ -24,7 +24,8 @@ Map<String, dynamic> _$$ReadingProgressImplToJson(
       'id': instance.id,
       'deviceId': instance.deviceId,
       'novelId': instance.novelId,
-      'currentProgress': instance.currentProgress,
-      'createdAt': instance.createdAt.toIso8601String(),
+      'volumeNumber': instance.volumeNumber,
+      'chapterNumber': instance.chapterNumber,
+      'position': instance.position,
       'updatedAt': instance.updatedAt.toIso8601String(),
     };
