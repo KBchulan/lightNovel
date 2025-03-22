@@ -47,7 +47,7 @@ class _MainPageState extends ConsumerState<MainPage> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
-            label: '主页',
+            label: '首页',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.book),

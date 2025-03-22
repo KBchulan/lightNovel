@@ -40,7 +40,6 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     _scrollController = ScrollController();
     _initReadingState();
     
-    // 设置全屏和竖屏
     _setSystemUIMode(true);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   }
@@ -71,11 +70,12 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
   Future<void> _initReadingState() async {
     setState(() => _isLoading = true);
     try {
-      // 设置当前章节
-      ref.read(readingNotifierProvider.notifier)
+      // 设置当前章节和阅读模式
+      final notifier = ref.read(readingNotifierProvider.notifier);
+      notifier
         ..setCurrentChapter(widget.chapter)
-        ..setReadingMode(ReadingMode.scroll)  // 设置为滚动模式
-        ..setShowControls(false);  // 默认隐藏控制栏
+        ..setReadingMode(ReadingMode.scroll)
+        ..setShowControls(false);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -96,7 +96,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
       backgroundColor: isDark ? Colors.black : Colors.white,
       body: Stack(
         children: [
-          // 阅读内容 - 使用固定位置
+          // 阅读内容
           Positioned(
             top: 0,
             left: 0,
@@ -105,7 +105,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
             child: _buildReadingContent(readingState, isDark),
           ),
           
-          // 控制面板 - 使用Positioned.fill确保完全覆盖
+          // 控制面板
           if (readingState.showControls)
             Positioned.fill(
               child: _buildControlPanel(context, isDark),
@@ -156,7 +156,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
       color: Colors.transparent,
       child: Column(
         children: [
-          // 顶部标题栏 - 添加滑动动画
+          // 顶部标题栏
           SlideAnimation(
             direction: SlideDirection.fromTop,
             child: Container(
@@ -197,7 +197,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
             ),
           ),
           
-          // 中间区域 - 透明背景，点击时隐藏控制面板
+          // 中间区域
           Expanded(
             child: GestureDetector(
               onTap: () {
@@ -209,7 +209,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
             ),
           ),
           
-          // 底部功能按钮 - 添加滑动动画
+          // 底部功能按钮
           SlideAnimation(
             direction: SlideDirection.fromBottom,
             child: Container(

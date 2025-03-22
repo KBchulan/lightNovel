@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/novel_provider.dart';
 import '../../../core/providers/tag_filter_provider.dart';
 import '../../../shared/widgets/novel_card.dart';
+import '../../../shared/widgets/page_transitions.dart';
 import '../widgets/animated_filter_chip.dart';
 import '../../../shared/props/novel_tags.dart';
 import '../widgets/search_box.dart';
@@ -47,8 +48,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: GestureDetector(
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const SearchPage(),
+                      FadePageRoute(
+                        page: const SearchPage(),
                       ),
                     );
                   },
@@ -115,8 +116,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                builder: (context) => NovelDetailPage(novel: novel),
+                              NovelDetailPageRoute(
+                                page: NovelDetailPage(novel: novel),
                               ),
                             );
                           },

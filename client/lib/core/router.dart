@@ -73,7 +73,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
-            label: '主页',
+            label: '首页',
           ),
           NavigationDestination(
             icon: Icon(Icons.book_outlined),

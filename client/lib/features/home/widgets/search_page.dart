@@ -26,7 +26,7 @@ class SearchPage extends ConsumerWidget {
     ref.read(novelNotifierProvider.notifier).searchNovels(value);
     
     Navigator.of(context).push(
-      SlideUpPageRoute(
+      SearchResultPageRoute(
         page: SearchResultPage(keyword: value),
       ),
     );

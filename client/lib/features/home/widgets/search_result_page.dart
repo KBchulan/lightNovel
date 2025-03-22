@@ -12,6 +12,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/novel_provider.dart';
 import '../../../shared/widgets/novel_card.dart';
+import '../../../shared/widgets/page_transitions.dart';
+import '../../../features/novel/pages/novel_detail_page.dart';
 import 'search_box.dart';
 
 class SearchResultPage extends ConsumerWidget {
@@ -89,7 +91,12 @@ class SearchResultPage extends ConsumerWidget {
                         return NovelCard(
                           novel: novel,
                           onTap: () {
-                            // TODO: 导航到小说详情页
+                            Navigator.push(
+                              context,
+                              NovelDetailPageRoute(
+                                page: NovelDetailPage(novel: novel),
+                              ),
+                            );
                           },
                         );
                       },

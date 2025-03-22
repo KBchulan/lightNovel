@@ -14,6 +14,7 @@ import '../../../core/models/novel.dart';
 import '../../../core/models/chapter_info.dart';
 import '../../../shared/props/novel_props.dart';
 import '../../../core/providers/volume_provider.dart';
+import '../../../shared/widgets/page_transitions.dart';
 import '../widgets/novel_share_sheet.dart';
 import '../../reading/pages/reading_page.dart';
 
@@ -47,6 +48,12 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
           SliverAppBar(
             expandedHeight: 400,
             pinned: true,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.share),
@@ -54,6 +61,11 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                   showModalBottomSheet(
                     context: context,
                     backgroundColor: Colors.transparent,
+                    isScrollControlled: true,
+                    transitionAnimationController: AnimationController(
+                      vsync: Navigator.of(context),
+                      duration: const Duration(milliseconds: 300),
+                    ),
                     builder: (context) => NovelShareSheet(novel: widget.novel),
                   );
                 },
@@ -198,11 +210,12 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                             if (context.mounted) {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (context) => ReadingPage(
+                                SharedAxisPageRoute(
+                                  page: ReadingPage(
                                     chapter: firstChapter,
                                     novelId: widget.novel.id,
                                   ),
+                                  type: SharedAxisTransitionType.horizontal,
                                 ),
                               );
                             }
@@ -356,11 +369,12 @@ class _VolumeListState extends ConsumerState<_VolumeList> {
                         if (context.mounted) {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) => ReadingPage(
+                            SharedAxisPageRoute(
+                              page: ReadingPage(
                                 chapter: chapter,
                                 novelId: widget.novel.id,
                               ),
+                              type: SharedAxisTransitionType.horizontal,
                             ),
                           );
                         }

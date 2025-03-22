@@ -97,7 +97,7 @@ class ReadingState {
     this.currentChapter,
     this.readingProgress,
     this.isFullScreen = false,
-    this.showControls = true,
+    this.showControls = false,
   });
 
   ReadingState copyWith({
