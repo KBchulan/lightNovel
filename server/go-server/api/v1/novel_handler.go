@@ -39,6 +39,18 @@ import (
 // @name X-Device-ID
 // @description 设备ID用于识别用户，如果未提供则使用客户端IP
 
+// @tag.name novels
+// @tag.description 小说相关接口
+
+// @tag.name favorites
+// @tag.description 用户收藏相关接口
+
+// @tag.name bookmarks
+// @tag.description 用户书签相关接口
+
+// @tag.name reading
+// @tag.description 用户阅读记录相关接口
+
 // @tag.name static
 // @tag.description 静态资源服务
 
@@ -365,7 +377,7 @@ func (h *NovelHandler) UpdateReadingProgress(c *gin.Context) {
 
 // @Summary 获取用户书签
 // @Description 获取用户的所有书签
-// @Tags user
+// @Tags bookmarks
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -500,10 +512,9 @@ func (h *NovelHandler) getDeviceAndNovelID(c *gin.Context) (string, string, erro
 	return deviceID, novelID, nil
 }
 
-// GetUserFavorites 获取用户收藏列表
 // @Summary 获取用户收藏列表
 // @Description 获取用户收藏的小说列表
-// @Tags user
+// @Tags favorites
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -528,10 +539,9 @@ func (h *NovelHandler) GetUserFavorites(c *gin.Context) {
 	response.Success(c, novels)
 }
 
-// AddFavorite 添加收藏
 // @Summary 添加收藏
 // @Description 添加小说到收藏列表
-// @Tags user
+// @Tags favorites
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -558,10 +568,9 @@ func (h *NovelHandler) AddFavorite(c *gin.Context) {
 	response.Success(c, gin.H{"message": "收藏成功"})
 }
 
-// RemoveFavorite 取消收藏
 // @Summary 取消收藏
 // @Description 从收藏列表中移除小说
-// @Tags user
+// @Tags favorites
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -588,10 +597,9 @@ func (h *NovelHandler) RemoveFavorite(c *gin.Context) {
 	response.Success(c, gin.H{"message": "取消收藏成功"})
 }
 
-// IsFavorite 检查是否已收藏
 // @Summary 检查是否已收藏
 // @Description 检查小说是否已收藏
-// @Tags user
+// @Tags favorites
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -634,13 +642,16 @@ type AddReadRecordRequest struct {
 
 // @Summary 添加阅读记录
 // @Description 添加一条阅读记录，同时更新阅读统计和已读章节记录
-// @Tags 阅读记录
+// @Tags reading
 // @Accept json
 // @Produce json
-// @Param device-id header string true "设备ID"
+// @Security ApiKeyAuth
+// @Param X-Device-ID header string true "设备ID"
 // @Param request body AddReadRecordRequest true "阅读记录信息"
-// @Success 200 {object} response.Response
-// @Router /api/v1/reading/records [post]
+// @Success 200 {object} response.Response "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /user/reading/records [post]
 func (h *NovelHandler) AddReadRecord(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
 	if deviceID == "" {
@@ -686,7 +697,7 @@ func (h *NovelHandler) AddReadRecord(c *gin.Context) {
 // @Success 200 {object} response.Response{data=[]models.ReadRecord} "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /reading/records/{novel-id} [get]
+// @Router /user/reading/records/{novel-id} [get]
 func (h *NovelHandler) GetReadRecords(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
 	novelID := c.Param("novel-id")
@@ -718,7 +729,7 @@ func (h *NovelHandler) GetReadRecords(c *gin.Context) {
 // @Success 200 {object} response.Response "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 404 {object} response.Response "记录不存在"
-// @Router /reading/records/{novel-id}/{record-id} [delete]
+// @Router /user/reading/records/{novel-id}/{record-id} [delete]
 func (h *NovelHandler) DeleteReadRecord(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
 	novelID := c.Param("novel-id")
@@ -752,7 +763,7 @@ func (h *NovelHandler) DeleteReadRecord(c *gin.Context) {
 // @Success 200 {object} response.Response{data=[]models.ReadChapterRecord} "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /reading/chapters/{novel-id} [get]
+// @Router /user/reading/chapters/{novel-id} [get]
 func (h *NovelHandler) GetReadChapters(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
 	novelID := c.Param("novel-id")
@@ -780,7 +791,7 @@ func (h *NovelHandler) GetReadChapters(c *gin.Context) {
 // @Success 200 {object} response.Response{data=models.ReadingStat} "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 404 {object} response.Response "统计不存在"
-// @Router /reading/stats/{novel-id} [get]
+// @Router /user/reading/stats/{novel-id} [get]
 func (h *NovelHandler) GetReadingStat(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
 	novelID := c.Param("novel-id")
@@ -809,7 +820,7 @@ func (h *NovelHandler) GetReadingStat(c *gin.Context) {
 // @Success 200 {object} response.Response{data=[]models.ReadingStat} "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /reading/stats [get]
+// @Router /user/reading/stats [get]
 func (h *NovelHandler) GetReadingStats(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
 	if deviceID == "" {

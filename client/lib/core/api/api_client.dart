@@ -627,7 +627,7 @@ class ApiClient {
   Future<List<ReadChapterRecord>> getReadChapters(String novelId) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/reading/chapters/$novelId',
+        '/user/reading/chapters/$novelId',
       );
 
       final data = response.data;
@@ -652,7 +652,7 @@ class ApiClient {
   Future<List<ReadRecord>> getReadRecords(String novelId, {int? page, int? pageSize}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/reading/records/$novelId',
+        '/user/reading/records/$novelId',
         queryParameters: {
           if (page != null) 'page': page,
           if (pageSize != null) 'page_size': pageSize,
@@ -681,7 +681,7 @@ class ApiClient {
   Future<void> deleteReadRecord(String novelId, String recordId) async {
     try {
       await _dio.delete<Map<String, dynamic>>(
-        '/reading/records/$novelId/$recordId',
+        '/user/reading/records/$novelId/$recordId',
       );
     } catch (e) {
       debugPrint('❌ 删除阅读记录错误: $e');
@@ -702,7 +702,7 @@ class ApiClient {
   }) async {
     try {
       await _dio.post<Map<String, dynamic>>(
-        '/reading/records',
+        '/user/reading/records',
         data: {
           'novelId': novelId,
           'volumeNumber': volumeNumber,
@@ -724,7 +724,7 @@ class ApiClient {
   Future<ReadingStat> getReadingStat(String novelId) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/reading/stats/$novelId',
+        '/user/reading/stats/$novelId',
       );
 
       final data = response.data;
@@ -746,7 +746,7 @@ class ApiClient {
   Future<List<ReadingStat>> getReadingStats({int? page, int? pageSize}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/reading/stats',
+        '/user/reading/stats',
         queryParameters: {
           if (page != null) 'page': page,
           if (pageSize != null) 'page_size': pageSize,

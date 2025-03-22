@@ -1,3 +1,16 @@
+// @title Light Novel API
+// @version 1.0
+// @description 轻小说阅读API服务
+// @BasePath /api/v1
+// @schemes http https
+// @contact.name API Support
+// @contact.email support@example.com
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @tag.name system
+// @tag.description 系统相关接口
+
 // ****************************************************************************
 //
 // @file       health.go
@@ -55,7 +68,7 @@ func NewHealthHandler() *HealthHandler {
 // @Accept json
 // @Produce json
 // @Success 200 {object} response.Response{data=HealthResponse} "成功"
-// @Router /health [get]
+// @Router /api/v1/health [get]
 func (h *HealthHandler) Check(c *gin.Context) {
 	c.JSON(http.StatusOK, HealthResponse{
 		Status:    "ok",
@@ -70,7 +83,7 @@ func (h *HealthHandler) Check(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 200 {object} response.Response{data=MetricsResponse} "成功"
-// @Router /metrics [get]
+// @Router /api/v1/metrics [get]
 func (h *HealthHandler) Metrics(c *gin.Context) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)

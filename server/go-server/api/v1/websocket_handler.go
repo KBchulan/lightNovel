@@ -70,6 +70,23 @@ func NewWebSocketHandler(cfg *config.Config) *WebSocketHandler {
 	}
 }
 
+// @title Light Novel API
+// @version 1.0
+// @description 轻小说阅读API服务
+// @BasePath /api/v1
+// @schemes http https
+// @contact.name API Support
+// @contact.email support@example.com
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-Device-ID
+// @description 设备ID用于识别用户，如果未提供则使用客户端IP
+
+// @tag.name websocket
+// @tag.description WebSocket相关接口
+
 // @Summary WebSocket连接
 // @Description 建立WebSocket连接以接收实时更新通知
 // @Tags websocket
@@ -79,7 +96,7 @@ func NewWebSocketHandler(cfg *config.Config) *WebSocketHandler {
 // @Param X-Device-ID header string false "设备ID，如果未提供则使用客户端IP"
 // @Success 101 {string} string "Switching Protocols"
 // @Failure 400 {object} response.Response "无效的请求"
-// @Router /ws [get]
+// @Router /api/v1/ws [get]
 func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
 	if deviceID == "" {
@@ -108,7 +125,7 @@ func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} response.Response{data=map[string]interface{}} "成功"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /ws/status [get]
+// @Router /api/v1/ws/status [get]
 func (h *WebSocketHandler) GetStatus(c *gin.Context) {
 	status := map[string]interface{}{
 		"connections":  h.hub.GetActiveConnections(),
