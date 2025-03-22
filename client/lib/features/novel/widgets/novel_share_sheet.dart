@@ -172,7 +172,7 @@ class NovelShareSheet extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('提示'),
-        content: Text('暂不支持直接分享到$platform, 请使用复制功能后手动分享'),
+        content: Text('对接$platform的功能真的做不出来,可以用复制功能喵'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
