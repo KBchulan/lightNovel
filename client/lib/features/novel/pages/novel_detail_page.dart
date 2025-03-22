@@ -19,6 +19,7 @@ import '../widgets/novel_share_sheet.dart';
 import '../../reading/pages/reading_page.dart';
 import '../../../core/providers/api_provider.dart';
 import '../../../shared/widgets/snack_message.dart';
+import '../../../core/providers/novel_provider.dart';
 
 class NovelDetailPage extends ConsumerStatefulWidget {
   final Novel novel;
@@ -67,11 +68,15 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
         await ref.read(apiClientProvider).removeFavorite(widget.novel.id);
         if (mounted) {
           SnackMessage.show(context, '取消收藏了喵');
+          // 刷新收藏列表
+          ref.read(favoriteNotifierProvider.notifier).fetchFavorites();
         }
       } else {
         await ref.read(apiClientProvider).addFavorite(widget.novel.id);
         if (mounted) {
           SnackMessage.show(context, '添加到收藏了喵');
+          // 刷新收藏列表
+          ref.read(favoriteNotifierProvider.notifier).fetchFavorites();
         }
       }
       if (mounted) {
@@ -123,10 +128,14 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  NovelProps.getCoverImage(
-                    widget.novel,
-                    width: double.infinity,
-                    height: double.infinity,
+                  Align(
+                    alignment: Alignment.topCenter,
+                    child: SizedBox.expand(
+                      child: NovelProps.buildCoverImage(
+                        NovelProps.getCoverUrl(widget.novel),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                   Container(
                     decoration: BoxDecoration(

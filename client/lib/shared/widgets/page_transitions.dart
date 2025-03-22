@@ -10,13 +10,37 @@
 
 import 'package:flutter/material.dart';
 
-/// 从下方滑入的页面路由
-class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
+abstract class BasePageRoute<T> extends PageRouteBuilder<T> {
+  static const defaultDuration = Duration(milliseconds: 300);
+  static const fastDuration = Duration(milliseconds: 200);
+  static const defaultCurve = Curves.easeOutCubic;
+
   final Widget page;
 
-  SlideUpPageRoute({required this.page})
-      : super(
+  BasePageRoute({
+    required this.page,
+    required super.transitionsBuilder,
+    Duration duration = defaultDuration,
+    Duration? reverseDuration,
+    bool opaque = true,
+    Color? barrierColor,
+    bool maintainState = true,
+  }) : super(
           pageBuilder: (context, animation, secondaryAnimation) => page,
+          transitionDuration: duration,
+          reverseTransitionDuration: reverseDuration ?? duration,
+          opaque: opaque,
+          barrierColor: barrierColor,
+          maintainState: maintainState,
+        );
+}
+
+/// 从下方滑入的页面路由
+class SlideUpPageRoute<T> extends BasePageRoute<T> {
+  SlideUpPageRoute({
+    required super.page,
+  }) : super(
+          duration: BasePageRoute.fastDuration,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(0.0, 0.05);
             const end = Offset.zero;
@@ -33,23 +57,19 @@ class SlideUpPageRoute<T> extends PageRouteBuilder<T> {
               ),
             );
           },
-          transitionDuration: const Duration(milliseconds: 200),
         );
 }
 
 /// 从右侧滑入的页面路由
-class SlideHorizontalPageRoute<T> extends PageRouteBuilder<T> {
-  final Widget page;
-
-  SlideHorizontalPageRoute({required this.page})
-      : super(
-          pageBuilder: (context, animation, secondaryAnimation) => page,
+class SlideHorizontalPageRoute<T> extends BasePageRoute<T> {
+  SlideHorizontalPageRoute({
+    required super.page,
+  }) : super(
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(1.0, 0.0);
             const end = Offset.zero;
-            const curve = Curves.easeInOutCubic;
 
-            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: BasePageRoute.defaultCurve));
             var offsetAnimation = animation.drive(tween);
 
             return SlideTransition(
@@ -57,34 +77,30 @@ class SlideHorizontalPageRoute<T> extends PageRouteBuilder<T> {
               child: child,
             );
           },
-          transitionDuration: const Duration(milliseconds: 300),
         );
 }
 
 /// 淡入淡出页面路由
-class FadePageRoute<T> extends PageRouteBuilder<T> {
-  final Widget page;
-
-  FadePageRoute({required this.page})
-      : super(
-          pageBuilder: (context, animation, secondaryAnimation) => page,
+class FadePageRoute<T> extends BasePageRoute<T> {
+  FadePageRoute({
+    required super.page,
+  }) : super(
+          duration: BasePageRoute.fastDuration,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(
               opacity: animation,
               child: child,
             );
           },
-          transitionDuration: const Duration(milliseconds: 200),
         );
 }
 
 /// 缩放页面路由
-class ScalePageRoute<T> extends PageRouteBuilder<T> {
-  final Widget page;
-
-  ScalePageRoute({required this.page})
-      : super(
-          pageBuilder: (context, animation, secondaryAnimation) => page,
+class ScalePageRoute<T> extends BasePageRoute<T> {
+  ScalePageRoute({
+    required super.page,
+  }) : super(
+          duration: BasePageRoute.fastDuration,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const curve = Curves.easeInOut;
             var scaleTween = Tween(begin: 0.9, end: 1.0).chain(CurveTween(curve: curve));
@@ -98,43 +114,36 @@ class ScalePageRoute<T> extends PageRouteBuilder<T> {
               ),
             );
           },
-          transitionDuration: const Duration(milliseconds: 200),
         );
 }
 
 /// 共享元素过渡路由
-class SharedAxisPageRoute<T> extends PageRouteBuilder<T> {
-  final Widget page;
+class SharedAxisPageRoute<T> extends BasePageRoute<T> {
   final SharedAxisTransitionType type;
 
   SharedAxisPageRoute({
-    required this.page,
+    required super.page,
     this.type = SharedAxisTransitionType.horizontal,
   }) : super(
-          pageBuilder: (context, animation, secondaryAnimation) => page,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = Offset(1.0, 0.0);
-            const end = Offset.zero;
-            const curve = Curves.easeInOutCubic;
-
-            var slideAnimation = Tween(begin: begin, end: end)
-                .chain(CurveTween(curve: curve))
-                .animate(animation);
-
-            var scaleAnimation = Tween(begin: 0.9, end: 1.0)
-                .chain(CurveTween(curve: curve))
-                .animate(animation);
-
             Widget transitionChild = child;
 
             switch (type) {
               case SharedAxisTransitionType.horizontal:
+                var slideAnimation = Tween(
+                  begin: const Offset(1.0, 0.0),
+                  end: Offset.zero,
+                ).chain(CurveTween(curve: BasePageRoute.defaultCurve)).animate(animation);
                 transitionChild = SlideTransition(
                   position: slideAnimation,
                   child: child,
                 );
                 break;
               case SharedAxisTransitionType.scaled:
+                var scaleAnimation = Tween(
+                  begin: 0.9,
+                  end: 1.0,
+                ).chain(CurveTween(curve: BasePageRoute.defaultCurve)).animate(animation);
                 transitionChild = ScaleTransition(
                   scale: scaleAnimation,
                   child: child,
@@ -150,20 +159,22 @@ class SharedAxisPageRoute<T> extends PageRouteBuilder<T> {
 
             return transitionChild;
           },
-          transitionDuration: const Duration(milliseconds: 300),
         );
 }
 
 /// 书本打开/关闭动画路由
-class BookPageRoute<T> extends PageRouteBuilder<T> {
-  final Widget page;
+class BookPageRoute<T> extends BasePageRoute<T> {
   final bool reverse;
 
   BookPageRoute({
-    required this.page,
+    required super.page,
     this.reverse = false,
   }) : super(
-          pageBuilder: (context, animation, secondaryAnimation) => page,
+          duration: const Duration(milliseconds: 400),
+          reverseDuration: const Duration(milliseconds: 400),
+          opaque: true,
+          barrierColor: Colors.transparent,
+          maintainState: true,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(1.0, 0.0);
             const end = Offset.zero;
@@ -193,51 +204,45 @@ class BookPageRoute<T> extends PageRouteBuilder<T> {
               ),
             );
           },
-          transitionDuration: const Duration(milliseconds: 400),
-          reverseTransitionDuration: const Duration(milliseconds: 400),
         );
 }
 
 /// 搜索结果页面过渡动画
-class SearchResultPageRoute<T> extends PageRouteBuilder<T> {
-  final Widget page;
-
-  SearchResultPageRoute({required this.page})
-      : super(
-          pageBuilder: (context, animation, secondaryAnimation) => page,
+class SearchResultPageRoute<T> extends BasePageRoute<T> {
+  SearchResultPageRoute({
+    required super.page,
+  }) : super(
+          duration: const Duration(milliseconds: 250),
+          reverseDuration: BasePageRoute.fastDuration,
+          opaque: false,
+          barrierColor: Colors.transparent,
+          maintainState: true,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            var curve = Curves.easeOutCubic;
-            
-            // 主页面的动画
             var slideAnimation = Tween(
               begin: const Offset(1.0, 0.0),
               end: Offset.zero,
             ).animate(CurvedAnimation(
               parent: animation,
-              curve: curve,
+              curve: BasePageRoute.defaultCurve,
             ));
 
-            // 背景页面动画
             var secondarySlideAnimation = Tween(
               begin: Offset.zero,
               end: const Offset(-0.2, 0.0),
             ).animate(CurvedAnimation(
               parent: secondaryAnimation,
-              curve: curve,
+              curve: BasePageRoute.defaultCurve,
             ));
 
             return Stack(
               fit: StackFit.passthrough,
               children: [
-                // 背景页面动画
                 SlideTransition(
                   position: secondarySlideAnimation,
                   child: Container(
                     color: Theme.of(context).scaffoldBackgroundColor,
                   ),
                 ),
-                
-                // 主页面动画
                 SlideTransition(
                   position: slideAnimation,
                   child: child,
@@ -245,59 +250,49 @@ class SearchResultPageRoute<T> extends PageRouteBuilder<T> {
               ],
             );
           },
-          transitionDuration: const Duration(milliseconds: 250),
-          reverseTransitionDuration: const Duration(milliseconds: 200),
-          opaque: false,
-          barrierColor: Colors.transparent,
-          maintainState: true,
         );
 }
 
 /// 小说详情页面过渡动画
-class NovelDetailPageRoute<T> extends PageRouteBuilder<T> {
-  final Widget page;
+class NovelDetailPageRoute<T> extends BasePageRoute<T> {
   final bool isReverse;
 
   NovelDetailPageRoute({
-    required this.page,
+    required super.page,
     this.isReverse = false,
   }) : super(
-          pageBuilder: (context, animation, secondaryAnimation) => page,
+          duration: BasePageRoute.defaultDuration,
+          reverseDuration: BasePageRoute.fastDuration,
+          opaque: false,
+          barrierColor: Colors.transparent,
+          maintainState: true,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            var curve = Curves.easeOutCubic;
-            
-            // 缩放动画
             var scaleAnimation = Tween(
               begin: isReverse ? 1.0 : 0.95,
               end: isReverse ? 0.95 : 1.0,
-            ).chain(CurveTween(curve: curve)).animate(animation);
+            ).chain(CurveTween(curve: BasePageRoute.defaultCurve)).animate(animation);
 
-            // 淡入动画
             var fadeAnimation = Tween(
               begin: isReverse ? 1.0 : 0.3,
               end: isReverse ? 0.3 : 1.0,
-            ).chain(CurveTween(curve: curve)).animate(animation);
+            ).chain(CurveTween(curve: BasePageRoute.defaultCurve)).animate(animation);
 
-            // 背景页面动画
             var secondaryScaleAnimation = Tween(
               begin: isReverse ? 0.95 : 1.0,
               end: isReverse ? 1.0 : 0.95,
             ).animate(CurvedAnimation(
               parent: secondaryAnimation,
-              curve: curve,
+              curve: BasePageRoute.defaultCurve,
             ));
 
             return Stack(
               children: [
-                // 背景页面动画
                 ScaleTransition(
                   scale: secondaryScaleAnimation,
                   child: Container(
                     color: Theme.of(context).scaffoldBackgroundColor,
                   ),
                 ),
-                
-                // 主内容动画
                 FadeTransition(
                   opacity: fadeAnimation,
                   child: ScaleTransition(
@@ -308,11 +303,6 @@ class NovelDetailPageRoute<T> extends PageRouteBuilder<T> {
               ],
             );
           },
-          transitionDuration: const Duration(milliseconds: 300),
-          reverseTransitionDuration: const Duration(milliseconds: 200),
-          opaque: false,
-          barrierColor: Colors.transparent,
-          maintainState: true,
         );
 }
 

@@ -335,8 +335,8 @@ class _ListViewNovelCard extends StatelessWidget {
                   child: SizedBox(
                     width: 80,
                     height: 120,
-                    child: NovelProps.getCoverImage(
-                      novel,
+                    child: NovelProps.buildCoverImage(
+                      NovelProps.getCoverUrl(novel),
                       width: 80,
                       height: 120,
                     ),

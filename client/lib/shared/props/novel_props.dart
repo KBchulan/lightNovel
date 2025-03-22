@@ -27,11 +27,31 @@ class NovelProps {
     return '${AppConfig.staticUrl}/novels/$encodedTitle/volume_1/chapter_1/001.${_imageFormats[0]}';
   }
 
-  static Widget getCoverImage(Novel novel, {double? width, double? height}) {
-    return _CoverImage(
-      novel: novel,
+  static Widget buildCoverImage(
+    String? url, {
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.cover,
+    Widget? placeholder,
+    Widget? errorWidget,
+  }) {
+    if (url == null) {
+      return Container(
+        width: width,
+        height: height,
+        color: Colors.grey[200],
+        child: const Icon(Icons.book, size: 48, color: Colors.grey),
+      );
+    }
+
+    return _NetworkImageWithRetry(
+      url: url,
       width: width,
       height: height,
+      fit: fit,
+      placeholder: placeholder,
+      errorWidget: errorWidget,
+      imageFormats: _imageFormats,
     );
   }
 
@@ -51,22 +71,30 @@ class NovelProps {
   }
 }
 
-class _CoverImage extends StatefulWidget {
-  final Novel novel;
+class _NetworkImageWithRetry extends StatefulWidget {
+  final String url;
   final double? width;
   final double? height;
+  final BoxFit fit;
+  final Widget? placeholder;
+  final Widget? errorWidget;
+  final List<String> imageFormats;
 
-  const _CoverImage({
-    required this.novel,
+  const _NetworkImageWithRetry({
+    required this.url,
     this.width,
     this.height,
+    this.fit = BoxFit.cover,
+    this.placeholder,
+    this.errorWidget,
+    required this.imageFormats,
   });
 
   @override
-  State<_CoverImage> createState() => _CoverImageState();
+  State<_NetworkImageWithRetry> createState() => _NetworkImageWithRetryState();
 }
 
-class _CoverImageState extends State<_CoverImage> {
+class _NetworkImageWithRetryState extends State<_NetworkImageWithRetry> {
   late String _currentUrl;
   int _currentFormatIndex = 0;
   bool _hasError = false;
@@ -75,21 +103,21 @@ class _CoverImageState extends State<_CoverImage> {
   @override
   void initState() {
     super.initState();
-    _currentUrl = NovelProps.getCoverUrl(widget.novel) ?? '';
+    _currentUrl = widget.url;
   }
 
   @override
-  void didUpdateWidget(_CoverImage oldWidget) {
+  void didUpdateWidget(_NetworkImageWithRetry oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.novel != widget.novel) {
-      _currentUrl = NovelProps.getCoverUrl(widget.novel) ?? '';
+    if (oldWidget.url != widget.url) {
+      _currentUrl = widget.url;
       _currentFormatIndex = 0;
       _hasError = false;
     }
   }
 
   void _tryNextFormat() {
-    if (_currentFormatIndex >= NovelProps._imageFormats.length - 1) {
+    if (_currentFormatIndex >= widget.imageFormats.length - 1) {
       setState(() => _hasError = true);
       return;
     }
@@ -97,49 +125,52 @@ class _CoverImageState extends State<_CoverImage> {
     _currentFormatIndex++;
     final baseUrl = _currentUrl.substring(0, _currentUrl.lastIndexOf('.'));
     setState(() {
-      _currentUrl = '$baseUrl.${NovelProps._imageFormats[_currentFormatIndex]}';
+      _currentUrl = '$baseUrl.${widget.imageFormats[_currentFormatIndex]}';
       _hasError = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_currentUrl.isEmpty || _hasError) {
-      return Container(
+    if (_hasError) {
+      return widget.errorWidget ?? Container(
         width: widget.width,
         height: widget.height,
         color: Colors.grey[200],
-        child: const Icon(
-          Icons.book,
-          size: 48,
-          color: Colors.grey,
-        ),
+        child: const Icon(Icons.broken_image, size: 48, color: Colors.grey),
       );
     }
 
-    // 使用Container包裹Image，确保居中显示
-    return Container(
+    return Image.network(
+      _currentUrl,
+      key: ValueKey('${_currentUrl}_$_uniqueKey'),
       width: widget.width,
       height: widget.height,
-      color: Colors.grey[200],
-      child: Image.network(
-        _currentUrl,
-        key: ValueKey('${_currentUrl}_$_uniqueKey'),
-        fit: BoxFit.cover,
-        alignment: Alignment.topCenter,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return const Center(
+      fit: widget.fit,
+      alignment: Alignment.topCenter,
+      filterQuality: FilterQuality.high,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return widget.placeholder ?? Container(
+          width: widget.width,
+          height: widget.height,
+          color: Colors.grey[200],
+          child: const Center(
             child: CircularProgressIndicator(),
-          );
-        },
-        errorBuilder: (context, error, stackTrace) {
-          _tryNextFormat();
-          return const Center(
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        _tryNextFormat();
+        return widget.placeholder ?? Container(
+          width: widget.width,
+          height: widget.height,
+          color: Colors.grey[200],
+          child: const Center(
             child: CircularProgressIndicator(),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 } 

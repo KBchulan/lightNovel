@@ -29,45 +29,57 @@ class ThemeNotifier extends _$ThemeNotifier {
 }
 
 class AppTheme {
+  static const _subThemesData = FlexSubThemesData(
+    blendOnColors: false,
+    useTextTheme: true,
+    useM2StyleDividerInM3: true,
+    alignedDropdown: true,
+    useInputDecoratorThemeInDialogs: true,
+    defaultRadius: 8,
+    fabUseShape: true,
+    interactionEffects: true,
+    thinBorderWidth: 1.0,
+    thickBorderWidth: 2.0,
+    textButtonRadius: 8.0,
+    elevatedButtonRadius: 8.0,
+    outlinedButtonRadius: 8.0,
+    toggleButtonsRadius: 8.0,
+    inputDecoratorRadius: 8.0,
+    cardRadius: 12.0,
+    popupMenuRadius: 8.0,
+    dialogRadius: 12.0,
+    timePickerDialogRadius: 12.0,
+    bottomSheetRadius: 16.0,
+    navigationBarIndicatorRadius: 8.0,
+    tabBarIndicatorWeight: 2.0,
+    bottomNavigationBarElevation: 2.0,
+    navigationBarHeight: 56.0,
+    drawerWidth: 304.0,
+    dialogBackgroundSchemeColor: SchemeColor.surface,
+    datePickerHeaderBackgroundSchemeColor: SchemeColor.primary,
+    snackBarBackgroundSchemeColor: SchemeColor.inverseSurface,
+  );
+
+  static const _pageTransitionsTheme = PageTransitionsTheme(
+    builders: {
+      TargetPlatform.android: ZoomPageTransitionsBuilder(),
+      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+      TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+    },
+  );
+
   static final light = FlexThemeData.light(
     scheme: FlexScheme.blue,
     surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
     blendLevel: 7,
-    subThemesData: const FlexSubThemesData(
+    subThemesData: _subThemesData.copyWith(
       blendOnLevel: 10,
-      blendOnColors: false,
-      useTextTheme: true,
-      useM2StyleDividerInM3: true,
-      alignedDropdown: true,
-      useInputDecoratorThemeInDialogs: true,
-      defaultRadius: 8,
-      fabUseShape: true,
-      interactionEffects: true,
-      thinBorderWidth: 1.0,
-      thickBorderWidth: 2.0,
-      textButtonRadius: 8.0,
-      elevatedButtonRadius: 8.0,
-      outlinedButtonRadius: 8.0,
-      toggleButtonsRadius: 8.0,
-      inputDecoratorRadius: 8.0,
-      cardRadius: 12.0,
-      popupMenuRadius: 8.0,
-      dialogRadius: 12.0,
-      timePickerDialogRadius: 12.0,
-      bottomSheetRadius: 16.0,
-      navigationBarIndicatorRadius: 8.0,
-      tabBarIndicatorWeight: 2.0,
-      bottomNavigationBarElevation: 2.0,
-      navigationBarHeight: 56.0,
-      drawerWidth: 304.0,
-      dialogBackgroundSchemeColor: SchemeColor.surface,
-      datePickerHeaderBackgroundSchemeColor: SchemeColor.primary,
-      snackBarBackgroundSchemeColor: SchemeColor.inverseSurface,
     ),
     visualDensity: FlexColorScheme.comfortablePlatformDensity,
     useMaterial3: true,
     swapLegacyOnMaterial3: true,
-    // 添加自定义颜色
     colors: const FlexSchemeColor(
       primary: Color(0xFF2196F3),
       primaryContainer: Color(0xFFBBDEFB),
@@ -79,55 +91,19 @@ class AppTheme {
       error: Color(0xFFB00020),
     ),
   ).copyWith(
-    pageTransitionsTheme: const PageTransitionsTheme(
-      builders: {
-        TargetPlatform.android: ZoomPageTransitionsBuilder(),
-        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-        TargetPlatform.linux: ZoomPageTransitionsBuilder(),
-        TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-        TargetPlatform.windows: ZoomPageTransitionsBuilder(),
-      },
-    ),
+    pageTransitionsTheme: _pageTransitionsTheme,
   );
 
   static final dark = FlexThemeData.dark(
     scheme: FlexScheme.blue,
     surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
     blendLevel: 13,
-    subThemesData: const FlexSubThemesData(
+    subThemesData: _subThemesData.copyWith(
       blendOnLevel: 20,
-      useTextTheme: true,
-      useM2StyleDividerInM3: true,
-      alignedDropdown: true,
-      useInputDecoratorThemeInDialogs: true,
-      defaultRadius: 8,
-      fabUseShape: true,
-      interactionEffects: true,
-      thinBorderWidth: 1.0,
-      thickBorderWidth: 2.0,
-      textButtonRadius: 8.0,
-      elevatedButtonRadius: 8.0,
-      outlinedButtonRadius: 8.0,
-      toggleButtonsRadius: 8.0,
-      inputDecoratorRadius: 8.0,
-      cardRadius: 12.0,
-      popupMenuRadius: 8.0,
-      dialogRadius: 12.0,
-      timePickerDialogRadius: 12.0,
-      bottomSheetRadius: 16.0,
-      navigationBarIndicatorRadius: 8.0,
-      tabBarIndicatorWeight: 2.0,
-      bottomNavigationBarElevation: 2.0,
-      navigationBarHeight: 56.0,
-      drawerWidth: 304.0,
-      dialogBackgroundSchemeColor: SchemeColor.surface,
-      datePickerHeaderBackgroundSchemeColor: SchemeColor.primary,
-      snackBarBackgroundSchemeColor: SchemeColor.inverseSurface,
     ),
     visualDensity: FlexColorScheme.comfortablePlatformDensity,
     useMaterial3: true,
     swapLegacyOnMaterial3: true,
-    // 添加自定义颜色
     colors: const FlexSchemeColor(
       primary: Color(0xFF90CAF9),
       primaryContainer: Color(0xFF1976D2),
@@ -139,14 +115,6 @@ class AppTheme {
       error: Color(0xFFCF6679),
     ),
   ).copyWith(
-    pageTransitionsTheme: const PageTransitionsTheme(
-      builders: {
-        TargetPlatform.android: ZoomPageTransitionsBuilder(),
-        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-        TargetPlatform.linux: ZoomPageTransitionsBuilder(),
-        TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-        TargetPlatform.windows: ZoomPageTransitionsBuilder(),
-      },
-    ),
+    pageTransitionsTheme: _pageTransitionsTheme,
   );
 }
