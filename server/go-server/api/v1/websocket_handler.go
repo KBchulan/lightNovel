@@ -75,10 +75,11 @@ func NewWebSocketHandler(cfg *config.Config) *WebSocketHandler {
 // @Tags websocket
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param X-Device-ID header string false "设备ID，如果未提供则使用客户端IP"
 // @Success 101 {string} string "Switching Protocols"
 // @Failure 400 {object} response.Response "无效的请求"
-// @Router /api/v1/ws [get]
+// @Router /ws [get]
 func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
 	if deviceID == "" {
@@ -107,7 +108,7 @@ func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} response.Response{data=map[string]interface{}} "成功"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /api/v1/ws/status [get]
+// @Router /ws/status [get]
 func (h *WebSocketHandler) GetStatus(c *gin.Context) {
 	status := map[string]interface{}{
 		"connections":  h.hub.GetActiveConnections(),

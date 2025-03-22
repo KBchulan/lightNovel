@@ -17,6 +17,7 @@ import '../../../core/providers/volume_provider.dart';
 import '../../../shared/widgets/page_transitions.dart';
 import '../widgets/novel_share_sheet.dart';
 import '../../reading/pages/reading_page.dart';
+import '../../../core/providers/api_provider.dart';
 
 class NovelDetailPage extends ConsumerStatefulWidget {
   final Novel novel;
@@ -31,13 +32,99 @@ class NovelDetailPage extends ConsumerStatefulWidget {
 }
 
 class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
+  bool _isFavorite = false;
+
   @override
   void initState() {
     super.initState();
     // 加载卷列表
     Future.microtask(() {
       ref.read(volumeNotifierProvider.notifier).fetchVolumes(widget.novel.id);
+      // 检查收藏状态
+      _checkFavoriteStatus();
     });
+  }
+
+  Future<void> _checkFavoriteStatus() async {
+    try {
+      final isFavorite = await ref.read(apiClientProvider).checkFavorite(widget.novel.id);
+      if (mounted) {
+        setState(() {
+          _isFavorite = isFavorite;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar(context, '检查收藏状态失败: $e', isError: true);
+      }
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    try {
+      if (_isFavorite) {
+        await ref.read(apiClientProvider).removeFavorite(widget.novel.id);
+        if (mounted) {
+          _showSnackBar(context, '已取消收藏');
+        }
+      } else {
+        await ref.read(apiClientProvider).addFavorite(widget.novel.id);
+        if (mounted) {
+          _showSnackBar(context, '添加到收藏了喵');
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _isFavorite = !_isFavorite;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar(context, '操作失败: $e', isError: true);
+      }
+    }
+  }
+
+  void _showSnackBar(BuildContext context, String message, {bool isError = false}) {
+    final theme = Theme.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onInverseSurface.withAlpha(31),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isError ? Icons.error_outline : Icons.check_circle_outline,
+                color: theme.colorScheme.onInverseSurface,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onInverseSurface,
+                ),
+              ),
+            ),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isError 
+            ? theme.colorScheme.errorContainer
+            : theme.colorScheme.inverseSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
   }
 
   @override
@@ -161,11 +248,9 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () {
-                            // TODO: 实现收藏功能
-                          },
-                          icon: const Icon(Icons.favorite_border),
-                          label: const Text('收藏'),
+                          onPressed: _toggleFavorite,
+                          icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border),
+                          label: Text(_isFavorite ? '已收藏' : '收藏'),
                         ),
                       ),
                       const SizedBox(width: 16),

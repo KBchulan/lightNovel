@@ -28,10 +28,11 @@ class NovelShareSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: theme.colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: Column(
@@ -41,22 +42,21 @@ class NovelShareSheet extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                const Text(
+                Text(
                   '分享',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),
           ),
-          const Divider(),
+          Divider(color: theme.colorScheme.outlineVariant),
           // 分享选项
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -78,13 +78,13 @@ class NovelShareSheet extends StatelessWidget {
                 _ShareItem(
                   icon: Icons.share,
                   label: '分享',
-                  color: Theme.of(context).colorScheme.primary,
+                  color: theme.colorScheme.primary,
                   onTap: () => _shareToSystem(context),
                 ),
                 _ShareItem(
                   icon: Icons.copy,
                   label: '复制',
-                  color: Theme.of(context).colorScheme.primary,
+                  color: theme.colorScheme.primary,
                   onTap: () => _copyShareLink(context),
                 ),
               ],
@@ -97,12 +97,8 @@ class NovelShareSheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: SizedBox(
                 width: double.infinity,
-                child: FilledButton(
+                child: FilledButton.tonal(
                   onPressed: () => Navigator.of(context).pop(),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.grey[200],
-                    foregroundColor: Colors.black87,
-                  ),
                   child: const Text('取消'),
                 ),
               ),
@@ -115,6 +111,7 @@ class NovelShareSheet extends StatelessWidget {
 
   void _copyShareLink(BuildContext context) {
     Clipboard.setData(ClipboardData(text: _shareText));
+    final theme = Theme.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -122,33 +119,31 @@ class NovelShareSheet extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(30),
+                color: theme.colorScheme.onInverseSurface.withAlpha(31),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.check_circle_outline,
-                color: Colors.white,
+                color: theme.colorScheme.onInverseSurface,
                 size: 20,
               ),
             ),
             const SizedBox(width: 12),
-            const Text(
+            Text(
               '已复制分享内容',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onInverseSurface,
               ),
             ),
           ],
         ),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        width: 200,
+        backgroundColor: theme.colorScheme.inverseSurface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(25),
+          borderRadius: BorderRadius.circular(8),
         ),
         duration: const Duration(seconds: 2),
-        animation: null,
+        margin: const EdgeInsets.all(16),
       ),
     );
     Navigator.of(context).pop();
@@ -168,15 +163,19 @@ class NovelShareSheet extends StatelessWidget {
   }
 
   void _showUnsupportedDialog(BuildContext context, String platform) {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('提示'),
-        content: Text('对接$platform的功能真的做不出来,可以用复制功能喵'),
+        title: Text('提示', style: theme.textTheme.titleLarge),
+        content: Text(
+          '对接$platform的功能真的做不出来,可以用复制功能喵',
+          style: theme.textTheme.bodyMedium,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('确定'),
+            child: Text('确定', style: TextStyle(color: theme.colorScheme.primary)),
           ),
         ],
       ),
@@ -184,15 +183,16 @@ class NovelShareSheet extends StatelessWidget {
   }
 
   void _showErrorDialog(BuildContext context, String message) {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('错误'),
-        content: Text(message),
+        title: Text('错误', style: theme.textTheme.titleLarge),
+        content: Text(message, style: theme.textTheme.bodyMedium),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('确定'),
+            child: Text('确定', style: TextStyle(color: theme.colorScheme.primary)),
           ),
         ],
       ),
@@ -215,6 +215,7 @@ class _ShareItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -227,7 +228,7 @@ class _ShareItem extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: color.withAlpha(25),
+                color: color.withAlpha(31),
                 shape: BoxShape.circle,
               ),
               child: icon is IconData
@@ -237,7 +238,9 @@ class _ShareItem extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               label,
-              style: Theme.of(context).textTheme.bodySmall,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
             ),
           ],
         ),

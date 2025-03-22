@@ -167,10 +167,10 @@ GET /api/v1/novels/:id/volumes/:vid/chapters/:cid # 获取章节内容
 
 #### 收藏管理
 
-- 获取收藏列表: `GET /api/v1/favorites`
-- 添加收藏: `POST /api/v1/favorites/:id`
-- 取消收藏: `DELETE /api/v1/favorites/:id`
-- 检查收藏状态: `GET /api/v1/favorites/:id/check`
+- 获取收藏列表: `GET /api/v1/user/favorites`
+- 添加收藏: `POST /api/v1/user/favorites/:novel_id`
+- 取消收藏: `DELETE /api/v1/user/favorites/:novel_id`
+- 检查收藏状态: `GET /api/v1/user/favorites/:novel_id/check`
 
 #### 书签管理
 

@@ -367,7 +367,7 @@ class ApiClient {
   Future<List<Novel>> getFavorites() async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/favorites',
+        '/user/favorites',
       );
 
       final data = response.data;
@@ -392,7 +392,7 @@ class ApiClient {
   Future<void> addFavorite(String novelId) async {
     try {
       await _dio.post<Map<String, dynamic>>(
-        '/favorites/$novelId',
+        '/user/favorites/$novelId',
       );
     } catch (e) {
       debugPrint('❌ 添加收藏错误: $e');
@@ -404,7 +404,7 @@ class ApiClient {
   Future<void> removeFavorite(String novelId) async {
     try {
       await _dio.delete<Map<String, dynamic>>(
-        '/favorites/$novelId',
+        '/user/favorites/$novelId',
       );
     } catch (e) {
       debugPrint('❌ 取消收藏错误: $e');
@@ -416,7 +416,7 @@ class ApiClient {
   Future<bool> checkFavorite(String novelId) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/favorites/$novelId/check',
+        '/user/favorites/$novelId/check',
       );
 
       final data = response.data;
@@ -427,7 +427,8 @@ class ApiClient {
         );
       }
 
-      return data['data'] as bool;
+      final favoriteData = data['data'] as Map<String, dynamic>;
+      return favoriteData['isFavorite'] as bool;
     } catch (e) {
       debugPrint('❌ 检查收藏状态错误: $e');
       rethrow;
@@ -626,7 +627,7 @@ class ApiClient {
   Future<List<ReadChapterRecord>> getReadChapters(String novelId) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/user/reading/chapters/$novelId',
+        '/reading/chapters/$novelId',
       );
 
       final data = response.data;
@@ -637,8 +638,8 @@ class ApiClient {
         );
       }
 
-      final recordsList = data['data'] as List;
-      return recordsList
+      final chaptersList = data['data'] as List;
+      return chaptersList
           .map((json) => ReadChapterRecord.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
@@ -648,14 +649,10 @@ class ApiClient {
   }
 
   // 获取阅读记录
-  Future<List<ReadRecord>> getReadingRecords(
-    String novelId, {
-    int? page,
-    int? pageSize,
-  }) async {
+  Future<List<ReadRecord>> getReadRecords(String novelId, {int? page, int? pageSize}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/user/reading/records/$novelId',
+        '/reading/records/$novelId',
         queryParameters: {
           if (page != null) 'page': page,
           if (pageSize != null) 'page_size': pageSize,
@@ -681,10 +678,10 @@ class ApiClient {
   }
 
   // 删除阅读记录
-  Future<void> deleteReadingRecord(String novelId, String recordId) async {
+  Future<void> deleteReadRecord(String novelId, String recordId) async {
     try {
       await _dio.delete<Map<String, dynamic>>(
-        '/user/reading/records/$novelId/$recordId',
+        '/reading/records/$novelId/$recordId',
       );
     } catch (e) {
       debugPrint('❌ 删除阅读记录错误: $e');
@@ -705,7 +702,7 @@ class ApiClient {
   }) async {
     try {
       await _dio.post<Map<String, dynamic>>(
-        '/user/reading/records',
+        '/reading/records',
         data: {
           'novelId': novelId,
           'volumeNumber': volumeNumber,
@@ -723,14 +720,33 @@ class ApiClient {
     }
   }
 
-  // 获取阅读统计列表
-  Future<List<ReadingStat>> getReadingStats({
-    int? page,
-    int? pageSize,
-  }) async {
+  // 获取阅读统计
+  Future<ReadingStat> getReadingStat(String novelId) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/user/reading/stats',
+        '/reading/stats/$novelId',
+      );
+
+      final data = response.data;
+      if (data == null || data['data'] == null) {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          error: '响应数据格式错误',
+        );
+      }
+
+      return ReadingStat.fromJson(data['data'] as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('❌ 获取阅读统计错误: $e');
+      rethrow;
+    }
+  }
+
+  // 获取阅读统计列表
+  Future<List<ReadingStat>> getReadingStats({int? page, int? pageSize}) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/reading/stats',
         queryParameters: {
           if (page != null) 'page': page,
           if (pageSize != null) 'page_size': pageSize,
@@ -751,28 +767,6 @@ class ApiClient {
           .toList();
     } catch (e) {
       debugPrint('❌ 获取阅读统计列表错误: $e');
-      rethrow;
-    }
-  }
-
-  // 获取指定小说的阅读统计
-  Future<ReadingStat> getNovelReadingStat(String novelId) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        '/user/reading/stats/$novelId',
-      );
-
-      final data = response.data;
-      if (data == null || data['data'] == null) {
-        throw DioException(
-          requestOptions: response.requestOptions,
-          error: '响应数据格式错误',
-        );
-      }
-
-      return ReadingStat.fromJson(data['data'] as Map<String, dynamic>);
-    } catch (e) {
-      debugPrint('❌ 获取小说阅读统计错误: $e');
       rethrow;
     }
   }

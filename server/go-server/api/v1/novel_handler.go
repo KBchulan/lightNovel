@@ -503,14 +503,15 @@ func (h *NovelHandler) getDeviceAndNovelID(c *gin.Context) (string, string, erro
 // GetUserFavorites 获取用户收藏列表
 // @Summary 获取用户收藏列表
 // @Description 获取用户收藏的小说列表
-// @Tags 用户
+// @Tags user
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param X-Device-ID header string true "设备ID"
 // @Success 200 {object} response.Response{data=[]models.Novel} "成功"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /api/v1/favorites [get]
+// @Router /user/favorites [get]
 func (h *NovelHandler) GetUserFavorites(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
 	if deviceID == "" {
@@ -530,15 +531,16 @@ func (h *NovelHandler) GetUserFavorites(c *gin.Context) {
 // AddFavorite 添加收藏
 // @Summary 添加收藏
 // @Description 添加小说到收藏列表
-// @Tags 用户
+// @Tags user
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param X-Device-ID header string true "设备ID"
 // @Param novel_id path string true "小说ID"
 // @Success 200 {object} response.Response "成功"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /api/v1/favorites/{novel_id} [post]
+// @Router /user/favorites/{novel_id} [post]
 func (h *NovelHandler) AddFavorite(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
 	novelID := c.Param("novel_id")
@@ -559,15 +561,16 @@ func (h *NovelHandler) AddFavorite(c *gin.Context) {
 // RemoveFavorite 取消收藏
 // @Summary 取消收藏
 // @Description 从收藏列表中移除小说
-// @Tags 用户
+// @Tags user
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param X-Device-ID header string true "设备ID"
 // @Param novel_id path string true "小说ID"
 // @Success 200 {object} response.Response "成功"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /api/v1/favorites/{novel_id} [delete]
+// @Router /user/favorites/{novel_id} [delete]
 func (h *NovelHandler) RemoveFavorite(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
 	novelID := c.Param("novel_id")
@@ -588,15 +591,16 @@ func (h *NovelHandler) RemoveFavorite(c *gin.Context) {
 // IsFavorite 检查是否已收藏
 // @Summary 检查是否已收藏
 // @Description 检查小说是否已收藏
-// @Tags 用户
+// @Tags user
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param X-Device-ID header string true "设备ID"
 // @Param novel_id path string true "小说ID"
-// @Success 200 {object} response.Response{data=bool} "成功"
+// @Success 200 {object} response.Response{data=map[string]bool} "成功"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /api/v1/favorites/{novel_id}/check [get]
+// @Router /user/favorites/{novel_id}/check [get]
 func (h *NovelHandler) IsFavorite(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
 	novelID := c.Param("novel_id")

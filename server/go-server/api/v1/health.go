@@ -54,7 +54,7 @@ func NewHealthHandler() *HealthHandler {
 // @Tags system
 // @Accept json
 // @Produce json
-// @Success 200 {object} HealthResponse "成功"
+// @Success 200 {object} response.Response{data=HealthResponse} "成功"
 // @Router /health [get]
 func (h *HealthHandler) Check(c *gin.Context) {
 	c.JSON(http.StatusOK, HealthResponse{
@@ -69,7 +69,7 @@ func (h *HealthHandler) Check(c *gin.Context) {
 // @Tags system
 // @Accept json
 // @Produce json
-// @Success 200 {object} MetricsResponse "成功"
+// @Success 200 {object} response.Response{data=MetricsResponse} "成功"
 // @Router /metrics [get]
 func (h *HealthHandler) Metrics(c *gin.Context) {
 	var m runtime.MemStats

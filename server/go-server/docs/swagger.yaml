@@ -334,148 +334,6 @@ info:
   title: Light Novel API
   version: "1.0"
 paths:
-  /api/v1/favorites:
-    get:
-      consumes:
-      - application/json
-      description: 获取用户收藏的小说列表
-      parameters:
-      - description: 设备ID
-        in: header
-        name: X-Device-ID
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/models.Novel'
-                  type: array
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: 获取用户收藏列表
-      tags:
-      - 用户
-  /api/v1/favorites/{novel_id}:
-    delete:
-      consumes:
-      - application/json
-      description: 从收藏列表中移除小说
-      parameters:
-      - description: 设备ID
-        in: header
-        name: X-Device-ID
-        required: true
-        type: string
-      - description: 小说ID
-        in: path
-        name: novel_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            $ref: '#/definitions/response.Response'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: 取消收藏
-      tags:
-      - 用户
-    post:
-      consumes:
-      - application/json
-      description: 添加小说到收藏列表
-      parameters:
-      - description: 设备ID
-        in: header
-        name: X-Device-ID
-        required: true
-        type: string
-      - description: 小说ID
-        in: path
-        name: novel_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            $ref: '#/definitions/response.Response'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: 添加收藏
-      tags:
-      - 用户
-  /api/v1/favorites/{novel_id}/check:
-    get:
-      consumes:
-      - application/json
-      description: 检查小说是否已收藏
-      parameters:
-      - description: 设备ID
-        in: header
-        name: X-Device-ID
-        required: true
-        type: string
-      - description: 小说ID
-        in: path
-        name: novel_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  type: boolean
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: 检查是否已收藏
-      tags:
-      - 用户
   /api/v1/reading/records:
     post:
       consumes:
@@ -503,55 +361,6 @@ paths:
       summary: 添加阅读记录
       tags:
       - 阅读记录
-  /api/v1/ws:
-    get:
-      consumes:
-      - application/json
-      description: 建立WebSocket连接以接收实时更新通知
-      parameters:
-      - description: 设备ID，如果未提供则使用客户端IP
-        in: header
-        name: X-Device-ID
-        type: string
-      produces:
-      - application/json
-      responses:
-        "101":
-          description: Switching Protocols
-          schema:
-            type: string
-        "400":
-          description: 无效的请求
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: WebSocket连接
-      tags:
-      - websocket
-  /api/v1/ws/status:
-    get:
-      consumes:
-      - application/json
-      description: 获取当前WebSocket连接的状态信息
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  additionalProperties: true
-                  type: object
-              type: object
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: 获取WebSocket状态
-      tags:
-      - websocket
   /health:
     get:
       consumes:
@@ -563,7 +372,12 @@ paths:
         "200":
           description: 成功
           schema:
-            $ref: '#/definitions/v1.HealthResponse'
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/v1.HealthResponse'
+              type: object
       summary: 获取系统健康状态
       tags:
       - system
@@ -578,7 +392,12 @@ paths:
         "200":
           description: 成功
           schema:
-            $ref: '#/definitions/v1.MetricsResponse'
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/v1.MetricsResponse'
+              type: object
       summary: 获取系统性能指标
       tags:
       - system
@@ -1255,6 +1074,158 @@ paths:
       summary: 更新书签
       tags:
       - bookmarks
+  /user/favorites:
+    get:
+      consumes:
+      - application/json
+      description: 获取用户收藏的小说列表
+      parameters:
+      - description: 设备ID
+        in: header
+        name: X-Device-ID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Novel'
+                  type: array
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取用户收藏列表
+      tags:
+      - user
+  /user/favorites/{novel_id}:
+    delete:
+      consumes:
+      - application/json
+      description: 从收藏列表中移除小说
+      parameters:
+      - description: 设备ID
+        in: header
+        name: X-Device-ID
+        required: true
+        type: string
+      - description: 小说ID
+        in: path
+        name: novel_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 取消收藏
+      tags:
+      - user
+    post:
+      consumes:
+      - application/json
+      description: 添加小说到收藏列表
+      parameters:
+      - description: 设备ID
+        in: header
+        name: X-Device-ID
+        required: true
+        type: string
+      - description: 小说ID
+        in: path
+        name: novel_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 添加收藏
+      tags:
+      - user
+  /user/favorites/{novel_id}/check:
+    get:
+      consumes:
+      - application/json
+      description: 检查小说是否已收藏
+      parameters:
+      - description: 设备ID
+        in: header
+        name: X-Device-ID
+        required: true
+        type: string
+      - description: 小说ID
+        in: path
+        name: novel_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  additionalProperties:
+                    type: boolean
+                  type: object
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 检查是否已收藏
+      tags:
+      - user
   /user/history:
     get:
       consumes:
@@ -1344,4 +1315,55 @@ paths:
       summary: 更新阅读进度
       tags:
       - user
+  /ws:
+    get:
+      consumes:
+      - application/json
+      description: 建立WebSocket连接以接收实时更新通知
+      parameters:
+      - description: 设备ID，如果未提供则使用客户端IP
+        in: header
+        name: X-Device-ID
+        type: string
+      produces:
+      - application/json
+      responses:
+        "101":
+          description: Switching Protocols
+          schema:
+            type: string
+        "400":
+          description: 无效的请求
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: WebSocket连接
+      tags:
+      - websocket
+  /ws/status:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前WebSocket连接的状态信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取WebSocket状态
+      tags:
+      - websocket
 swagger: "2.0"

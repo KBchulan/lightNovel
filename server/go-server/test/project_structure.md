@@ -87,22 +87,22 @@
 ### 2. 用户相关接口
 
 #### 获取收藏列表
-- 路径: `GET /api/v1/favorites`
+- 路径: `GET /api/v1/user/favorites`
 - 头部: X-Device-ID
 - 返回: 用户的收藏列表
 
 #### 添加收藏
-- 路径: `POST /api/v1/favorites/:id`
+- 路径: `POST /api/v1/user/favorites/:novel_id`
 - 头部: X-Device-ID
 - 返回: 添加状态
 
 #### 取消收藏
-- 路径: `DELETE /api/v1/favorites/:id`
+- 路径: `DELETE /api/v1/user/favorites/:novel_id`
 - 头部: X-Device-ID
 - 返回: 删除状态
 
 #### 检查收藏状态
-- 路径: `GET /api/v1/favorites/:id/check`
+- 路径: `GET /api/v1/user/favorites/:novel_id/check`
 - 头部: X-Device-ID
 - 返回: 是否已收藏（布尔值）
 
