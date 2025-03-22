@@ -11,7 +11,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/novel_provider.dart';
-import '../../../core/providers/device_provider.dart';
+import '../../../core/services/device_service.dart';
 import '../../../core/models/novel.dart';
 import '../../../shared/widgets/novel_card.dart';
 import '../../../shared/widgets/page_transitions.dart';

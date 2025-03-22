@@ -11,7 +11,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../api/api_client.dart';
-import 'device_provider.dart';
+import '../services/device_service.dart';
 
 part 'api_provider.g.dart';
 
