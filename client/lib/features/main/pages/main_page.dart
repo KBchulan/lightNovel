@@ -65,26 +65,15 @@ class _MainPageState extends ConsumerState<MainPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: Navigator(
-        onGenerateRoute: (settings) {
-          return MaterialPageRoute(
-            builder: (context) => NotificationListener<SwitchToHomeNotification>(
-              onNotification: (notification) {
-                setState(() => _currentIndex = 0);
-                return true;
-              },
-              child: _items[_currentIndex].page,
-            ),
-            settings: settings,
-          );
-        },
-        // ignore: deprecated_member_use
-        onPopPage: (route, result) {
-          if (!route.didPop(result)) {
-            return false;
-          }
+      body: NotificationListener<SwitchToHomeNotification>(
+        onNotification: (notification) {
+          setState(() => _currentIndex = 0);
           return true;
         },
+        child: IndexedStack(
+          index: _currentIndex,
+          children: _items.map((item) => item.page).toList(),
+        ),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
