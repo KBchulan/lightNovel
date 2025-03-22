@@ -15,6 +15,7 @@ import '../../../core/models/chapter_info.dart';
 import '../../../shared/props/novel_props.dart';
 import '../../../core/providers/volume_provider.dart';
 import '../widgets/novel_share_sheet.dart';
+import '../../reading/pages/reading_page.dart';
 
 class NovelDetailPage extends ConsumerStatefulWidget {
   final Novel novel;
@@ -158,11 +159,56 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: FilledButton.icon(
-                          onPressed: () {
-                            // TODO: 实现阅读功能
+                          onPressed: () async {
+                            // 获取第一章
+                            final volumesAsync = ref.read(volumeNotifierProvider);
+                            final volumes = volumesAsync.value;
+                            if (volumes == null || volumes.isEmpty) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('服务器没有这些章节喵')),
+                                );
+                              }
+                              return;
+                            }
+
+                            // 获取第一卷的第一章
+                            final firstVolume = volumes.first;
+                            final chapters = await ref.read(volumeNotifierProvider.notifier).fetchChapters(
+                              widget.novel.id,
+                              firstVolume.volumeNumber,
+                            );
+
+                            if (chapters.isEmpty) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('服务器没有这些章节喵')),
+                                );
+                              }
+                              return;
+                            }
+
+                            final firstChapterInfo = chapters.first;
+                            final firstChapter = await ref.read(volumeNotifierProvider.notifier).fetchChapterContent(
+                              widget.novel.id,
+                              firstVolume.volumeNumber,
+                              firstChapterInfo.chapterNumber,
+                            );
+
+                            if (context.mounted) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ReadingPage(
+                                    chapter: firstChapter,
+                                    novelId: widget.novel.id,
+                                  ),
+                                ),
+                              );
+                            }
                           },
                           icon: const Icon(Icons.book),
-                          label: const Text('继续阅读'),
+                          label: const Text('开始阅读'),
                         ),
                       ),
                     ],
@@ -290,17 +336,34 @@ class _VolumeListState extends ConsumerState<_VolumeList> {
                 if (isExpanded)
                   Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: chapters.map((chapter) => ListTile(
+                    children: chapters.map((chapterInfo) => ListTile(
                       contentPadding: const EdgeInsets.only(left: 16),
                       visualDensity: const VisualDensity(vertical: -4),
                       title: Text(
-                        '第 ${chapter.chapterNumber} 话 ${chapter.title}',
+                        '第 ${chapterInfo.chapterNumber} 话 ${chapterInfo.title}',
                         style: const TextStyle(
                           fontSize: 14,
                         ),
                       ),
-                      onTap: () {
-                        // TODO: 跳转到章节阅读页面
+                      onTap: () async {
+                        // 获取章节内容
+                        final chapter = await ref.read(volumeNotifierProvider.notifier).fetchChapterContent(
+                          widget.novel.id,
+                          volume.volumeNumber,
+                          chapterInfo.chapterNumber,
+                        );
+
+                        if (context.mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ReadingPage(
+                                chapter: chapter,
+                                novelId: widget.novel.id,
+                              ),
+                            ),
+                          );
+                        }
                       },
                     )).toList(),
                   ),
