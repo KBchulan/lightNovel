@@ -12,17 +12,14 @@ package v1
 
 import (
 	"context"
-	"lightnovel/internal/models"
 	"lightnovel/internal/service"
 	"lightnovel/pkg/errors"
 	"lightnovel/pkg/response"
-	"lightnovel/pkg/utils"
 	"log"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // @title Light Novel API
@@ -306,63 +303,156 @@ func (h *NovelHandler) GetPopularNovels(c *gin.Context) {
 	response.Success(c, novels)
 }
 
-// 更新阅读进度请求体
-type UpdateProgressRequest struct {
-	NovelID       string `json:"novelId" binding:"required"`
-	VolumeNumber  int    `json:"volumeNumber" binding:"required"`
-	ChapterNumber int    `json:"chapterNumber" binding:"required"`
-	Position      int    `json:"position"`
-}
-
 // @Summary 获取阅读历史
-// @Description 获取用户的阅读历史记录
-// @Tags user
+// @Description 获取用户的阅读历史列表
+// @Tags reading
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param X-Device-ID header string false "设备ID，如果未提供则使用客户端IP"
-// @Param limit query int false "限制数量" default(10) minimum(1) maximum(100)
-// @Success 200 {object} response.Response{data=[]models.ReadingProgress} "成功"
+// @Param X-Device-ID header string true "设备ID"
+// @Success 200 {object} response.Response{data=[]models.ReadHistory} "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /user/history [get]
-func (h *NovelHandler) GetReadingHistory(c *gin.Context) {
+// @Router /user/reading/history [get]
+func (h *NovelHandler) GetReadHistory(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	history, err := h.novelService.GetReadingHistory(c.Request.Context(), deviceID, limit)
+	if deviceID == "" {
+		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
+		return
+	}
+
+	histories, err := h.novelService.GetReadHistory(c.Request.Context(), deviceID)
 	if err != nil {
 		response.Error(c, err)
 		return
 	}
 
-	response.Success(c, history)
+	response.Success(c, histories)
 }
 
-// @Summary 更新阅读进度
-// @Description 更新用户的小说阅读进度
-// @Tags user
+// @Summary 删除阅读历史
+// @Description 删除指定小说的阅读历史
+// @Tags reading
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param X-Device-ID header string false "设备ID，如果未提供则使用客户端IP"
-// @Param body body UpdateProgressRequest true "阅读进度信息"
-// @Success 200 {object} response.Response{data=string} "更新成功"
+// @Param X-Device-ID header string true "设备ID"
+// @Param novel_id path string true "小说ID"
+// @Success 200 {object} response.Response "成功"
 // @Failure 400 {object} response.Response "参数错误"
-// @Failure 404 {object} response.Response "小说不存在"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /user/progress [patch]
-func (h *NovelHandler) UpdateReadingProgress(c *gin.Context) {
+// @Router /user/reading/history/{novel_id} [delete]
+func (h *NovelHandler) DeleteReadHistory(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
+	novelID := c.Param("novel_id")
+	if deviceID == "" || novelID == "" {
+		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
+		return
+	}
+
+	err := h.novelService.DeleteReadHistory(c.Request.Context(), deviceID, novelID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{"message": "删除成功"})
+}
+
+// @Summary 清空阅读历史
+// @Description 清空用户的所有阅读历史
+// @Tags reading
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param X-Device-ID header string true "设备ID"
+// @Success 200 {object} response.Response "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /user/reading/history [delete]
+func (h *NovelHandler) ClearReadHistory(c *gin.Context) {
+	deviceID := c.GetString("deviceID")
+	if deviceID == "" {
+		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
+		return
+	}
+
+	err := h.novelService.ClearReadHistory(c.Request.Context(), deviceID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{"message": "清空成功"})
+}
+
+// @Summary 获取阅读进度
+// @Description 获取指定小说的阅读进度
+// @Tags reading
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param X-Device-ID header string true "设备ID"
+// @Param novel_id path string true "小说ID"
+// @Success 200 {object} response.Response{data=models.ReadProgress} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /user/reading/progress/{novel_id} [get]
+func (h *NovelHandler) GetReadProgress(c *gin.Context) {
+	deviceID := c.GetString("deviceID")
+	novelID := c.Param("novel_id")
+	if deviceID == "" || novelID == "" {
+		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
+		return
+	}
+
+	progress, err := h.novelService.GetReadProgress(c.Request.Context(), deviceID, novelID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, progress)
+}
+
+// UpdateProgressRequest 更新阅读进度请求
+type UpdateProgressRequest struct {
+	VolumeNumber  int `json:"volumeNumber" binding:"required,min=1"`
+	ChapterNumber int `json:"chapterNumber" binding:"required,min=1"`
+	Position      int `json:"position" binding:"min=0"`
+}
+
+// @Summary 更新阅读进度
+// @Description 更新指定小说的阅读进度
+// @Tags reading
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param X-Device-ID header string true "设备ID"
+// @Param novel_id path string true "小说ID"
+// @Param request body UpdateProgressRequest true "进度信息"
+// @Success 200 {object} response.Response "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /user/reading/progress/{novel_id} [put]
+func (h *NovelHandler) UpdateReadProgress(c *gin.Context) {
+	deviceID := c.GetString("deviceID")
+	novelID := c.Param("novel_id")
+	if deviceID == "" || novelID == "" {
+		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
+		return
+	}
+
 	var req UpdateProgressRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
 		return
 	}
 
-	err := h.novelService.UpdateReadingProgress(
+	err := h.novelService.UpdateReadProgress(
 		c.Request.Context(),
 		deviceID,
-		req.NovelID,
+		novelID,
 		req.VolumeNumber,
 		req.ChapterNumber,
 		req.Position,
@@ -628,214 +718,43 @@ func (h *NovelHandler) IsFavorite(c *gin.Context) {
 	})
 }
 
-// AddReadRecordRequest 添加阅读记录请求
-type AddReadRecordRequest struct {
-	NovelID       string `json:"novelId" binding:"required"`
-	VolumeNumber  int    `json:"volumeNumber" binding:"required,min=1"`
-	ChapterNumber int    `json:"chapterNumber" binding:"required,min=1"`
-	ReadDuration  int64  `json:"readDuration" binding:"required,min=1"`
-	StartPosition int    `json:"startPosition" binding:"min=0"`
-	EndPosition   int    `json:"endPosition" binding:"min=0"`
-	IsComplete    bool   `json:"isComplete"`
-	Source        string `json:"source" binding:"required,oneof=web app other"`
+// UpsertHistoryRequest 添加或更新阅读历史请求
+type UpsertHistoryRequest struct {
+	LastRead *time.Time `json:"lastRead"` // 可选,不传则使用当前时间
 }
 
-// @Summary 添加阅读记录
-// @Description 添加一条阅读记录，同时更新阅读统计和已读章节记录
+// @Summary 添加或更新阅读历史
+// @Description 添加或更新指定小说的阅读历史
 // @Tags reading
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
 // @Param X-Device-ID header string true "设备ID"
-// @Param request body AddReadRecordRequest true "阅读记录信息"
+// @Param novel_id path string true "小说ID"
+// @Param request body UpsertHistoryRequest false "阅读历史信息"
 // @Success 200 {object} response.Response "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /user/reading/records [post]
-func (h *NovelHandler) AddReadRecord(c *gin.Context) {
+// @Router /user/reading/history/{novel_id} [put]
+func (h *NovelHandler) UpsertReadHistory(c *gin.Context) {
 	deviceID := c.GetString("deviceID")
-	if deviceID == "" {
+	novelID := c.Param("novel_id")
+	if deviceID == "" || novelID == "" {
 		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
 		return
 	}
 
-	var req AddReadRecordRequest
+	var req UpsertHistoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
-		return
+		// 忽略绑定错误,使用默认值(当前时间)
+		req = UpsertHistoryRequest{}
 	}
 
-	record := &models.ReadRecord{
-		DeviceID:      deviceID,
-		NovelID:       req.NovelID,
-		VolumeNumber:  req.VolumeNumber,
-		ChapterNumber: req.ChapterNumber,
-		ReadDuration:  req.ReadDuration,
-		StartPosition: req.StartPosition,
-		EndPosition:   req.EndPosition,
-		IsComplete:    req.IsComplete,
-		Source:        req.Source,
-	}
-
-	if err := h.novelService.AddReadRecord(c, record); err != nil {
-		response.Error(c, err)
-		return
-	}
-
-	response.Success(c, nil)
-}
-
-// @Summary 获取阅读记录
-// @Description 获取用户的阅读记录
-// @Tags reading
-// @Accept json
-// @Produce json
-// @Param X-Device-ID header string true "设备ID"
-// @Param novel-id path string true "小说ID"
-// @Param page query int false "页码，默认1"
-// @Param page_size query int false "每页数量，默认20"
-// @Success 200 {object} response.Response{data=[]models.ReadRecord} "成功"
-// @Failure 400 {object} response.Response "参数错误"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /user/reading/records/{novel-id} [get]
-func (h *NovelHandler) GetReadRecords(c *gin.Context) {
-	deviceID := c.GetString("deviceID")
-	novelID := c.Param("novel-id")
-	if deviceID == "" || novelID == "" {
-		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
-		return
-	}
-
-	page := utils.GetIntQuery(c, "page", 1)
-	pageSize := utils.GetIntQuery(c, "page_size", 20)
-
-	records, err := h.novelService.GetReadRecords(c, deviceID, novelID, page, pageSize)
+	err := h.novelService.UpsertReadHistory(c.Request.Context(), deviceID, novelID, req.LastRead)
 	if err != nil {
 		response.Error(c, err)
 		return
 	}
 
-	response.Success(c, records)
-}
-
-// @Summary 删除阅读记录
-// @Description 删除指定的阅读记录
-// @Tags reading
-// @Accept json
-// @Produce json
-// @Param X-Device-ID header string true "设备ID"
-// @Param novel-id path string true "小说ID"
-// @Param record-id path string true "记录ID"
-// @Success 200 {object} response.Response "成功"
-// @Failure 400 {object} response.Response "参数错误"
-// @Failure 404 {object} response.Response "记录不存在"
-// @Router /user/reading/records/{novel-id}/{record-id} [delete]
-func (h *NovelHandler) DeleteReadRecord(c *gin.Context) {
-	deviceID := c.GetString("deviceID")
-	novelID := c.Param("novel-id")
-	recordID := c.Param("record-id")
-	if deviceID == "" || novelID == "" || recordID == "" {
-		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
-		return
-	}
-
-	objID, err := primitive.ObjectIDFromHex(recordID)
-	if err != nil {
-		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
-		return
-	}
-
-	if err := h.novelService.DeleteReadRecord(c, deviceID, novelID, objID); err != nil {
-		response.Error(c, err)
-		return
-	}
-
-	response.Success(c, nil)
-}
-
-// @Summary 获取已读章节列表
-// @Description 获取指定小说的已读章节列表
-// @Tags reading
-// @Accept json
-// @Produce json
-// @Param X-Device-ID header string true "设备ID"
-// @Param novel-id path string true "小说ID"
-// @Success 200 {object} response.Response{data=[]models.ReadChapterRecord} "成功"
-// @Failure 400 {object} response.Response "参数错误"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /user/reading/chapters/{novel-id} [get]
-func (h *NovelHandler) GetReadChapters(c *gin.Context) {
-	deviceID := c.GetString("deviceID")
-	novelID := c.Param("novel-id")
-	if deviceID == "" || novelID == "" {
-		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
-		return
-	}
-
-	chapters, err := h.novelService.GetReadChapters(c, deviceID, novelID)
-	if err != nil {
-		response.Error(c, err)
-		return
-	}
-
-	response.Success(c, chapters)
-}
-
-// @Summary 获取阅读统计
-// @Description 获取指定小说的阅读统计信息
-// @Tags reading
-// @Accept json
-// @Produce json
-// @Param X-Device-ID header string true "设备ID"
-// @Param novel-id path string true "小说ID"
-// @Success 200 {object} response.Response{data=models.ReadingStat} "成功"
-// @Failure 400 {object} response.Response "参数错误"
-// @Failure 404 {object} response.Response "统计不存在"
-// @Router /user/reading/stats/{novel-id} [get]
-func (h *NovelHandler) GetReadingStat(c *gin.Context) {
-	deviceID := c.GetString("deviceID")
-	novelID := c.Param("novel-id")
-	if deviceID == "" || novelID == "" {
-		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
-		return
-	}
-
-	stat, err := h.novelService.GetReadingStat(c, deviceID, novelID)
-	if err != nil {
-		response.Error(c, err)
-		return
-	}
-
-	response.Success(c, stat)
-}
-
-// @Summary 获取阅读统计列表
-// @Description 获取用户的所有阅读统计列表
-// @Tags reading
-// @Accept json
-// @Produce json
-// @Param X-Device-ID header string true "设备ID"
-// @Param page query int false "页码，默认1"
-// @Param page_size query int false "每页数量，默认20"
-// @Success 200 {object} response.Response{data=[]models.ReadingStat} "成功"
-// @Failure 400 {object} response.Response "参数错误"
-// @Failure 500 {object} response.Response "服务器内部错误"
-// @Router /user/reading/stats [get]
-func (h *NovelHandler) GetReadingStats(c *gin.Context) {
-	deviceID := c.GetString("deviceID")
-	if deviceID == "" {
-		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
-		return
-	}
-
-	page := utils.GetIntQuery(c, "page", 1)
-	pageSize := utils.GetIntQuery(c, "page_size", 20)
-
-	stats, err := h.novelService.GetReadingStats(c, deviceID, page, pageSize)
-	if err != nil {
-		response.Error(c, err)
-		return
-	}
-
-	response.Success(c, stats)
+	response.Success(c, gin.H{"message": "更新成功"})
 }

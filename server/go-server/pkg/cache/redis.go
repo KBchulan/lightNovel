@@ -20,21 +20,19 @@ import (
 
 const (
 	// 缓存键前缀
-	NovelListKey      = "novel:list"      // 小说列表
-	NovelDetailKey    = "novel:detail:"   // 小说详情
-	VolumeListKey     = "novel:volumes:"  // 卷列表
-	ChapterListKey    = "novel:chapters:" // 章节列表
-	ChapterKey        = "novel:chapter:"  // 章节内容
-	SearchKey         = "novel:search:"   // 搜索结果
-	LatestNovelsKey   = "novel:latest"    // 最新小说
-	PopularNovelsKey  = "novel:popular"   // 热门小说
-	ReadingHistoryKey = "user:history:"   // 阅读历史
-	DeviceKey         = "device:info:"    // 设备信息
-	BookmarkKey       = "user:bookmark:"  // 用户书签
-	FavoriteKey       = "user:favorite:"  // 用户收藏
-	ReadRecordKey     = "user:record:"    // 阅读记录
-	ReadChapterKey    = "user:chapter:"   // 已读章节
-	ReadingStatKey    = "user:stat:"      // 阅读统计
+	NovelListKey     = "novel:list"      // 小说列表
+	NovelDetailKey   = "novel:detail:"   // 小说详情
+	VolumeListKey    = "novel:volumes:"  // 卷列表
+	ChapterListKey   = "novel:chapters:" // 章节列表
+	ChapterKey       = "novel:chapter:"  // 章节内容
+	SearchKey        = "novel:search:"   // 搜索结果
+	LatestNovelsKey  = "novel:latest"    // 最新小说
+	PopularNovelsKey = "novel:popular"   // 热门小说
+	DeviceKey        = "device:info:"    // 设备信息
+	BookmarkKey      = "user:bookmark:"  // 用户书签
+	FavoriteKey      = "user:favorite:"  // 用户收藏
+	ReadHistoryKey   = "read:history:"   // 阅读历史
+	ReadProgressKey  = "read:progress:"  // 阅读进度
 )
 
 // RedisCache Redis缓存服务

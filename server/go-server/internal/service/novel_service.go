@@ -609,104 +609,186 @@ func (s *NovelService) GetUserBookmarks(ctx context.Context, deviceID string) ([
 	return bookmarks, nil
 }
 
-// UpdateReadingProgress 更新阅读进度
-func (s *NovelService) UpdateReadingProgress(ctx context.Context, deviceID string, novelID string, volumeNumber int, chapterNumber int, position int) error {
-	now := time.Now()
-
-	// 先检查是否存在记录
-	var existingProgress models.ReadingProgress
-	err := s.db.GetCollection("reading_progress").FindOne(ctx, bson.M{
-		"deviceId": deviceID,
-		"novelId":  novelID,
-	}).Decode(&existingProgress)
-
-	if err == mongo.ErrNoDocuments {
-		// 如果不存在，创建新记录
-		progress := models.ReadingProgress{
-			DeviceID: deviceID,
-			NovelID:  novelID,
-			CurrentProgress: models.CurrentProgress{
-				VolumeNumber:  volumeNumber,
-				ChapterNumber: chapterNumber,
-				Position:      position,
-				LastReadAt:    now,
-			},
-			CreatedAt: now,
-			UpdatedAt: now,
-		}
-
-		_, err = s.db.GetCollection("reading_progress").InsertOne(ctx, progress)
-		if err != nil {
-			return err
-		}
-	} else if err == nil {
-		// 如果存在，只更新需要的字段
-		update := bson.M{
-			"$set": bson.M{
-				"currentProgress": models.CurrentProgress{
-					VolumeNumber:  volumeNumber,
-					ChapterNumber: chapterNumber,
-					Position:      position,
-					LastReadAt:    now,
-				},
-				"updatedAt": now,
-			},
-		}
-
-		_, err = s.db.GetCollection("reading_progress").UpdateOne(ctx,
-			bson.M{
-				"deviceId": deviceID,
-				"novelId":  novelID,
-			},
-			update,
-		)
-		if err != nil {
-			return err
-		}
-	} else {
-		return err
-	}
-
-	// 清除相关缓存
-	cacheKey := fmt.Sprintf("%s:%s", cache.NovelDetailKey, novelID)
-	s.cache.Delete(ctx, cacheKey)
-	s.cache.Delete(ctx, fmt.Sprintf("%s:%s:%d", cache.ReadingHistoryKey, deviceID, 10))
-
-	return nil
-}
-
-// GetReadingHistory 获取阅读历史
-func (s *NovelService) GetReadingHistory(ctx context.Context, deviceID string, limit int) ([]models.ReadingProgress, error) {
-	var progresses []models.ReadingProgress
-	cacheKey := fmt.Sprintf("%s:%s:%d", cache.ReadingHistoryKey, deviceID, limit)
+// GetReadHistory 获取用户的阅读历史
+func (s *NovelService) GetReadHistory(ctx context.Context, deviceID string) ([]models.ReadHistory, error) {
+	var histories []models.ReadHistory
+	cacheKey := cache.ReadHistoryKey + deviceID
 
 	// 尝试从缓存获取
-	err := s.cache.Get(ctx, cacheKey, &progresses)
-	if err == nil && len(progresses) > 0 {
-		return progresses, nil
+	err := s.cache.Get(ctx, cacheKey, &histories)
+	if err == nil && len(histories) > 0 {
+		return histories, nil
 	}
 
-	opts := options.Find().
-		SetSort(bson.D{{Key: "currentProgress.lastReadAt", Value: -1}}).
-		SetLimit(int64(limit))
-
-	cursor, err := s.db.GetCollection("reading_progress").Find(ctx,
-		bson.M{"deviceId": deviceID},
-		opts,
-	)
+	// 从数据库获取
+	opts := options.Find().SetSort(bson.D{{Key: "lastRead", Value: -1}})
+	cursor, err := s.db.GetCollection("read_history").Find(ctx, bson.M{"deviceId": deviceID}, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
-	if err = cursor.All(ctx, &progresses); err != nil {
+	if err = cursor.All(ctx, &histories); err != nil {
 		return nil, err
 	}
 
-	// 设置缓存，有效期5分钟
-	s.cache.Set(ctx, cacheKey, progresses, 5*time.Minute)
+	// 设置缓存
+	s.cache.Set(ctx, cacheKey, histories, time.Hour)
+	return histories, nil
+}
 
-	return progresses, nil
+// UpsertReadHistory 添加或更新阅读历史
+func (s *NovelService) UpsertReadHistory(ctx context.Context, deviceID string, novelID string, lastRead *time.Time) error {
+	now := time.Now()
+	if lastRead == nil {
+		lastRead = &now
+	}
+
+	// 使用 upsert 操作,如果存在则更新 lastRead
+	filter := bson.M{
+		"deviceId": deviceID,
+		"novelId":  novelID,
+	}
+	update := bson.M{
+		"$set": bson.M{
+			"lastRead": lastRead,
+		},
+		"$setOnInsert": bson.M{
+			"_id": primitive.NewObjectID(),
+		},
+	}
+	opts := options.Update().SetUpsert(true)
+
+	_, err := s.db.GetCollection("read_history").UpdateOne(ctx, filter, update, opts)
+	if err != nil {
+		return err
+	}
+
+	// 删除缓存
+	s.cache.Delete(ctx, cache.ReadHistoryKey+deviceID)
+	return nil
+}
+
+// DeleteReadHistory 删除单条阅读历史
+func (s *NovelService) DeleteReadHistory(ctx context.Context, deviceID string, novelID string) error {
+	filter := bson.M{
+		"deviceId": deviceID,
+		"novelId":  novelID,
+	}
+
+	_, err := s.db.GetCollection("read_history").DeleteOne(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	// 删除相关缓存
+	s.cache.Delete(ctx, cache.ReadHistoryKey+deviceID)
+	s.cache.Delete(ctx, cache.ReadProgressKey+deviceID+":"+novelID)
+	return nil
+}
+
+// ClearReadHistory 清空用户的阅读历史
+func (s *NovelService) ClearReadHistory(ctx context.Context, deviceID string) error {
+	filter := bson.M{"deviceId": deviceID}
+
+	// 获取所有要删除的记录的 novelID
+	var histories []models.ReadHistory
+	cursor, err := s.db.GetCollection("read_history").Find(ctx, filter)
+	if err != nil {
+		return err
+	}
+	defer cursor.Close(ctx)
+
+	if err = cursor.All(ctx, &histories); err != nil {
+		return err
+	}
+
+	// 删除阅读历史
+	_, err = s.db.GetCollection("read_history").DeleteMany(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	// 删除阅读进度
+	_, err = s.db.GetCollection("read_progress").DeleteMany(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	// 删除相关缓存
+	s.cache.Delete(ctx, cache.ReadHistoryKey+deviceID)
+	for _, history := range histories {
+		s.cache.Delete(ctx, cache.ReadProgressKey+deviceID+":"+history.NovelID)
+	}
+
+	return nil
+}
+
+// GetReadProgress 获取阅读进度
+func (s *NovelService) GetReadProgress(ctx context.Context, deviceID string, novelID string) (*models.ReadProgress, error) {
+	var progress models.ReadProgress
+	cacheKey := cache.ReadProgressKey + deviceID + ":" + novelID
+
+	// 尝试从缓存获取
+	err := s.cache.Get(ctx, cacheKey, &progress)
+	if err == nil && !progress.ID.IsZero() {
+		return &progress, nil
+	}
+
+	// 从数据库获取
+	err = s.db.GetCollection("read_progress").FindOne(ctx, bson.M{
+		"deviceId": deviceID,
+		"novelId":  novelID,
+	}).Decode(&progress)
+
+	if err == mongo.ErrNoDocuments {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// 设置缓存
+	s.cache.Set(ctx, cacheKey, progress, time.Hour)
+	return &progress, nil
+}
+
+// UpdateReadProgress 更新阅读进度
+func (s *NovelService) UpdateReadProgress(ctx context.Context, deviceID string, novelID string, volumeNumber int, chapterNumber int, position int) error {
+	now := time.Now()
+
+	// 使用 upsert 操作
+	filter := bson.M{
+		"deviceId": deviceID,
+		"novelId":  novelID,
+	}
+	update := bson.M{
+		"$set": bson.M{
+			"volumeNumber":  volumeNumber,
+			"chapterNumber": chapterNumber,
+			"position":      position,
+			"updatedAt":     now,
+		},
+		"$setOnInsert": bson.M{
+			"_id": primitive.NewObjectID(),
+		},
+	}
+	opts := options.Update().SetUpsert(true)
+
+	_, err := s.db.GetCollection("read_progress").UpdateOne(ctx, filter, update, opts)
+	if err != nil {
+		return err
+	}
+
+	// 更新阅读历史
+	err = s.UpsertReadHistory(ctx, deviceID, novelID, nil)
+	if err != nil {
+		return err
+	}
+
+	// 删除缓存
+	s.cache.Delete(ctx, cache.ReadProgressKey+deviceID+":"+novelID)
+	return nil
 }
 
 // 辅助函数：根据UserAgent判断设备类型
@@ -1022,381 +1104,4 @@ func (s *NovelService) IsFavorite(ctx context.Context, deviceID string, novelID 
 		return false, nil
 	}
 	return false, err
-}
-
-// ReadRecord 相关方法
-func (s *NovelService) AddReadRecord(ctx context.Context, record *models.ReadRecord) error {
-	if record.ReadDuration <= 0 {
-		return errors.NewError(errors.ErrInvalidReadDuration)
-	}
-
-	record.ID = primitive.NewObjectID()
-	record.ReadAt = time.Now()
-
-	// 更新阅读统计
-	err := s.UpdateReadingStat(ctx, record)
-	if err != nil {
-		return err
-	}
-
-	// 更新已读章节记录
-	err = s.UpdateReadChapter(ctx, record)
-	if err != nil {
-		return err
-	}
-
-	// 保存阅读记录
-	_, err = s.db.GetCollection("read_records").InsertOne(ctx, record)
-	if err != nil {
-		return errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-
-	// 删除缓存
-	cacheKey := cache.ReadRecordKey + record.DeviceID + ":" + record.NovelID
-	s.cache.Delete(ctx, cacheKey)
-
-	return nil
-}
-
-func (s *NovelService) GetReadRecords(ctx context.Context, deviceID, novelID string, page, pageSize int) ([]*models.ReadRecord, error) {
-	skip := (page - 1) * pageSize
-
-	opts := options.Find().
-		SetSort(bson.D{{Key: "readAt", Value: -1}}).
-		SetSkip(int64(skip)).
-		SetLimit(int64(pageSize))
-
-	filter := bson.M{
-		"deviceId": deviceID,
-		"novelId":  novelID,
-	}
-
-	cursor, err := s.db.GetCollection("read_records").Find(ctx, filter, opts)
-	if err != nil {
-		return nil, errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-	defer cursor.Close(ctx)
-
-	var records []*models.ReadRecord
-	if err = cursor.All(ctx, &records); err != nil {
-		return nil, errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-
-	return records, nil
-}
-
-func (s *NovelService) DeleteReadRecord(ctx context.Context, deviceID, novelID string, recordID primitive.ObjectID) error {
-	filter := bson.M{
-		"_id":      recordID,
-		"deviceId": deviceID,
-		"novelId":  novelID,
-	}
-
-	result, err := s.db.GetCollection("read_records").DeleteOne(ctx, filter)
-	if err != nil {
-		return errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-
-	if result.DeletedCount == 0 {
-		return errors.NewError(errors.ErrReadRecordNotFound)
-	}
-
-	// 删除缓存
-	cacheKey := cache.ReadRecordKey + deviceID + ":" + novelID
-	s.cache.Delete(ctx, cacheKey)
-
-	return nil
-}
-
-// UpdateReadChapter 更新已读章节记录
-func (s *NovelService) UpdateReadChapter(ctx context.Context, record *models.ReadRecord) error {
-	filter := bson.M{
-		"deviceId":      record.DeviceID,
-		"novelId":       record.NovelID,
-		"volumeNumber":  record.VolumeNumber,
-		"chapterNumber": record.ChapterNumber,
-	}
-
-	update := bson.M{
-		"$set": bson.M{
-			"lastReadAt":   record.ReadAt,
-			"lastPosition": record.EndPosition,
-			"isComplete":   record.IsComplete,
-		},
-		"$inc": bson.M{
-			"readCount": 1,
-		},
-		"$setOnInsert": bson.M{
-			"firstReadAt": record.ReadAt,
-		},
-	}
-
-	opts := options.Update().SetUpsert(true)
-
-	_, err := s.db.GetCollection("read_chapters").UpdateOne(ctx, filter, update, opts)
-	if err != nil {
-		return errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-
-	// 删除缓存
-	cacheKey := cache.ReadChapterKey + record.DeviceID + ":" + record.NovelID
-	s.cache.Delete(ctx, cacheKey)
-
-	return nil
-}
-
-func (s *NovelService) GetReadChapters(ctx context.Context, deviceID, novelID string) ([]*models.ReadChapterRecord, error) {
-	filter := bson.M{
-		"deviceId": deviceID,
-		"novelId":  novelID,
-	}
-
-	cursor, err := s.db.GetCollection("read_chapters").Find(ctx, filter)
-	if err != nil {
-		return nil, errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-	defer cursor.Close(ctx)
-
-	var chapters []*models.ReadChapterRecord
-	if err = cursor.All(ctx, &chapters); err != nil {
-		return nil, errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-
-	return chapters, nil
-}
-
-// UpdateReadingStat 更新阅读统计
-func (s *NovelService) UpdateReadingStat(ctx context.Context, record *models.ReadRecord) error {
-	today := time.Now().Truncate(24 * time.Hour)
-
-	filter := bson.M{
-		"deviceId": record.DeviceID,
-		"novelId":  record.NovelID,
-	}
-
-	// 获取小说总章节数
-	novel, err := s.GetNovelByID(ctx, record.NovelID)
-	if err != nil {
-		return err
-	}
-
-	update := bson.M{
-		"$inc": bson.M{
-			"totalReadTime": record.ReadDuration,
-			"chapterRead":   1,
-		},
-		"$set": bson.M{
-			"lastActiveDate": today,
-			"updatedAt":      time.Now(),
-		},
-		"$setOnInsert": bson.M{
-			"createdAt": time.Now(),
-		},
-	}
-
-	// 如果章节已完成，增加完成计数
-	if record.IsComplete {
-		update["$inc"].(bson.M)["completeCount"] = 1
-	}
-
-	// 添加阅读天数
-	update["$addToSet"] = bson.M{
-		"readDays": today,
-	}
-
-	opts := options.Update().SetUpsert(true)
-
-	result, err := s.db.GetCollection("reading_stats").UpdateOne(ctx, filter, update, opts)
-	if err != nil {
-		return errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-
-	// 如果是新记录或需要更新，计算并更新阅读进度
-	if result.UpsertedCount > 0 || result.ModifiedCount > 0 {
-		// 获取已完成的章节数
-		completeChapters, err := s.db.GetCollection("read_chapters").CountDocuments(ctx, bson.M{
-			"deviceId":   record.DeviceID,
-			"novelId":    record.NovelID,
-			"isComplete": true,
-		})
-		if err != nil {
-			return errors.NewError(errors.ErrDatabaseOperationFailed)
-		}
-
-		// 计算阅读进度
-		progress := float64(completeChapters) / float64(novel.VolumeCount) * 100
-
-		// 更新阅读进度
-		_, err = s.db.GetCollection("reading_stats").UpdateOne(
-			ctx,
-			filter,
-			bson.M{"$set": bson.M{"readProgress": progress}},
-		)
-		if err != nil {
-			return errors.NewError(errors.ErrDatabaseOperationFailed)
-		}
-	}
-
-	// 删除缓存
-	cacheKey := cache.ReadingStatKey + record.DeviceID + ":" + record.NovelID
-	s.cache.Delete(ctx, cacheKey)
-
-	return nil
-}
-
-func (s *NovelService) GetReadingStat(ctx context.Context, deviceID, novelID string) (*models.ReadingStat, error) {
-	filter := bson.M{
-		"deviceId": deviceID,
-		"novelId":  novelID,
-	}
-
-	var stat models.ReadingStat
-	err := s.db.GetCollection("reading_stats").FindOne(ctx, filter).Decode(&stat)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, errors.NewError(errors.ErrReadingStatNotFound)
-		}
-		return nil, errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-
-	return &stat, nil
-}
-
-func (s *NovelService) GetReadingStats(ctx context.Context, deviceID string, page, pageSize int) ([]*models.ReadingStat, error) {
-	skip := (page - 1) * pageSize
-
-	opts := options.Find().
-		SetSort(bson.D{{Key: "lastActiveDate", Value: -1}}).
-		SetSkip(int64(skip)).
-		SetLimit(int64(pageSize))
-
-	filter := bson.M{
-		"deviceId": deviceID,
-	}
-
-	cursor, err := s.db.GetCollection("reading_stats").Find(ctx, filter, opts)
-	if err != nil {
-		return nil, errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-	defer cursor.Close(ctx)
-
-	var stats []*models.ReadingStat
-	if err = cursor.All(ctx, &stats); err != nil {
-		return nil, errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-
-	return stats, nil
-}
-
-// AddReadRecordsBatch 批量添加阅读记录
-func (s *NovelService) AddReadRecordsBatch(ctx context.Context, records []*models.ReadRecord) error {
-	if len(records) == 0 {
-		return nil
-	}
-
-	// 准备批量插入的文档
-	documents := make([]interface{}, len(records))
-	for i, record := range records {
-		if record.ReadDuration <= 0 {
-			return errors.NewError(errors.ErrInvalidReadDuration)
-		}
-		record.ID = primitive.NewObjectID()
-		record.ReadAt = time.Now()
-		documents[i] = record
-	}
-
-	// 批量插入阅读记录
-	_, err := s.db.GetCollection("read_records").InsertMany(ctx, documents)
-	if err != nil {
-		return errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-
-	// 批量更新阅读统计和已读章节
-	for _, record := range records {
-		// 这里不返回错误，继续处理其他记录
-		_ = s.UpdateReadingStat(ctx, record)
-		_ = s.UpdateReadChapter(ctx, record)
-
-		// 删除相关缓存
-		cacheKey := cache.ReadRecordKey + record.DeviceID + ":" + record.NovelID
-		s.cache.Delete(ctx, cacheKey)
-	}
-
-	return nil
-}
-
-// UpdateReadChaptersBatch 批量更新已读章节
-func (s *NovelService) UpdateReadChaptersBatch(ctx context.Context, records []*models.ReadRecord) error {
-	if len(records) == 0 {
-		return nil
-	}
-
-	// 准备批量更新操作
-	operations := make([]mongo.WriteModel, len(records))
-	for i, record := range records {
-		filter := bson.M{
-			"deviceId":      record.DeviceID,
-			"novelId":       record.NovelID,
-			"volumeNumber":  record.VolumeNumber,
-			"chapterNumber": record.ChapterNumber,
-		}
-		update := bson.M{
-			"$set": bson.M{
-				"lastReadAt": record.ReadAt,
-			},
-			"$inc": bson.M{
-				"readCount": 1,
-			},
-			"$setOnInsert": bson.M{
-				"firstReadAt": record.ReadAt,
-			},
-		}
-		operations[i] = mongo.NewUpdateOneModel().
-			SetFilter(filter).
-			SetUpdate(update).
-			SetUpsert(true)
-	}
-
-	// 执行批量更新
-	_, err := s.db.GetCollection("read_chapters").BulkWrite(ctx, operations)
-	if err != nil {
-		return errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-
-	// 清除相关缓存
-	for _, record := range records {
-		cacheKey := cache.ReadChapterKey + record.DeviceID + ":" + record.NovelID
-		s.cache.Delete(ctx, cacheKey)
-	}
-
-	return nil
-}
-
-// GetReadingStatsBatch 批量获取阅读统计
-func (s *NovelService) GetReadingStatsBatch(ctx context.Context, deviceID string, novelIDs []string) ([]*models.ReadingStat, error) {
-	if len(novelIDs) == 0 {
-		return nil, nil
-	}
-
-	// 构建查询条件
-	filter := bson.M{
-		"deviceId": deviceID,
-		"novelId": bson.M{
-			"$in": novelIDs,
-		},
-	}
-
-	// 执行查询
-	cursor, err := s.db.GetCollection("reading_stats").Find(ctx, filter)
-	if err != nil {
-		return nil, errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-	defer cursor.Close(ctx)
-
-	var stats []*models.ReadingStat
-	if err = cursor.All(ctx, &stats); err != nil {
-		return nil, errors.NewError(errors.ErrDatabaseOperationFailed)
-	}
-
-	return stats, nil
 }

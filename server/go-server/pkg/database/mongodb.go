@@ -81,8 +81,8 @@ func (db *MongoDB) CreateIndexes(ctx context.Context) error {
 			Options: options.Index().SetName("updated_at"),
 		},
 		{
-			Keys:    bson.D{{Key: "tags", Value: 1}},
-			Options: options.Index().SetName("tags"),
+			Keys:    bson.D{{Key: "readCount", Value: -1}},
+			Options: options.Index().SetName("read_count"),
 		},
 	}
 
@@ -112,27 +112,12 @@ func (db *MongoDB) CreateIndexes(ctx context.Context) error {
 	// 设备集合索引
 	deviceIndexes := []mongo.IndexModel{
 		{
-			Keys:    bson.D{{Key: "lastSeen", Value: -1}},
-			Options: options.Index().SetName("last_seen"),
-		},
-		{
 			Keys:    bson.D{{Key: "ip", Value: 1}},
 			Options: options.Index().SetName("ip"),
 		},
-	}
-
-	// 阅读进度索引
-	progressIndexes := []mongo.IndexModel{
 		{
-			Keys: bson.D{
-				{Key: "deviceId", Value: 1},
-				{Key: "novelId", Value: 1},
-			},
-			Options: options.Index().SetName("device_novel").SetUnique(true),
-		},
-		{
-			Keys:    bson.D{{Key: "currentProgress.lastReadAt", Value: -1}},
-			Options: options.Index().SetName("last_read"),
+			Keys:    bson.D{{Key: "lastSeen", Value: -1}},
+			Options: options.Index().SetName("last_seen"),
 		},
 	}
 
@@ -142,9 +127,12 @@ func (db *MongoDB) CreateIndexes(ctx context.Context) error {
 			Keys: bson.D{
 				{Key: "deviceId", Value: 1},
 				{Key: "novelId", Value: 1},
-				{Key: "createdAt", Value: -1},
 			},
-			Options: options.Index().SetName("device_novel_time"),
+			Options: options.Index().SetName("device_novel_bookmark"),
+		},
+		{
+			Keys:    bson.D{{Key: "createdAt", Value: -1}},
+			Options: options.Index().SetName("created_at"),
 		},
 	}
 
@@ -157,103 +145,44 @@ func (db *MongoDB) CreateIndexes(ctx context.Context) error {
 			},
 			Options: options.Index().SetName("device_novel_favorite").SetUnique(true),
 		},
+	}
+
+	// 阅读历史索引
+	readHistoryIndexes := []mongo.IndexModel{
 		{
-			Keys:    bson.D{{Key: "createdAt", Value: -1}},
-			Options: options.Index().SetName("favorite_time"),
+			Keys: bson.D{
+				{Key: "deviceId", Value: 1},
+				{Key: "novelId", Value: 1},
+			},
+			Options: options.Index().SetName("device_novel_history").SetUnique(true),
+		},
+		{
+			Keys:    bson.D{{Key: "lastRead", Value: -1}},
+			Options: options.Index().SetName("last_read"),
+		},
+	}
+
+	// 阅读进度索引
+	readProgressIndexes := []mongo.IndexModel{
+		{
+			Keys: bson.D{
+				{Key: "deviceId", Value: 1},
+				{Key: "novelId", Value: 1},
+			},
+			Options: options.Index().SetName("device_novel_progress").SetUnique(true),
 		},
 	}
 
 	// 创建索引
 	collections := map[string][]mongo.IndexModel{
-		"novels":           novelIndexes,
-		"volumes":          volumeIndexes,
-		"chapters":         chapterIndexes,
-		"devices":          deviceIndexes,
-		"reading_progress": progressIndexes,
-		"bookmarks":        bookmarkIndexes,
-		"favorites":        favoriteIndexes,
-		"read_records": {
-			{
-				Keys: bson.D{
-					{Key: "deviceId", Value: 1},
-					{Key: "novelId", Value: 1},
-					{Key: "readAt", Value: -1},
-				},
-				Options: options.Index().SetName("device_novel_time"),
-			},
-			{
-				Keys:    bson.D{{Key: "readAt", Value: -1}},
-				Options: options.Index().SetName("read_time"),
-			},
-			{
-				Keys:    bson.D{{Key: "readDuration", Value: -1}},
-				Options: options.Index().SetName("read_duration"),
-			},
-			{
-				Keys:    bson.D{{Key: "isComplete", Value: 1}},
-				Options: options.Index().SetName("complete_status"),
-			},
-			{
-				Keys:    bson.D{{Key: "source", Value: 1}},
-				Options: options.Index().SetName("read_source"),
-			},
-		},
-		"read_chapters": {
-			{
-				Keys: bson.D{
-					{Key: "deviceId", Value: 1},
-					{Key: "novelId", Value: 1},
-					{Key: "volumeNumber", Value: 1},
-					{Key: "chapterNumber", Value: 1},
-				},
-				Options: options.Index().SetName("device_novel_chapter").SetUnique(true),
-			},
-			{
-				Keys:    bson.D{{Key: "lastReadAt", Value: -1}},
-				Options: options.Index().SetName("last_read_time"),
-			},
-			{
-				Keys:    bson.D{{Key: "readCount", Value: -1}},
-				Options: options.Index().SetName("read_count"),
-			},
-			{
-				Keys:    bson.D{{Key: "isComplete", Value: 1}},
-				Options: options.Index().SetName("chapter_complete"),
-			},
-			{
-				Keys:    bson.D{{Key: "lastPosition", Value: 1}},
-				Options: options.Index().SetName("last_position"),
-			},
-		},
-		"reading_stats": {
-			{
-				Keys: bson.D{
-					{Key: "deviceId", Value: 1},
-					{Key: "novelId", Value: 1},
-				},
-				Options: options.Index().SetName("device_novel_stats").SetUnique(true),
-			},
-			{
-				Keys:    bson.D{{Key: "lastActiveDate", Value: -1}},
-				Options: options.Index().SetName("last_active"),
-			},
-			{
-				Keys:    bson.D{{Key: "totalReadTime", Value: -1}},
-				Options: options.Index().SetName("total_read_time"),
-			},
-			{
-				Keys:    bson.D{{Key: "chapterRead", Value: -1}},
-				Options: options.Index().SetName("chapter_read"),
-			},
-			{
-				Keys:    bson.D{{Key: "completeCount", Value: -1}},
-				Options: options.Index().SetName("complete_count"),
-			},
-			{
-				Keys:    bson.D{{Key: "readProgress", Value: -1}},
-				Options: options.Index().SetName("read_progress"),
-			},
-		},
+		"novels":        novelIndexes,
+		"volumes":       volumeIndexes,
+		"chapters":      chapterIndexes,
+		"devices":       deviceIndexes,
+		"bookmarks":     bookmarkIndexes,
+		"favorites":     favoriteIndexes,
+		"read_history":  readHistoryIndexes,
+		"read_progress": readProgressIndexes,
 	}
 
 	for collection, indexes := range collections {

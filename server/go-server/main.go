@@ -136,32 +136,19 @@ func main() {
 			user.POST("/bookmarks", novelHandler.CreateBookmark)
 			user.DELETE("/bookmarks/:id", novelHandler.DeleteBookmark)
 			user.PUT("/bookmarks/:id", novelHandler.UpdateBookmark)
-			user.PATCH("/progress", novelHandler.UpdateReadingProgress)
-			user.GET("/history", middleware.ValidateLimit(10, 100), novelHandler.GetReadingHistory)
 
-			// 阅读记录相关路由组
+			// 阅读相关路由组
 			reading := user.Group("/reading")
 			{
-				// 阅读记录
-				records := reading.Group("/records")
-				{
-					records.POST("", novelHandler.AddReadRecord)
-					records.GET("/:novel-id", middleware.ValidatePagination(), novelHandler.GetReadRecords)
-					records.DELETE("/:novel-id/:record-id", novelHandler.DeleteReadRecord)
-				}
+				// 阅读历史
+				reading.GET("/history", novelHandler.GetReadHistory)
+				reading.PUT("/history/:novel_id", novelHandler.UpsertReadHistory)
+				reading.DELETE("/history/:novel_id", novelHandler.DeleteReadHistory)
+				reading.DELETE("/history", novelHandler.ClearReadHistory)
 
-				// 已读章节
-				chapters := reading.Group("/chapters")
-				{
-					chapters.GET("/:novel-id", novelHandler.GetReadChapters)
-				}
-
-				// 阅读统计
-				stats := reading.Group("/stats")
-				{
-					stats.GET("", middleware.ValidatePagination(), novelHandler.GetReadingStats)
-					stats.GET("/:novel-id", novelHandler.GetReadingStat)
-				}
+				// 阅读进度
+				reading.GET("/progress/:novel_id", novelHandler.GetReadProgress)
+				reading.PUT("/progress/:novel_id", novelHandler.UpdateReadProgress)
 			}
 		}
 	}

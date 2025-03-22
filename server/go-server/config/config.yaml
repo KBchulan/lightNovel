@@ -26,17 +26,14 @@ redis:
   poolSize: 300
 
 cache:
-  novelList: 30m
-  novelDetail: 1h
-  volumeList: 40m
-  chapterList: 40m
-  chapterDetail: 2h
-  searchResult: 20m
-  latestNovels: 10m
-  popularNovels: 1h
-  readRecord: 1h
-  readChapter: 24h
-  readingStat: 1h
+  novel: 24h
+  volume: 24h
+  chapter: 24h
+  search: 1h
+  bookmark: 1h
+  favorite: 1h
+  readHistory: 1h
+  readProgress: 1h
 
 rate:
   limit: 1000000

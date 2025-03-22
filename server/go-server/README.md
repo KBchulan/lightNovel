@@ -153,90 +153,52 @@ http://localhost:8080/swagger/index.html
 ### 小说相关
 
 ```
-GET /api/v1/novels              # 获取小说列表
-GET /api/v1/novels/search       # 搜索小说
-GET /api/v1/novels/latest       # 最新更新
-GET /api/v1/novels/popular      # 热门小说
+GET /api/v1/novels              # 获取小说列表（支持分页）
+GET /api/v1/novels/search       # 搜索小说（支持分页）
+GET /api/v1/novels/latest       # 最新更新（支持限制数量）
+GET /api/v1/novels/popular      # 热门小说（支持限制数量）
 GET /api/v1/novels/:id          # 获取小说详情
 GET /api/v1/novels/:id/volumes  # 获取卷列表
-GET /api/v1/novels/:id/volumes/:vid/chapters      # 获取章节列表
-GET /api/v1/novels/:id/volumes/:vid/chapters/:cid # 获取章节内容
+GET /api/v1/novels/:id/volumes/:volume/chapters      # 获取章节列表
+GET /api/v1/novels/:id/volumes/:volume/chapters/:chapter # 获取章节内容
 ```
 
 ### 用户相关
 
 #### 收藏管理
 
-- 获取收藏列表: `GET /api/v1/user/favorites`
-- 添加收藏: `POST /api/v1/user/favorites/:novel_id`
-- 取消收藏: `DELETE /api/v1/user/favorites/:novel_id`
-- 检查收藏状态: `GET /api/v1/user/favorites/:novel_id/check`
+```
+GET    /api/v1/user/favorites                # 获取收藏列表
+POST   /api/v1/user/favorites/:novel_id      # 添加收藏
+DELETE /api/v1/user/favorites/:novel_id      # 取消收藏
+GET    /api/v1/user/favorites/:novel_id/check # 检查收藏状态
+```
 
 #### 书签管理
 
-- 获取书签列表: `GET /api/v1/user/bookmarks`
-- 创建书签: `POST /api/v1/user/bookmarks`
-- 更新书签: `PUT /api/v1/user/bookmarks/:id`
-- 删除书签: `DELETE /api/v1/user/bookmarks/:id`
+```
+GET    /api/v1/user/bookmarks      # 获取书签列表
+POST   /api/v1/user/bookmarks      # 创建书签
+PUT    /api/v1/user/bookmarks/:id  # 更新书签
+DELETE /api/v1/user/bookmarks/:id  # 删除书签
+```
 
-#### 阅读历史
+#### 阅读相关
 
-- 获取阅读历史: `GET /api/v1/user/history`
-- 更新阅读进度: `PATCH /api/v1/user/progress`
-
-### 设备识别
-
-- 所有用户相关接口都需要在请求头中包含 `X-Device-ID`
-- 如果未提供设备ID，系统将使用客户端IP作为设备标识
-
-### 缓存机制
-
-- 小说列表和详情使用 Redis 缓存
-- 缓存时间：小说列表 5 分钟，小说详情 30 分钟
-- 用户相关的收藏、书签、历史记录等数据不缓存，实时从数据库获取
+```
+GET    /api/v1/user/reading/history           # 获取阅读历史
+PUT    /api/v1/user/reading/history/:novel_id # 添加或更新阅读历史
+DELETE /api/v1/user/reading/history/:novel_id # 删除指定小说的阅读历史
+DELETE /api/v1/user/reading/history          # 清空所有阅读历史
+GET    /api/v1/user/reading/progress/:novel_id # 获取阅读进度
+PUT    /api/v1/user/reading/progress/:novel_id # 更新阅读进度
+```
 
 ### WebSocket
 
 ```
-GET /api/v1/ws      # WebSocket连接
+GET /api/v1/ws         # WebSocket连接
 GET /api/v1/ws/status  # 获取连接状态
-```
-
-#### WebSocket消息格式
-
-1. 小说更新通知
-
-```json
-{
-  "type": "novel_update",
-  "data": {
-    "novelId": "string",
-    "title": "string",
-    "updateType": "new_chapter|new_volume|content_update",
-    "description": "string"
-  },
-  "time": "2024-03-17T15:04:05Z"
-}
-```
-
-2. 系统公告
-
-```json
-{
-  "type": "system_notice",
-  "data": {
-    "level": "info|warning|error",
-    "content": "string"
-  },
-  "time": "2024-03-17T15:04:05Z"
-}
-```
-
-### 阅读记录
-
-```
-GET /api/v1/reading/stats           # 获取阅读统计
-POST /api/v1/reading/records/batch  # 批量获取阅读记录
 ```
 
 ### 系统监控

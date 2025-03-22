@@ -1142,14 +1142,14 @@
                 }
             }
         },
-        "/user/history": {
+        "/user/reading/history": {
             "get": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "获取用户的阅读历史记录",
+                "description": "获取用户的阅读历史列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -1157,24 +1157,16 @@
                     "application/json"
                 ],
                 "tags": [
-                    "user"
+                    "reading"
                 ],
                 "summary": "获取阅读历史",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "设备ID，如果未提供则使用客户端IP",
+                        "description": "设备ID",
                         "name": "X-Device-ID",
-                        "in": "header"
-                    },
-                    {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "default": 10,
-                        "description": "限制数量",
-                        "name": "limit",
-                        "in": "query"
+                        "in": "header",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -1191,7 +1183,7 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/models.ReadingProgress"
+                                                "$ref": "#/definitions/models.ReadHistory"
                                             }
                                         }
                                     }
@@ -1212,16 +1204,14 @@
                         }
                     }
                 }
-            }
-        },
-        "/user/progress": {
-            "patch": {
+            },
+            "delete": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "更新用户的小说阅读进度",
+                "description": "清空用户的所有阅读历史",
                 "consumes": [
                     "application/json"
                 ],
@@ -1229,19 +1219,260 @@
                     "application/json"
                 ],
                 "tags": [
-                    "user"
+                    "reading"
+                ],
+                "summary": "清空阅读历史",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID",
+                        "name": "X-Device-ID",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/reading/history/{novel_id}": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "添加或更新指定小说的阅读历史",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "summary": "添加或更新阅读历史",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID",
+                        "name": "X-Device-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "小说ID",
+                        "name": "novel_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "阅读历史信息",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/v1.UpsertHistoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除指定小说的阅读历史",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "summary": "删除阅读历史",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID",
+                        "name": "X-Device-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "小说ID",
+                        "name": "novel_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/reading/progress/{novel_id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "获取指定小说的阅读进度",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "summary": "获取阅读进度",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "设备ID",
+                        "name": "X-Device-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "小说ID",
+                        "name": "novel_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.ReadProgress"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "更新指定小说的阅读进度",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reading"
                 ],
                 "summary": "更新阅读进度",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "设备ID，如果未提供则使用客户端IP",
+                        "description": "设备ID",
                         "name": "X-Device-ID",
-                        "in": "header"
+                        "in": "header",
+                        "required": true
                     },
                     {
-                        "description": "阅读进度信息",
-                        "name": "body",
+                        "type": "string",
+                        "description": "小说ID",
+                        "name": "novel_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "进度信息",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -1251,148 +1482,6 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "更新成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "404": {
-                        "description": "小说不存在",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "服务器内部错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/user/reading/chapters/{novel-id}": {
-            "get": {
-                "description": "获取指定小说的已读章节列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "reading"
-                ],
-                "summary": "获取已读章节列表",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "设备ID",
-                        "name": "X-Device-ID",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "小说ID",
-                        "name": "novel-id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.ReadChapterRecord"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "服务器内部错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/user/reading/records": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "添加一条阅读记录，同时更新阅读统计和已读章节记录",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "reading"
-                ],
-                "summary": "添加阅读记录",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "设备ID",
-                        "name": "X-Device-ID",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "阅读记录信息",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/v1.AddReadRecordRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
                         "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
@@ -1406,276 +1495,6 @@
                     },
                     "500": {
                         "description": "服务器内部错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/user/reading/records/{novel-id}": {
-            "get": {
-                "description": "获取用户的阅读记录",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "reading"
-                ],
-                "summary": "获取阅读记录",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "设备ID",
-                        "name": "X-Device-ID",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "小说ID",
-                        "name": "novel-id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "页码，默认1",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "每页数量，默认20",
-                        "name": "page_size",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.ReadRecord"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "服务器内部错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/user/reading/records/{novel-id}/{record-id}": {
-            "delete": {
-                "description": "删除指定的阅读记录",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "reading"
-                ],
-                "summary": "删除阅读记录",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "设备ID",
-                        "name": "X-Device-ID",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "小说ID",
-                        "name": "novel-id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "记录ID",
-                        "name": "record-id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "404": {
-                        "description": "记录不存在",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/user/reading/stats": {
-            "get": {
-                "description": "获取用户的所有阅读统计列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "reading"
-                ],
-                "summary": "获取阅读统计列表",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "设备ID",
-                        "name": "X-Device-ID",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "页码，默认1",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "每页数量，默认20",
-                        "name": "page_size",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.ReadingStat"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "服务器内部错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/user/reading/stats/{novel-id}": {
-            "get": {
-                "description": "获取指定小说的阅读统计信息",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "reading"
-                ],
-                "summary": "获取阅读统计",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "设备ID",
-                        "name": "X-Device-ID",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "小说ID",
-                        "name": "novel-id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/models.ReadingStat"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "404": {
-                        "description": "统计不存在",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
                         }
@@ -1781,23 +1600,6 @@
                 }
             }
         },
-        "models.CurrentProgress": {
-            "type": "object",
-            "properties": {
-                "chapterNumber": {
-                    "type": "integer"
-                },
-                "lastReadAt": {
-                    "type": "string"
-                },
-                "position": {
-                    "type": "integer"
-                },
-                "volumeNumber": {
-                    "type": "integer"
-                }
-            }
-        },
         "models.Novel": {
             "type": "object",
             "properties": {
@@ -1841,87 +1643,30 @@
                 }
             }
         },
-        "models.ReadChapterRecord": {
+        "models.ReadHistory": {
+            "type": "object",
+            "properties": {
+                "deviceId": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lastRead": {
+                    "description": "最后阅读时间,用于排序",
+                    "type": "string"
+                },
+                "novelId": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ReadProgress": {
             "type": "object",
             "properties": {
                 "chapterNumber": {
+                    "description": "当前章节号",
                     "type": "integer"
-                },
-                "deviceId": {
-                    "type": "string"
-                },
-                "firstReadAt": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "isComplete": {
-                    "type": "boolean"
-                },
-                "lastPosition": {
-                    "type": "integer"
-                },
-                "lastReadAt": {
-                    "type": "string"
-                },
-                "novelId": {
-                    "type": "string"
-                },
-                "readCount": {
-                    "type": "integer"
-                },
-                "volumeNumber": {
-                    "type": "integer"
-                }
-            }
-        },
-        "models.ReadRecord": {
-            "type": "object",
-            "properties": {
-                "chapterNumber": {
-                    "type": "integer"
-                },
-                "deviceId": {
-                    "type": "string"
-                },
-                "endPosition": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "isComplete": {
-                    "type": "boolean"
-                },
-                "novelId": {
-                    "type": "string"
-                },
-                "readAt": {
-                    "type": "string"
-                },
-                "readDuration": {
-                    "type": "integer"
-                },
-                "source": {
-                    "type": "string"
-                },
-                "startPosition": {
-                    "type": "integer"
-                },
-                "volumeNumber": {
-                    "type": "integer"
-                }
-            }
-        },
-        "models.ReadingProgress": {
-            "type": "object",
-            "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "currentProgress": {
-                    "$ref": "#/definitions/models.CurrentProgress"
                 },
                 "deviceId": {
                     "type": "string"
@@ -1932,52 +1677,16 @@
                 "novelId": {
                     "type": "string"
                 },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.ReadingStat": {
-            "type": "object",
-            "properties": {
-                "chapterRead": {
-                    "type": "integer"
-                },
-                "completeCount": {
-                    "type": "integer"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deviceId": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "lastActiveDate": {
-                    "type": "string"
-                },
-                "novelId": {
-                    "type": "string"
-                },
-                "readDays": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "readProgress": {
-                    "type": "number"
-                },
-                "totalChapters": {
-                    "type": "integer"
-                },
-                "totalReadTime": {
+                "position": {
+                    "description": "章节内位置",
                     "type": "integer"
                 },
                 "updatedAt": {
                     "type": "string"
+                },
+                "volumeNumber": {
+                    "description": "当前卷号",
+                    "type": "integer"
                 }
             }
         },
@@ -2031,52 +1740,6 @@
                 "data": {},
                 "message": {
                     "type": "string"
-                }
-            }
-        },
-        "v1.AddReadRecordRequest": {
-            "type": "object",
-            "required": [
-                "chapterNumber",
-                "novelId",
-                "readDuration",
-                "source",
-                "volumeNumber"
-            ],
-            "properties": {
-                "chapterNumber": {
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "endPosition": {
-                    "type": "integer",
-                    "minimum": 0
-                },
-                "isComplete": {
-                    "type": "boolean"
-                },
-                "novelId": {
-                    "type": "string"
-                },
-                "readDuration": {
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "source": {
-                    "type": "string",
-                    "enum": [
-                        "web",
-                        "app",
-                        "other"
-                    ]
-                },
-                "startPosition": {
-                    "type": "integer",
-                    "minimum": 0
-                },
-                "volumeNumber": {
-                    "type": "integer",
-                    "minimum": 1
                 }
             }
         },
@@ -2159,21 +1822,29 @@
             "type": "object",
             "required": [
                 "chapterNumber",
-                "novelId",
                 "volumeNumber"
             ],
             "properties": {
                 "chapterNumber": {
-                    "type": "integer"
-                },
-                "novelId": {
-                    "type": "string"
+                    "type": "integer",
+                    "minimum": 1
                 },
                 "position": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                 },
                 "volumeNumber": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "v1.UpsertHistoryRequest": {
+            "type": "object",
+            "properties": {
+                "lastRead": {
+                    "description": "可选,不传则使用当前时间",
+                    "type": "string"
                 }
             }
         }

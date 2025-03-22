@@ -77,24 +77,6 @@ type Device struct {
 	LastSeen   time.Time `bson:"lastSeen" json:"lastSeen"`
 }
 
-// CurrentProgress 当前阅读进度
-type CurrentProgress struct {
-	VolumeNumber  int       `bson:"volumeNumber" json:"volumeNumber"`
-	ChapterNumber int       `bson:"chapterNumber" json:"chapterNumber"`
-	Position      int       `bson:"position" json:"position"`
-	LastReadAt    time.Time `bson:"lastReadAt" json:"lastReadAt"`
-}
-
-// ReadingProgress 阅读进度模型
-type ReadingProgress struct {
-	ID              primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	DeviceID        string             `bson:"deviceId" json:"deviceId"`
-	NovelID         string             `bson:"novelId" json:"novelId"`
-	CurrentProgress CurrentProgress    `bson:"currentProgress" json:"currentProgress"`
-	CreatedAt       time.Time          `bson:"createdAt" json:"createdAt"`
-	UpdatedAt       time.Time          `bson:"updatedAt" json:"updatedAt"`
-}
-
 // Bookmark 书签模型
 type Bookmark struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
@@ -117,47 +99,21 @@ type Favorite struct {
 	UpdatedAt time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
 
-// ReadRecord 阅读记录模型
-type ReadRecord struct {
+// ReadHistory 阅读历史
+type ReadHistory struct {
+	ID       primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	DeviceID string             `bson:"deviceId" json:"deviceId"`
+	NovelID  string             `bson:"novelId" json:"novelId"`
+	LastRead time.Time          `bson:"lastRead" json:"lastRead"` // 最后阅读时间,用于排序
+}
+
+// ReadProgress 阅读进度
+type ReadProgress struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	DeviceID      string             `bson:"deviceId" json:"deviceId"`
 	NovelID       string             `bson:"novelId" json:"novelId"`
-	VolumeNumber  int                `bson:"volumeNumber" json:"volumeNumber"`
-	ChapterNumber int                `bson:"chapterNumber" json:"chapterNumber"`
-	ReadDuration  int64              `bson:"readDuration" json:"readDuration"`
-	ReadAt        time.Time          `bson:"readAt" json:"readAt"`
-	StartPosition int                `bson:"startPosition" json:"startPosition"`
-	EndPosition   int                `bson:"endPosition" json:"endPosition"`
-	IsComplete    bool               `bson:"isComplete" json:"isComplete"`
-	Source        string             `bson:"source" json:"source"`
-}
-
-// ReadChapterRecord 已读章节记录
-type ReadChapterRecord struct {
-	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	DeviceID      string             `bson:"deviceId" json:"deviceId"`
-	NovelID       string             `bson:"novelId" json:"novelId"`
-	VolumeNumber  int                `bson:"volumeNumber" json:"volumeNumber"`
-	ChapterNumber int                `bson:"chapterNumber" json:"chapterNumber"`
-	FirstReadAt   time.Time          `bson:"firstReadAt" json:"firstReadAt"`
-	LastReadAt    time.Time          `bson:"lastReadAt" json:"lastReadAt"`
-	ReadCount     int                `bson:"readCount" json:"readCount"`
-	IsComplete    bool               `bson:"isComplete" json:"isComplete"`
-	LastPosition  int                `bson:"lastPosition" json:"lastPosition"`
-}
-
-// ReadingStat 阅读统计
-type ReadingStat struct {
-	ID             primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	DeviceID       string             `bson:"deviceId" json:"deviceId"`
-	NovelID        string             `bson:"novelId" json:"novelId"`
-	TotalReadTime  int64              `bson:"totalReadTime" json:"totalReadTime"`
-	ChapterRead    int                `bson:"chapterRead" json:"chapterRead"`
-	LastActiveDate time.Time          `bson:"lastActiveDate" json:"lastActiveDate"`
-	ReadDays       []time.Time        `bson:"readDays" json:"readDays"`
-	CreatedAt      time.Time          `bson:"createdAt" json:"createdAt"`
-	UpdatedAt      time.Time          `bson:"updatedAt" json:"updatedAt"`
-	CompleteCount  int                `bson:"completeCount" json:"completeCount"`
-	TotalChapters  int                `bson:"totalChapters" json:"totalChapters"`
-	ReadProgress   float64            `bson:"readProgress" json:"readProgress"`
+	VolumeNumber  int                `bson:"volumeNumber" json:"volumeNumber"`   // 当前卷号
+	ChapterNumber int                `bson:"chapterNumber" json:"chapterNumber"` // 当前章节号
+	Position      int                `bson:"position" json:"position"`           // 章节内位置
+	UpdatedAt     time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
