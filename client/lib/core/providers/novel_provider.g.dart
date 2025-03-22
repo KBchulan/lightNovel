@@ -22,7 +22,7 @@ final novelNotifierProvider =
 );
 
 typedef _$NovelNotifier = AutoDisposeAsyncNotifier<List<Novel>>;
-String _$favoriteNotifierHash() => r'34a160f450ec0396536ae2440fe536d715267bce';
+String _$favoriteNotifierHash() => r'5573e082d333ad90e291a76d4fc3d192dfd25f94';
 
 /// See also [FavoriteNotifier].
 @ProviderFor(FavoriteNotifier)

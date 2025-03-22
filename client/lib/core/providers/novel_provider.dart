@@ -58,7 +58,15 @@ class FavoriteNotifier extends _$FavoriteNotifier {
   Future<void> fetchFavorites() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      return await ref.read(apiClientProvider).getFavorites();
+      try {
+        return await ref.read(apiClientProvider).getFavorites();
+      } catch (e) {
+        // 如果是空响应导致的错误，返回空列表
+        if (e.toString().contains('null')) {
+          return const [];
+        }
+        rethrow;
+      }
     });
   }
 

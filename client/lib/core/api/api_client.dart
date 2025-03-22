@@ -378,10 +378,25 @@ class ApiClient {
         );
       }
 
-      final novelsList = data['data'] as List;
-      return novelsList
-          .map((json) => Novel.fromJson(json as Map<String, dynamic>))
-          .toList();
+      final favoritesList = data['data'] as List;
+      final novels = <Novel>[];
+
+      // 获取每个收藏小说的详情
+      for (final favorite in favoritesList) {
+        final favoriteData = favorite as Map<String, dynamic>;
+        final novelId = favoriteData['novelId'] as String;
+        
+        try {
+          final novel = await getNovelDetail(novelId);
+          novels.add(novel);
+        } catch (e) {
+          debugPrint('❌ 获取小说详情错误: $e');
+          // 继续获取下一个小说，不中断整个过程
+          continue;
+        }
+      }
+
+      return novels;
     } catch (e) {
       debugPrint('❌ 获取收藏列表错误: $e');
       rethrow;

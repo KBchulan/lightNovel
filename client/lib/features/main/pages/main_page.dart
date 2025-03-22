@@ -65,7 +65,27 @@ class _MainPageState extends ConsumerState<MainPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: _items[_currentIndex].page,
+      body: Navigator(
+        onGenerateRoute: (settings) {
+          return MaterialPageRoute(
+            builder: (context) => NotificationListener<SwitchToHomeNotification>(
+              onNotification: (notification) {
+                setState(() => _currentIndex = 0);
+                return true;
+              },
+              child: _items[_currentIndex].page,
+            ),
+            settings: settings,
+          );
+        },
+        // ignore: deprecated_member_use
+        onPopPage: (route, result) {
+          if (!route.didPop(result)) {
+            return false;
+          }
+          return true;
+        },
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
