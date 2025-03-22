@@ -11,6 +11,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/models/novel.dart';
+import '../../../shared/widgets/snack_message.dart';
 
 class NovelShareSheet extends StatelessWidget {
   final Novel novel;
@@ -34,6 +35,12 @@ class NovelShareSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        border: Border(
+          top: BorderSide(
+            color: theme.colorScheme.outlineVariant,
+            width: 1,
+          ),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -46,11 +53,12 @@ class NovelShareSheet extends StatelessWidget {
                   '分享',
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
+                  icon: Icon(Icons.close, color: theme.colorScheme.onSurfaceVariant),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -97,9 +105,19 @@ class NovelShareSheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: SizedBox(
                 width: double.infinity,
-                child: FilledButton.tonal(
+                child: FilledButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('取消'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    '取消',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.onPrimary,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -111,41 +129,7 @@ class NovelShareSheet extends StatelessWidget {
 
   void _copyShareLink(BuildContext context) {
     Clipboard.setData(ClipboardData(text: _shareText));
-    final theme = Theme.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.onInverseSurface.withAlpha(31),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.check_circle_outline,
-                color: theme.colorScheme.onInverseSurface,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              '已复制分享内容',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onInverseSurface,
-              ),
-            ),
-          ],
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: theme.colorScheme.inverseSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        duration: const Duration(seconds: 2),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+    SnackMessage.show(context, '已复制分享内容');
     Navigator.of(context).pop();
   }
 
@@ -158,7 +142,10 @@ class NovelShareSheet extends StatelessWidget {
       });
       if (context.mounted) Navigator.of(context).pop();
     } catch (error) {
-      if (context.mounted) _showErrorDialog(context, '系统分享失败');
+      if (context.mounted) {
+        SnackMessage.show(context, '系统分享失败了喵', isError: true);
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -182,22 +169,6 @@ class NovelShareSheet extends StatelessWidget {
     );
   }
 
-  void _showErrorDialog(BuildContext context, String message) {
-    final theme = Theme.of(context);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('错误', style: theme.textTheme.titleLarge),
-        content: Text(message, style: theme.textTheme.bodyMedium),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('确定', style: TextStyle(color: theme.colorScheme.primary)),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _ShareItem extends StatelessWidget {

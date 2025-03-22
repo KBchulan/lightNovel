@@ -18,6 +18,7 @@ import '../../../shared/widgets/page_transitions.dart';
 import '../widgets/novel_share_sheet.dart';
 import '../../reading/pages/reading_page.dart';
 import '../../../core/providers/api_provider.dart';
+import '../../../shared/widgets/snack_message.dart';
 
 class NovelDetailPage extends ConsumerStatefulWidget {
   final Novel novel;
@@ -55,7 +56,7 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
       }
     } catch (e) {
       if (mounted) {
-        _showSnackBar(context, '检查收藏状态失败: $e', isError: true);
+        SnackMessage.show(context, '检查收藏状态失败: $e', isError: true);
       }
     }
   }
@@ -65,12 +66,12 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
       if (_isFavorite) {
         await ref.read(apiClientProvider).removeFavorite(widget.novel.id);
         if (mounted) {
-          _showSnackBar(context, '已取消收藏');
+          SnackMessage.show(context, '取消收藏了喵');
         }
       } else {
         await ref.read(apiClientProvider).addFavorite(widget.novel.id);
         if (mounted) {
-          _showSnackBar(context, '添加到收藏了喵');
+          SnackMessage.show(context, '添加到收藏了喵');
         }
       }
       if (mounted) {
@@ -80,51 +81,9 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
       }
     } catch (e) {
       if (mounted) {
-        _showSnackBar(context, '操作失败: $e', isError: true);
+        SnackMessage.show(context, '操作失败: $e', isError: true);
       }
     }
-  }
-
-  void _showSnackBar(BuildContext context, String message, {bool isError = false}) {
-    final theme = Theme.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.onInverseSurface.withAlpha(31),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isError ? Icons.error_outline : Icons.check_circle_outline,
-                color: theme.colorScheme.onInverseSurface,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                message,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onInverseSurface,
-                ),
-              ),
-            ),
-          ],
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: isError 
-            ? theme.colorScheme.errorContainer
-            : theme.colorScheme.inverseSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        duration: const Duration(seconds: 2),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
   }
 
   @override
@@ -262,8 +221,11 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                             final volumes = volumesAsync.value;
                             if (volumes == null || volumes.isEmpty) {
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('服务器没有这些章节喵')),
+                                SnackMessage.show(
+                                  context, 
+                                  '服务器没有这些章节喵', 
+                                  isError: true,
+                                  duration: const Duration(milliseconds: 500),
                                 );
                               }
                               return;
@@ -278,8 +240,11 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
 
                             if (chapters.isEmpty) {
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('服务器没有这些章节喵')),
+                                SnackMessage.show(
+                                  context, 
+                                  '服务器没有这些章节喵', 
+                                  isError: true,
+                                  duration: const Duration(milliseconds: 500),
                                 );
                               }
                               return;

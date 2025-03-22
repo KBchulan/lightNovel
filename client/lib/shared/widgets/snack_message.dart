@@ -29,12 +29,16 @@ class SnackMessage {
             Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: theme.colorScheme.onInverseSurface.withAlpha(31),
+                color: (isError 
+                    ? theme.colorScheme.error 
+                    : theme.colorScheme.primary).withAlpha(31),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 isError ? Icons.error_outline : Icons.check_circle_outline,
-                color: theme.colorScheme.onInverseSurface,
+                color: isError 
+                    ? theme.colorScheme.error
+                    : theme.colorScheme.primary,
                 size: 20,
               ),
             ),
@@ -43,21 +47,24 @@ class SnackMessage {
               child: Text(
                 message,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onInverseSurface,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ),
           ],
         ),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: isError 
-            ? theme.colorScheme.errorContainer
-            : theme.colorScheme.inverseSurface,
+        backgroundColor: theme.colorScheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
+          side: BorderSide(
+            color: theme.colorScheme.outlineVariant,
+            width: 1,
+          ),
         ),
-        duration: duration ?? const Duration(seconds: 2),
+        duration: duration ?? const Duration(milliseconds: 500),
         margin: const EdgeInsets.all(16),
+        elevation: 0,
       ),
     );
   }
