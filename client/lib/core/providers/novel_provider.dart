@@ -69,18 +69,4 @@ class FavoriteNotifier extends _$FavoriteNotifier {
       }
     });
   }
-
-  Future<void> addFavorite(String novelId) async {
-    await ref.read(apiClientProvider).addFavorite(novelId);
-    fetchFavorites();
-  }
-
-  Future<void> removeFavorite(String novelId) async {
-    await ref.read(apiClientProvider).removeFavorite(novelId);
-    fetchFavorites();
-  }
-
-  Future<bool> checkFavorite(String novelId) async {
-    return await ref.read(apiClientProvider).checkFavorite(novelId);
-  }
 }
