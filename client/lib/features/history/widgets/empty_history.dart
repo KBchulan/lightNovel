@@ -25,7 +25,7 @@ class EmptyHistory extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceVariant.withAlpha(50),
+              color: colorScheme.surfaceContainerHighest.withAlpha(50),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -49,7 +49,7 @@ class EmptyHistory extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               color: Color.alphaBlend(
-                outlineColor.withOpacity(0.7),
+                outlineColor.withAlpha(179),
                 colorScheme.surface,
               ),
             ),

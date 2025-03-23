@@ -210,39 +210,70 @@ class SearchResultPageRoute<T> extends BasePageRoute<T> {
     required super.page,
   }) : super(
           duration: const Duration(milliseconds: 250),
-          reverseDuration: BasePageRoute.fastDuration,
-          opaque: false,
+          reverseDuration: const Duration(milliseconds: 200),
+          opaque: true,
           barrierColor: Colors.transparent,
           maintainState: true,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            // 定义更平滑的动画曲线
+            const curve = Curves.easeOutQuart;
+            const reverseCurve = Curves.easeInQuart;
+            
+            // 主页面进入动画
             var slideAnimation = Tween(
               begin: const Offset(1.0, 0.0),
               end: Offset.zero,
             ).animate(CurvedAnimation(
               parent: animation,
-              curve: BasePageRoute.defaultCurve,
+              curve: curve,
             ));
-
-            var secondarySlideAnimation = Tween(
-              begin: Offset.zero,
-              end: const Offset(-0.2, 0.0),
+            
+            // 主页面透明度动画
+            var fadeAnimation = Tween(
+              begin: 0.0,
+              end: 1.0,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: curve,
+            ));
+            
+            // 前一页面退出动画
+            var secondaryFadeAnimation = Tween(
+              begin: 1.0,
+              end: 0.4,
             ).animate(CurvedAnimation(
               parent: secondaryAnimation,
-              curve: BasePageRoute.defaultCurve,
+              curve: reverseCurve,
             ));
-
+            
+            // 为前一页面添加轻微缩放效果，使过渡更自然
+            var secondaryScaleAnimation = Tween(
+              begin: 1.0,
+              end: 0.95,
+            ).animate(CurvedAnimation(
+              parent: secondaryAnimation,
+              curve: reverseCurve,
+            ));
+            
             return Stack(
-              fit: StackFit.passthrough,
               children: [
-                SlideTransition(
-                  position: secondarySlideAnimation,
-                  child: Container(
-                    color: Theme.of(context).scaffoldBackgroundColor,
+                // 前一页面
+                FadeTransition(
+                  opacity: secondaryFadeAnimation,
+                  child: ScaleTransition(
+                    scale: secondaryScaleAnimation,
+                    child: Container(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                    ),
                   ),
                 ),
+                // 当前页面
                 SlideTransition(
                   position: slideAnimation,
-                  child: child,
+                  child: FadeTransition(
+                    opacity: fadeAnimation,
+                    child: child,
+                  ),
                 ),
               ],
             );

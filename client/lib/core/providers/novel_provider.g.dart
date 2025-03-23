@@ -6,7 +6,7 @@ part of 'novel_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$novelNotifierHash() => r'497ff1157fdeb7311da047cd84250fb1f5bf5a50';
+String _$novelNotifierHash() => r'd199b18eaf93990e698acb67798409aaccf93d98';
 
 /// See also [NovelNotifier].
 @ProviderFor(NovelNotifier)

@@ -246,7 +246,7 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
                 width: 80,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Center(child: CircularProgressIndicator()),
@@ -312,6 +312,7 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
         return confirmed ?? false;
       },
       onDismissed: (direction) async {
+        final currentContext = context;
         try {
           final apiClient = ref.read(apiClientProvider);
           // 删除单本小说的历史记录和阅读进度
@@ -321,8 +322,8 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
           ]);
           ref.invalidate(historyProvider);
         } catch (e) {
-          if (mounted) {
-            SnackMessage.show(context, '删除失败: $e', isError: true);
+          if (mounted && currentContext.mounted) {
+            SnackMessage.show(currentContext, '删除失败: $e', isError: true);
           }
         }
       },
@@ -330,8 +331,9 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: InkWell(
           onTap: () {
+            final currentContext = context;
             Navigator.push(
-              context,
+              currentContext,
               SlideUpPageRoute(
                 page: NovelDetailPage(novel: _novel!),
               ),
@@ -445,6 +447,7 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
                 ),
                 child: TextButton.icon(
                   onPressed: () async {
+                    final currentContext = context;
                     try {
                       final chapter =
                           await ref.read(apiClientProvider).getChapterContent(
@@ -453,9 +456,9 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
                                 _progress!.chapterNumber,
                               );
 
-                      if (mounted) {
+                      if (mounted && currentContext.mounted) {
                         Navigator.push(
-                          context,
+                          currentContext,
                           SlideUpPageRoute(
                             page: ReadingPage(
                               chapter: chapter,
@@ -465,8 +468,8 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
                         );
                       }
                     } catch (e) {
-                      if (mounted) {
-                        SnackMessage.show(context, '获取章节失败: $e', isError: true);
+                      if (mounted && currentContext.mounted) {
+                        SnackMessage.show(currentContext, '获取章节失败: $e', isError: true);
                       }
                     }
                   },
@@ -486,7 +489,7 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
   }
 
   void _showOperationMenu(BuildContext context) {
-    final BuildContext currentContext = context;
+    final currentContext = context;
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -515,7 +518,7 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
                     ],
                   ),
                 );
-                if (confirmed == true && mounted) {
+                if (confirmed == true && mounted && currentContext.mounted) {
                   try {
                     final apiClient = ref.read(apiClientProvider);
                     // 删除单本小说的历史记录和阅读进度
@@ -525,9 +528,8 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
                     ]);
                     ref.invalidate(historyProvider);
                   } catch (e) {
-                    if (mounted) {
-                      SnackMessage.show(currentContext, '删除失败: $e',
-                          isError: true);
+                    if (mounted && currentContext.mounted) {
+                      SnackMessage.show(currentContext, '删除失败: $e', isError: true);
                     }
                   }
                 }

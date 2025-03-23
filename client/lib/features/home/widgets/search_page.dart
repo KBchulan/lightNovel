@@ -23,8 +23,11 @@ class SearchPage extends ConsumerWidget {
     if (value.isEmpty) return;
     
     ref.read(searchHistoryProvider.notifier).addSearch(value);
-    ref.read(novelNotifierProvider.notifier).searchNovels(value);
     
+    // 先将状态设置为loading，但不执行实际搜索
+    ref.read(novelNotifierProvider.notifier).setLoading();
+    
+    // 导航到搜索结果页面
     Navigator.of(context).push(
       SearchResultPageRoute(
         page: SearchResultPage(keyword: value),

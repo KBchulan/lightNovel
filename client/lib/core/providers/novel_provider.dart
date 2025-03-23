@@ -20,31 +20,54 @@ class NovelNotifier extends _$NovelNotifier {
   ApiClient get _apiClient => ref.read(apiClientProvider);
 
   List<Novel>? _homeNovels;
+  List<Novel>? _searchResults;
+  bool _isSearchMode = false;
 
   @override
   FutureOr<List<Novel>> build() async {
+    // 确保初始状态加载完整列表
+    _isSearchMode = false;
     _homeNovels = await _apiClient.getNovels();
     return _homeNovels ?? [];
   }
 
   Future<void> searchNovels(String keyword) async {
+    _isSearchMode = true;
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _apiClient.searchNovels(keyword: keyword));
+    final searchResult = await AsyncValue.guard(() => _apiClient.searchNovels(keyword: keyword));
+    _searchResults = searchResult.valueOrNull;
+    state = searchResult;
+  }
+
+  // 添加设置加载状态的方法，用于显示加载UI但不执行实际搜索
+  void setLoading() {
+    state = const AsyncValue.loading();
   }
 
   Future<void> refresh() async {
-    state = const AsyncValue.loading();
+    // 如果是从搜索页面返回，则应该显示全部小说列表
+    _isSearchMode = false;
+    
     if (_homeNovels != null) {
       state = AsyncValue.data(_homeNovels!);
     } else {
-      state = await AsyncValue.guard(() => _apiClient.getNovels());
+      state = const AsyncValue.loading();
+      final novels = await AsyncValue.guard(() => _apiClient.getNovels());
+      _homeNovels = novels.valueOrNull;
+      state = novels;
     }
   }
 
   Future<void> refreshHome() async {
+    _isSearchMode = false;
     state = const AsyncValue.loading();
     _homeNovels = await _apiClient.getNovels();
     state = AsyncValue.data(_homeNovels ?? []);
+  }
+
+  // 添加获取首页小说的方法
+  List<Novel> getHomeNovels() {
+    return _homeNovels ?? [];
   }
 }
 

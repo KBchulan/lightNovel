@@ -118,7 +118,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
 
     return PopScope(
       canPop: true,
-      onPopInvoked: (bool didPop) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) {
           await _saveReadingProgress();
         }
