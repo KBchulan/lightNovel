@@ -32,7 +32,7 @@ class EmptyBookshelf extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.7,
+              height: MediaQuery.of(context).size.height * 0.65,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -45,12 +45,12 @@ class EmptyBookshelf extends StatelessWidget {
                       return Transform.scale(
                         scale: value,
                         child: Container(
-                          width: 140,
-                          height: 140,
+                          width: 120,
+                          height: 120,
                           decoration: BoxDecoration(
                             color: colorScheme.surfaceContainerHighest
                                 .withAlpha(20),
-                            borderRadius: BorderRadius.circular(70),
+                            borderRadius: BorderRadius.circular(60),
                             boxShadow: [
                               BoxShadow(
                                 color: primaryColor.withAlpha(10),
@@ -114,7 +114,7 @@ class EmptyBookshelf extends StatelessWidget {
                     },
                   ),
 
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
 
                   // 标题文字
                   TweenAnimationBuilder<double>(
@@ -141,7 +141,7 @@ class EmptyBookshelf extends StatelessWidget {
                     },
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
                   // 副标题描述
                   TweenAnimationBuilder<double>(
@@ -168,7 +168,7 @@ class EmptyBookshelf extends StatelessWidget {
                     },
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
 
                   // 探索按钮
                   TweenAnimationBuilder<double>(
@@ -195,7 +195,7 @@ class EmptyBookshelf extends StatelessWidget {
                     },
                   ),
 
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 36),
 
                   // 底部装饰元素
                   Row(

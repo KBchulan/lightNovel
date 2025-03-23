@@ -111,10 +111,13 @@ class HistoryPage extends ConsumerWidget {
         child: historyAsync.when(
           data: (histories) {
             if (histories.isEmpty) {
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: const [
-                  EmptyHistory(),
+              return const CustomScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverPadding(
+                    padding: EdgeInsets.all(16),
+                    sliver: EmptyHistory(),
+                  ),
                 ],
               );
             }

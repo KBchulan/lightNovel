@@ -74,7 +74,7 @@ class AppConfig {
   // 个人信息
   static const String authorName = 'KBchulan';
   static const String authorEmail = '18737519552@163.com';
-  static const String githubUrl = 'https://github.com/KBchulan';
+  static const String githubUrl = 'https://github.com/KBchulan/lightNovel';
 
   // 更新检查
   static const String updateCheckUrl =
