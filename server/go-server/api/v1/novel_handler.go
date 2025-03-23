@@ -415,6 +415,35 @@ func (h *NovelHandler) GetReadProgress(c *gin.Context) {
 	response.Success(c, progress)
 }
 
+// @Summary 删除阅读进度
+// @Description 删除指定小说的阅读进度
+// @Tags reading
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param X-Device-ID header string true "设备ID"
+// @Param novel_id path string true "小说ID"
+// @Success 200 {object} response.Response "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /user/reading/progress/{novel_id} [delete]
+func (h *NovelHandler) DeleteReadProgress(c *gin.Context) {
+	deviceID := c.GetString("deviceID")
+	novelID := c.Param("novel_id")
+	if deviceID == "" || novelID == "" {
+		response.Error(c, errors.NewError(errors.ErrInvalidParameter))
+		return
+	}
+
+	err := h.novelService.DeleteReadProgress(c.Request.Context(), deviceID, novelID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{"message": "删除成功"})
+}
+
 // UpdateProgressRequest 更新阅读进度请求
 type UpdateProgressRequest struct {
 	VolumeNumber  int `json:"volumeNumber" binding:"required,min=1"`

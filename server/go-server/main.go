@@ -149,6 +149,7 @@ func main() {
 				// 阅读进度
 				reading.GET("/progress/:novel_id", novelHandler.GetReadProgress)
 				reading.PUT("/progress/:novel_id", novelHandler.UpdateReadProgress)
+				reading.DELETE("/progress/:novel_id", novelHandler.DeleteReadProgress)
 			}
 		}
 	}

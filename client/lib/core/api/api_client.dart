@@ -396,11 +396,14 @@ class ApiClient {
       );
 
       final data = response.data;
-      if (data == null || data['data'] == null) {
-        throw DioException(
-          requestOptions: response.requestOptions,
-          error: '响应数据格式错误',
-        );
+      if (data == null) {
+        debugPrint('📚 API: 收藏列表响应为空');
+        return [];
+      }
+
+      if (data['data'] == null) {
+        debugPrint('📚 API: 收藏列表为空');
+        return [];
       }
 
       final favoritesList = data['data'] as List;
@@ -415,15 +418,19 @@ class ApiClient {
           final novel = await getNovelDetail(novelId);
           novels.add(novel);
         } catch (e) {
-          debugPrint('❌ 获取小说详情错误: $e');
+          debugPrint('⚠️ 获取小说详情失败: $e');
           // 继续获取下一个小说，不中断整个过程
           continue;
         }
       }
 
+      debugPrint('📚 API: 获取到 ${novels.length} 本收藏小说');
       return novels;
     } catch (e) {
-      debugPrint('❌ 获取收藏列表错误: $e');
+      debugPrint('⚠️ API: 获取收藏列表出现异常: $e');
+      if (e is DioException && e.error.toString().contains('响应数据格式错误')) {
+        return [];
+      }
       rethrow;
     }
   }
@@ -683,6 +690,18 @@ class ApiClient {
       );
     } catch (e) {
       debugPrint('❌ 更新阅读进度错误: $e');
+      rethrow;
+    }
+  }
+
+  // 删除阅读进度
+  Future<void> deleteReadProgress(String novelId) async {
+    try {
+      await _dio.delete<Map<String, dynamic>>(
+        '/user/reading/progress/$novelId',
+      );
+    } catch (e) {
+      debugPrint('❌ 删除阅读进度错误: $e');
       rethrow;
     }
   }

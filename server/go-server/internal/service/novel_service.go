@@ -791,6 +791,23 @@ func (s *NovelService) UpdateReadProgress(ctx context.Context, deviceID string, 
 	return nil
 }
 
+// DeleteReadProgress 删除阅读进度
+func (s *NovelService) DeleteReadProgress(ctx context.Context, deviceID string, novelID string) error {
+	filter := bson.M{
+		"deviceId": deviceID,
+		"novelId":  novelID,
+	}
+
+	_, err := s.db.GetCollection("read_progress").DeleteOne(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	// 删除相关缓存
+	s.cache.Delete(ctx, cache.ReadProgressKey+deviceID+":"+novelID)
+	return nil
+}
+
 // 辅助函数：根据UserAgent判断设备类型
 func getDeviceType(userAgent string) string {
 	userAgent = strings.ToLower(userAgent)

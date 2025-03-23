@@ -1084,6 +1084,41 @@ paths:
       tags:
       - reading
   /user/reading/progress/{novel_id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定小说的阅读进度
+      parameters:
+      - description: 设备ID
+        in: header
+        name: X-Device-ID
+        required: true
+        type: string
+      - description: 小说ID
+        in: path
+        name: novel_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 删除阅读进度
+      tags:
+      - reading
     get:
       consumes:
       - application/json

@@ -160,4 +160,18 @@ class ReadingNotifier extends _$ReadingNotifier {
       rethrow;
     }
   }
+
+  // 删除阅读进度
+  Future<void> deleteReadingProgress(String novelId) async {
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      await apiClient.deleteReadProgress(novelId);
+      if (state.readingProgress?.novelId == novelId) {
+        state = state.copyWith(readingProgress: null);
+      }
+    } catch (e) {
+      debugPrint('❌ 删除阅读进度错误: $e');
+      rethrow;
+    }
+  }
 } 

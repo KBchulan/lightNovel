@@ -30,8 +30,18 @@ final historyProvider =
   final apiClient = ref.read(apiClientProvider);
   try {
     final result = await apiClient.getReadHistory();
-    debugPrint('📚 获取阅读历史结果: $result');
-    return result;
+    
+    // 确保历史记录的唯一性，使用 Map 来去重
+    final uniqueHistories = <String, ReadHistory>{};
+    for (final history in result) {
+      uniqueHistories[history.novelId] = history;
+    }
+    
+    // 按最后阅读时间排序
+    final sortedHistories = uniqueHistories.values.toList()
+      ..sort((a, b) => b.lastRead.compareTo(a.lastRead));
+    
+    return sortedHistories;
   } catch (e) {
     if (e is DioException && e.error.toString().contains('响应数据格式错误')) {
       return [];
@@ -62,8 +72,12 @@ class HistoryPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 监听阅读历史刷新
-    ref.watch(historyRefreshProvider);
+    // 监听阅读状态变化
+    ref.listen(readingNotifierProvider, (previous, next) {
+      // 当阅读状态发生变化时，刷新历史记录
+      ref.invalidate(historyProvider);
+    });
+
     final historyAsync = ref.watch(historyProvider);
 
     return Scaffold(
@@ -90,7 +104,10 @@ class HistoryPage extends ConsumerWidget {
             itemCount: histories.length,
             itemBuilder: (context, index) {
               final history = histories[index];
-              return _HistoryItem(history: history);
+              return _HistoryItem(
+                key: ValueKey('history_${history.id}'),
+                history: history,
+              );
             },
           );
         },
@@ -152,7 +169,9 @@ class HistoryPage extends ConsumerWidget {
 
     if (confirmed == true && context.mounted) {
       try {
-        await ref.read(apiClientProvider).clearReadHistory();
+        final apiClient = ref.read(apiClientProvider);
+        // 清空所有历史记录和阅读进度
+        await apiClient.clearReadHistory();
         ref.invalidate(historyProvider);
         if (context.mounted) {
           SnackMessage.show(context, '已清空阅读历史');
@@ -170,6 +189,7 @@ class _HistoryItem extends ConsumerStatefulWidget {
   final ReadHistory history;
 
   const _HistoryItem({
+    super.key,
     required this.history,
   });
 
@@ -193,7 +213,7 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
       final apiClient = ref.read(apiClientProvider);
       final novel = await apiClient.getNovelDetail(widget.history.novelId);
       final progress = await apiClient.getReadProgress(widget.history.novelId);
-
+      
       if (mounted) {
         setState(() {
           _novel = novel;
@@ -205,7 +225,6 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          // 不将空数据视为错误，只是不显示该条目
           _novel = null;
           _progress = null;
         });
@@ -216,18 +235,42 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Card(
-        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: SizedBox(
+      return Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Container(
           height: 152,
-          child: Center(
-            child: CircularProgressIndicator(),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 80,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 8),
+                    LinearProgressIndicator(),
+                    SizedBox(height: 8),
+                    LinearProgressIndicator(value: 0.6),
+                    SizedBox(height: 8),
+                    LinearProgressIndicator(value: 0.3),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       );
     }
 
-    // 如果数据为空，不显示该条目
     if (_novel == null || _progress == null) {
       return const SizedBox.shrink();
     }
@@ -270,9 +313,12 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
       },
       onDismissed: (direction) async {
         try {
-          await ref
-              .read(apiClientProvider)
-              .deleteReadHistory(widget.history.novelId);
+          final apiClient = ref.read(apiClientProvider);
+          // 删除单本小说的历史记录和阅读进度
+          await Future.wait([
+            apiClient.deleteReadHistory(widget.history.novelId),
+            apiClient.deleteReadProgress(widget.history.novelId),
+          ]);
           ref.invalidate(historyProvider);
         } catch (e) {
           if (mounted) {
@@ -471,9 +517,12 @@ class _HistoryItemState extends ConsumerState<_HistoryItem> {
                 );
                 if (confirmed == true && mounted) {
                   try {
-                    await ref
-                        .read(apiClientProvider)
-                        .deleteReadHistory(widget.history.novelId);
+                    final apiClient = ref.read(apiClientProvider);
+                    // 删除单本小说的历史记录和阅读进度
+                    await Future.wait([
+                      apiClient.deleteReadHistory(widget.history.novelId),
+                      apiClient.deleteReadProgress(widget.history.novelId),
+                    ]);
                     ref.invalidate(historyProvider);
                   } catch (e) {
                     if (mounted) {

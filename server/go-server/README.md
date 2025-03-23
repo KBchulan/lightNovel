@@ -192,6 +192,7 @@ DELETE /api/v1/user/reading/history/:novel_id # 删除指定小说的阅读历�
 DELETE /api/v1/user/reading/history          # 清空所有阅读历史
 GET    /api/v1/user/reading/progress/:novel_id # 获取阅读进度
 PUT    /api/v1/user/reading/progress/:novel_id # 更新阅读进度
+DELETE /api/v1/user/reading/progress/:novel_id # 删除阅读进度
 ```
 
 ### WebSocket

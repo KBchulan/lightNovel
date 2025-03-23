@@ -17,6 +17,7 @@ import '../../../shared/widgets/novel_card.dart';
 import '../../../shared/widgets/page_transitions.dart';
 import '../../../shared/props/novel_props.dart';
 import '../../novel/pages/novel_detail_page.dart';
+import '../widgets/empty_bookshelf.dart';
 
 // 定义一个自定义通知类
 class SwitchToHomeNotification extends Notification {}
@@ -122,57 +123,11 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage> with SingleTicker
             sliver: favoritesAsync.when(
               data: (favorites) {
                 if (favorites.isEmpty) {
-                  return SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(28),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withAlpha(38),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.auto_stories_outlined,
-                            size: 64,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          '书架空空如也喵',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.onSurface,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '去首页发现好看的小说吧',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withAlpha(204),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        FilledButton.icon(
-                          onPressed: () {
-                            // 发送通知给父级
-                            SwitchToHomeNotification().dispatch(context);
-                          },
-                          icon: const Icon(Icons.explore),
-                          label: const Text('去探索'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: theme.colorScheme.primary,
-                            foregroundColor: theme.colorScheme.onPrimary,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  return EmptyBookshelf(
+                    onExplore: () {
+                      // 发送通知给父级
+                      SwitchToHomeNotification().dispatch(context);
+                    },
                   );
                 }
 
