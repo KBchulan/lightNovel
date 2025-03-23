@@ -578,19 +578,28 @@ class ApiClient {
       );
 
       final data = response.data;
-      if (data == null || data['data'] == null) {
-        throw DioException(
-          requestOptions: response.requestOptions,
-          error: '响应数据格式错误',
-        );
+      if (data == null) {
+        debugPrint('📚 API: 阅读历史响应为空');
+        return [];
+      }
+
+      if (data['data'] == null) {
+        debugPrint('📚 API: 阅读历史为空');
+        return [];
       }
 
       final historyList = data['data'] as List;
-      return historyList
+      final result = historyList
           .map((json) => ReadHistory.fromJson(json as Map<String, dynamic>))
           .toList();
+      
+      debugPrint('📚 API: 获取到 ${result.length} 条阅读历史');
+      return result;
     } catch (e) {
-      debugPrint('❌ 获取阅读历史错误: $e');
+      debugPrint('⚠️ API: 获取阅读历史出现异常: $e');
+      if (e is DioException && e.error.toString().contains('响应数据格式错误')) {
+        return [];
+      }
       rethrow;
     }
   }

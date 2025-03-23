@@ -141,10 +141,11 @@ class ReadingNotifier extends _$ReadingNotifier {
     try {
       final apiClient = ref.read(apiClientProvider);
       final history = await apiClient.getReadHistory();
+      debugPrint('📚 Provider: 获取阅读历史: ${history.length} 条记录');
       state = state.copyWith(readHistory: history);
     } catch (e) {
-      debugPrint('❌ 获取阅读历史错误: $e');
-      rethrow;
+      debugPrint('⚠️ Provider: 获取阅读历史为空或发生错误: $e');
+      state = state.copyWith(readHistory: []);
     }
   }
 

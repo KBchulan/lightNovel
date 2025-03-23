@@ -43,6 +43,11 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     
     _setSystemUIMode(true);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    
+    // 确保初始状态下控制面板不显示
+    Future.microtask(() {
+      ref.read(readingNotifierProvider.notifier).setShowControls(false);
+    });
   }
 
   @override
