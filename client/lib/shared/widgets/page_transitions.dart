@@ -22,16 +22,13 @@ abstract class BasePageRoute<T> extends PageRouteBuilder<T> {
     required super.transitionsBuilder,
     Duration duration = defaultDuration,
     Duration? reverseDuration,
-    bool opaque = true,
-    Color? barrierColor,
-    bool maintainState = true,
+    super.opaque,
+    super.barrierColor,
+    super.maintainState,
   }) : super(
           pageBuilder: (context, animation, secondaryAnimation) => page,
           transitionDuration: duration,
           reverseTransitionDuration: reverseDuration ?? duration,
-          opaque: opaque,
-          barrierColor: barrierColor,
-          maintainState: maintainState,
         );
 }
 

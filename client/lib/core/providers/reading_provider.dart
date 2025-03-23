@@ -1,7 +1,7 @@
 // ****************************************************************************
 //
 // @file       reading_provider.dart
-// @brief      阅读状态管理
+// @brief      阅读相关的状态管理
 //
 // @author     KBchulan
 // @date       2025/03/19
@@ -9,120 +9,154 @@
 // ****************************************************************************
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter/foundation.dart';
 import '../models/chapter.dart';
 import '../models/reading_progress.dart';
+import '../models/read_history.dart';
+import 'api_provider.dart';
 
 part 'reading_provider.g.dart';
 
+// 阅读模式
 enum ReadingMode {
-  page,    // 翻页模式
-  scroll,  // 滚动模式
+  scroll, // 滚动模式
+  page,   // 翻页模式
 }
 
-enum ReadingTheme {
-  light,   // 日间模式
-  dark,    // 夜间模式
-  sepia,   // 护眼模式
+// 阅读状态
+class ReadingState {
+  final Chapter? currentChapter;
+  final ReadingMode readingMode;
+  final bool showControls;
+  final ReadingProgress? readingProgress;
+  final List<ReadHistory> readHistory;
+
+  const ReadingState({
+    this.currentChapter,
+    this.readingMode = ReadingMode.scroll,
+    this.showControls = true,
+    this.readingProgress,
+    this.readHistory = const [],
+  });
+
+  ReadingState copyWith({
+    Chapter? currentChapter,
+    ReadingMode? readingMode,
+    bool? showControls,
+    ReadingProgress? readingProgress,
+    List<ReadHistory>? readHistory,
+  }) {
+    return ReadingState(
+      currentChapter: currentChapter ?? this.currentChapter,
+      readingMode: readingMode ?? this.readingMode,
+      showControls: showControls ?? this.showControls,
+      readingProgress: readingProgress ?? this.readingProgress,
+      readHistory: readHistory ?? this.readHistory,
+    );
+  }
 }
 
 @riverpod
 class ReadingNotifier extends _$ReadingNotifier {
   @override
-  ReadingState build() => const ReadingState();
-
-  void setReadingMode(ReadingMode mode) {
-    state = state.copyWith(readingMode: mode);
+  ReadingState build() {
+    return const ReadingState();
   }
 
-  void setReadingTheme(ReadingTheme theme) {
-    state = state.copyWith(readingTheme: theme);
-  }
-
-  void setFontSize(double size) {
-    state = state.copyWith(fontSize: size);
-  }
-
-  void setLineHeight(double height) {
-    state = state.copyWith(lineHeight: height);
-  }
-
-  void setParagraphSpacing(double spacing) {
-    state = state.copyWith(paragraphSpacing: spacing);
-  }
-
-  void setBrightness(double brightness) {
-    state = state.copyWith(brightness: brightness);
-  }
-
+  // 设置当前章节
   void setCurrentChapter(Chapter chapter) {
     state = state.copyWith(currentChapter: chapter);
   }
 
-  void setReadingProgress(ReadingProgress progress) {
-    state = state.copyWith(readingProgress: progress);
+  // 设置阅读模式
+  void setReadingMode(ReadingMode mode) {
+    state = state.copyWith(readingMode: mode);
   }
 
-  void toggleFullScreen() {
-    state = state.copyWith(isFullScreen: !state.isFullScreen);
-  }
-
+  // 切换控制面板显示状态
   void toggleShowControls() {
     state = state.copyWith(showControls: !state.showControls);
   }
 
+  // 设置控制面板显示状态
   void setShowControls(bool show) {
     state = state.copyWith(showControls: show);
   }
-}
 
-class ReadingState {
-  final ReadingMode readingMode;
-  final ReadingTheme readingTheme;
-  final double fontSize;
-  final double lineHeight;
-  final double paragraphSpacing;
-  final double brightness;
-  final Chapter? currentChapter;
-  final ReadingProgress? readingProgress;
-  final bool isFullScreen;
-  final bool showControls;
+  // 更新阅读进度
+  Future<void> updateReadingProgress({
+    required String novelId,
+    required int volumeNumber,
+    required int chapterNumber,
+    required int position,
+  }) async {
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      // 同时更新阅读进度和历史
+      await Future.wait([
+        apiClient.updateReadProgress(
+          novelId: novelId,
+          volumeNumber: volumeNumber,
+          chapterNumber: chapterNumber,
+          position: position,
+        ),
+        apiClient.updateReadHistory(novelId),
+      ]);
+      
+      // 更新本地状态
+      state = state.copyWith(
+        readingProgress: ReadingProgress(
+          id: '',
+          deviceId: '',
+          novelId: novelId,
+          volumeNumber: volumeNumber,
+          chapterNumber: chapterNumber,
+          position: position,
+          updatedAt: DateTime.now(),
+        ),
+      );
+      
+    } catch (e) {
+      debugPrint('❌ 更新阅读进度错误: $e');
+      rethrow;
+    }
+  }
 
-  const ReadingState({
-    this.readingMode = ReadingMode.page,
-    this.readingTheme = ReadingTheme.light,
-    this.fontSize = 16.0,
-    this.lineHeight = 1.5,
-    this.paragraphSpacing = 1.0,
-    this.brightness = 1.0,
-    this.currentChapter,
-    this.readingProgress,
-    this.isFullScreen = false,
-    this.showControls = false,
-  });
+  // 获取阅读进度
+  Future<void> fetchReadingProgress(String novelId) async {
+    debugPrint('Provider: 开始获取阅读进度，novelId: $novelId');
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final progress = await apiClient.getReadProgress(novelId);
+      debugPrint('Provider: 获取到阅读进度: $progress');
+      state = state.copyWith(readingProgress: progress);
+    } catch (e) {
+      debugPrint('❌ Provider: 获取阅读进度错误: $e');
+      rethrow;
+    }
+  }
 
-  ReadingState copyWith({
-    ReadingMode? readingMode,
-    ReadingTheme? readingTheme,
-    double? fontSize,
-    double? lineHeight,
-    double? paragraphSpacing,
-    double? brightness,
-    Chapter? currentChapter,
-    ReadingProgress? readingProgress,
-    bool? isFullScreen,
-    bool? showControls,
-  }) {
-    return ReadingState(
-      readingMode: readingMode ?? this.readingMode,
-      readingTheme: readingTheme ?? this.readingTheme,
-      fontSize: fontSize ?? this.fontSize,
-      lineHeight: lineHeight ?? this.lineHeight,
-      paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
-      brightness: brightness ?? this.brightness,
-      currentChapter: currentChapter ?? this.currentChapter,
-      readingProgress: readingProgress ?? this.readingProgress,
-      isFullScreen: isFullScreen ?? this.isFullScreen,
-      showControls: showControls ?? this.showControls,
-    );
+  // 获取阅读历史
+  Future<void> fetchReadHistory() async {
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final history = await apiClient.getReadHistory();
+      state = state.copyWith(readHistory: history);
+    } catch (e) {
+      debugPrint('❌ 获取阅读历史错误: $e');
+      rethrow;
+    }
+  }
+
+  // 清空阅读历史
+  Future<void> clearReadHistory() async {
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      await apiClient.clearReadHistory();
+      state = state.copyWith(readHistory: []);
+    } catch (e) {
+      debugPrint('❌ 清空阅读历史错误: $e');
+      rethrow;
+    }
   }
 } 

@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/chapter.dart';
 import '../../../core/providers/reading_provider.dart';
+import '../../../core/providers/api_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/slide_animation.dart';
 
@@ -31,14 +32,14 @@ class ReadingPage extends ConsumerStatefulWidget {
 }
 
 class _ReadingPageState extends ConsumerState<ReadingPage> {
-  late ScrollController _scrollController;
+  late final ScrollController _scrollController;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _initReadingState();
+    _loadReadingProgress(); // 改为直接加载阅读进度
     
     _setSystemUIMode(true);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -58,26 +59,44 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     super.dispose();
   }
 
-  // 控制系统UI的显示和隐藏
-  void _setSystemUIMode(bool hideUI) {
-    if (hideUI) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
-    } else {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  // 加载阅读进度
+  Future<void> _loadReadingProgress() async {
+    setState(() => _isLoading = true);
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final progress = await apiClient.getReadProgress(widget.novelId);
+      
+      if (progress.volumeNumber == widget.chapter.volumeNumber &&
+          progress.chapterNumber == widget.chapter.chapterNumber) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _scrollController.hasClients) {
+            _scrollController.jumpTo(progress.position.toDouble());
+          }
+        });
+      }
+    } catch (e) {
+      // 如果获取进度失败，静默处理，从头开始阅读
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
-  Future<void> _initReadingState() async {
-    setState(() => _isLoading = true);
+  // 保存阅读进度
+  Future<void> _saveReadingProgress() async {
     try {
-      // 设置当前章节和阅读模式
-      final notifier = ref.read(readingNotifierProvider.notifier);
-      notifier
-        ..setCurrentChapter(widget.chapter)
-        ..setReadingMode(ReadingMode.scroll)
-        ..setShowControls(false);
-    } finally {
-      setState(() => _isLoading = false);
+      if (!_scrollController.hasClients) return;
+      
+      final position = _scrollController.position.pixels.toInt();
+      await ref.read(readingNotifierProvider.notifier).updateReadingProgress(
+        novelId: widget.novelId,
+        volumeNumber: widget.chapter.volumeNumber,
+        chapterNumber: widget.chapter.chapterNumber,
+        position: position,
+      );
+    } catch (e) {
+      // 保存失败静默处理
     }
   }
 
@@ -92,25 +111,29 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     // 根据控制面板的显示状态切换系统UI
     _setSystemUIMode(!readingState.showControls);
 
-    return Scaffold(
-      backgroundColor: isDark ? Colors.black : Colors.white,
-      body: Stack(
-        children: [
-          // 阅读内容
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildReadingContent(readingState, isDark),
-          ),
-          
-          // 控制面板
-          if (readingState.showControls)
+    return PopScope(
+      canPop: true,
+      onPopInvoked: (bool didPop) async {
+        if (didPop) {
+          await _saveReadingProgress();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? Colors.black : Colors.white,
+        body: Stack(
+          children: [
+            // 阅读内容
             Positioned.fill(
-              child: _buildControlPanel(context, isDark),
+              child: _buildReadingContent(readingState, isDark),
             ),
-        ],
+            
+            // 控制面板
+            if (readingState.showControls)
+              Positioned.fill(
+                child: _buildControlPanel(context, isDark),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -161,7 +184,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
             direction: SlideDirection.fromTop,
             child: Container(
               padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 16,
+                top: MediaQuery.paddingOf(context).top + 16,
                 left: 16,
                 right: 16,
                 bottom: 16,
@@ -172,8 +195,11 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).pop();
+                    onTap: () async {
+                      await _saveReadingProgress();
+                      if (mounted && context.mounted) {
+                        Navigator.of(context).pop();
+                      }
                     },
                     child: Icon(
                       Icons.arrow_back,
@@ -214,7 +240,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
             direction: SlideDirection.fromBottom,
             child: Container(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).padding.bottom + 24,
+                bottom: MediaQuery.paddingOf(context).bottom + 24,
                 top: 24,
               ),
               decoration: BoxDecoration(
@@ -243,5 +269,14 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
       color: color,
       size: 28,
     );
+  }
+
+  // 控制系统UI的显示和隐藏
+  void _setSystemUIMode(bool hideUI) {
+    if (hideUI) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+    } else {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
   }
 } 
