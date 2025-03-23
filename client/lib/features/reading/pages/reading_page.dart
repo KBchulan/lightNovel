@@ -111,7 +111,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     try {
       if (!_scrollController.hasClients) return;
 
-      // 防抖处理：距离上次保存时间至少2秒以上才执行保存
+      // 防抖, 距离上次保存时间至少2秒以上才执行保存
       final now = DateTime.now();
       if (now.difference(_lastSaveTime).inSeconds < 2) {
         await Future.delayed(const Duration(milliseconds: 100));
@@ -160,10 +160,8 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     final now = DateTime.now();
     if (now.difference(_lastScrollTime).inSeconds >= 10) {
       _lastScrollTime = now;
-      // 每10秒自动保存一次阅读进度
       if (!_isScrolling) {
         _isScrolling = true;
-        // 使用延迟执行，避免频繁保存
         Future.delayed(const Duration(milliseconds: 500), () {
           _saveReadingProgress();
           _isScrolling = false;

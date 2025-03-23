@@ -14,6 +14,7 @@ import '../../home/pages/home_page.dart';
 import '../../bookshelf/pages/bookshelf_page.dart';
 import '../../history/pages/history_page.dart';
 import '../../settings/pages/settings_page.dart';
+import '../../history/widgets/empty_history.dart';
 
 class MainPage extends ConsumerStatefulWidget {
   const MainPage({super.key});
@@ -65,10 +66,14 @@ class _MainPageState extends ConsumerState<MainPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: NotificationListener<SwitchToHomeNotification>(
+      body: NotificationListener<Notification>(
         onNotification: (notification) {
-          setState(() => _currentIndex = 0);
-          return true;
+          if (notification is SwitchToHomeNotification || 
+              notification is SwitchToHomeFromHistoryNotification) {
+            setState(() => _currentIndex = 0);
+            return true;
+          }
+          return false;
         },
         child: IndexedStack(
           index: _currentIndex,

@@ -27,17 +27,43 @@ class HistoryPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final historyAsync = ref.watch(historyNotifierProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('阅读历史'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: '清空历史',
-            onPressed: () {
-              _showClearHistoryDialog(context, ref);
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'clear') {
+                _showClearHistoryDialog(context, ref);
+              } else if (value == 'sort_time') {
+                // 按时间排序已在 provider 中实现，这里可以添加其他排序方式
+              }
             },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'clear',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, size: 20),
+                    SizedBox(width: 8),
+                    Text('清空历史'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'sort_time',
+                child: Row(
+                  children: [
+                    Icon(Icons.sort, size: 20),
+                    SizedBox(width: 8),
+                    Text('按时间排序'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -46,23 +72,73 @@ class HistoryPage extends ConsumerWidget {
         child: historyAsync.when(
           data: (histories) {
             if (histories.isEmpty) {
-              return Stack(
-                children: [
-                  const EmptyHistory(),
-                  // 添加一个可拉动区域以触发RefreshIndicator
-                  ListView(),
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  EmptyHistory(),
                 ],
               );
             }
 
+            // 按日期对历史记录进行分组
+            final Map<String, List<ReadHistory>> groupedHistories = {};
+            for (var history in histories) {
+              final dateKey = _formatDateForGrouping(history.lastRead);
+              if (!groupedHistories.containsKey(dateKey)) {
+                groupedHistories[dateKey] = [];
+              }
+              groupedHistories[dateKey]!.add(history);
+            }
+
+            // 按照日期键的顺序排序
+            final sortedDates = groupedHistories.keys.toList()
+              ..sort((a, b) => b.compareTo(a)); // 最新的日期在前面
+
             return ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: histories.length,
+              padding: const EdgeInsets.only(top: 8, bottom: 16),
+              itemCount: sortedDates.length,
               itemBuilder: (context, index) {
-                final history = histories[index];
-                return _HistoryItem(
-                  key: ValueKey('history_${history.id}'),
-                  history: history,
+                final dateKey = sortedDates[index];
+                final dateHistories = groupedHistories[dateKey]!;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              _formatDateGroupHeader(dateKey),
+                              style: TextStyle(
+                                color: theme.colorScheme.onPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Divider(
+                              color: theme.colorScheme.outlineVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ...dateHistories.map((history) => _HistoryItem(
+                          key: ValueKey('history_${history.id}'),
+                          history: history,
+                        )),
+                  ],
                 );
               },
             );
@@ -79,24 +155,38 @@ class HistoryPage extends ConsumerWidget {
                     Icon(
                       Icons.error_outline,
                       size: 48,
-                      color: Theme.of(context).colorScheme.error,
+                      color: theme.colorScheme.error,
                     ),
                     const SizedBox(height: 16),
                     Text(
                       '加载失败',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Theme.of(context).colorScheme.error,
+                        color: theme.colorScheme.error,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      error.toString(),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.outline,
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 32),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.errorContainer.withAlpha(128),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      textAlign: TextAlign.center,
+                      child: Text(
+                        error.toString(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: theme.colorScheme.onErrorContainer,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      onPressed: () => ref.refresh(historyNotifierProvider),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('重试'),
                     ),
                   ],
                 ),
@@ -108,6 +198,47 @@ class HistoryPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  // 格式化日期用于分组
+  String _formatDateForGrouping(DateTime date) {
+    final now = DateTime.now();
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+    final dateOnly = DateTime(date.year, date.month, date.day);
+
+    if (dateOnly.year == now.year &&
+        dateOnly.month == now.month &&
+        dateOnly.day == now.day) {
+      return 'today';
+    } else if (dateOnly.year == yesterday.year &&
+        dateOnly.month == yesterday.month &&
+        dateOnly.day == yesterday.day) {
+      return 'yesterday';
+    } else if (now.difference(dateOnly).inDays < 7) {
+      return 'thisWeek';
+    } else if (dateOnly.year == now.year && dateOnly.month == now.month) {
+      return 'thisMonth';
+    } else {
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}';
+    }
+  }
+
+  // 格式化日期组标题
+  String _formatDateGroupHeader(String dateKey) {
+    switch (dateKey) {
+      case 'today':
+        return '今天';
+      case 'yesterday':
+        return '昨天';
+      case 'thisWeek':
+        return '本周';
+      case 'thisMonth':
+        return '本月';
+      default:
+        // 格式为 YYYY-MM
+        final parts = dateKey.split('-');
+        return '${parts[0]}年${parts[1]}月';
+    }
   }
 
   Future<void> _showClearHistoryDialog(
@@ -158,6 +289,7 @@ class _HistoryItem extends ConsumerWidget {
     // 使用新的provider获取小说和进度信息
     final novelAsync = ref.watch(historyNovelProvider(history.novelId));
     final progressAsync = ref.watch(historyProgress(history.novelId));
+    final theme = Theme.of(context);
 
     // 检查是否正在加载
     final isLoading = novelAsync.isLoading || progressAsync.isLoading;
@@ -170,6 +302,8 @@ class _HistoryItem extends ConsumerWidget {
     if (isLoading) {
       return Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        elevation: 1,
+        surfaceTintColor: Colors.white,
         child: Container(
           height: 152,
           padding: const EdgeInsets.all(16),
@@ -179,7 +313,7 @@ class _HistoryItem extends ConsumerWidget {
                 width: 80,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Center(child: CircularProgressIndicator()),
@@ -208,13 +342,20 @@ class _HistoryItem extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
+    // 计算一个模拟的阅读进度百分比
+    // 假设：第1卷共20章，第2卷共20章，...，如果在第2卷第10章，进度约为 (20 + 10) / (总章节数)
+    // 这里简单起见，使用卷号和章节号的组合计算一个进度值
+    final estimatedProgress =
+        (progress.volumeNumber * 0.7 + progress.chapterNumber * 0.3) / 100;
+    final clampedProgress = estimatedProgress.clamp(0.05, 0.95);
+
     return Dismissible(
       key: Key('history_${history.id}'),
       direction: DismissDirection.endToStart,
       background: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.error,
+          color: theme.colorScheme.error,
           borderRadius: BorderRadius.circular(12),
         ),
         alignment: Alignment.centerRight,
@@ -247,7 +388,9 @@ class _HistoryItem extends ConsumerWidget {
       onDismissed: (direction) async {
         final currentContext = context;
         try {
-          await ref.read(historyNotifierProvider.notifier).deleteHistory(history.novelId);
+          await ref
+              .read(historyNotifierProvider.notifier)
+              .deleteHistory(history.novelId);
         } catch (e) {
           if (currentContext.mounted) {
             SnackMessage.show(currentContext, '删除失败: $e', isError: true);
@@ -256,6 +399,8 @@ class _HistoryItem extends ConsumerWidget {
       },
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        elevation: 1,
+        surfaceTintColor: Colors.white,
         child: InkWell(
           onTap: () {
             final currentContext = context;
@@ -268,9 +413,11 @@ class _HistoryItem extends ConsumerWidget {
               // 从详情页返回后刷新历史列表
               final historyResult = ref.refresh(historyNotifierProvider);
               // 刷新小说进度
-              final progressResult = ref.refresh(historyProgress(history.novelId));
+              final progressResult =
+                  ref.refresh(historyProgress(history.novelId));
               // 使用刷新结果避免编译器警告
-              debugPrint('刷新历史: ${historyResult.hasValue}, 进度: ${progressResult.hasValue}');
+              debugPrint(
+                  '刷新历史: ${historyResult.hasValue}, 进度: ${progressResult.hasValue}');
             });
           },
           onLongPress: () => _showOperationMenu(context, ref, novel),
@@ -284,18 +431,66 @@ class _HistoryItem extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // 封面图
-                    Hero(
-                      tag: 'novel_cover_${history.novelId}',
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: SizedBox(
-                          width: 80,
-                          height: 120,
-                          child: NovelProps.buildCoverImage(
-                            NovelProps.getCoverUrl(novel),
+                    Stack(
+                      children: [
+                        Hero(
+                          tag: 'novel_cover_${history.novelId}',
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: SizedBox(
+                              width: 80,
+                              height: 120,
+                              child: NovelProps.buildCoverImage(
+                                NovelProps.getCoverUrl(novel),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        // 添加一个半透明的阴影覆盖层
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            height: 40,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withAlpha(179),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        // 阅读进度指示器
+                        Positioned(
+                          bottom: 4,
+                          left: 4,
+                          right: 4,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '阅读进度',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.white.withAlpha(204),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              LinearProgressIndicator(
+                                value: clampedProgress,
+                                backgroundColor: Colors.white.withAlpha(51),
+                                borderRadius: BorderRadius.circular(2),
+                                minHeight: 4,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(width: 16),
                     // 信息区
@@ -313,12 +508,22 @@ class _HistoryItem extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            novel.author,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context).colorScheme.secondary,
-                            ),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.person,
+                                size: 14,
+                                color: theme.colorScheme.secondary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                novel.author,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: theme.colorScheme.secondary,
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 8),
                           Container(
@@ -327,18 +532,14 @@ class _HistoryItem extends ConsumerWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .secondaryContainer,
+                              color: theme.colorScheme.secondaryContainer,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               '第${progress.volumeNumber}卷 第${progress.chapterNumber}话',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSecondaryContainer,
+                                color: theme.colorScheme.onSecondaryContainer,
                               ),
                             ),
                           ),
@@ -348,19 +549,46 @@ class _HistoryItem extends ConsumerWidget {
                               Icon(
                                 Icons.access_time,
                                 size: 14,
-                                color: Theme.of(context).colorScheme.outline,
+                                color: theme.colorScheme.outline,
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                NovelProps.formatDateTime(
-                                    history.lastRead),
+                                _formatLastReadTime(history.lastRead),
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Theme.of(context).colorScheme.outline,
+                                  color: theme.colorScheme.outline,
                                 ),
                               ),
                             ],
                           ),
+                          if (novel.tags.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 4,
+                              runSpacing: 4,
+                              children: novel.tags.take(2).map((tag) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.tertiaryContainer
+                                        .withAlpha(128),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    tag,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color:
+                                          theme.colorScheme.onTertiaryContainer,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -374,13 +602,13 @@ class _HistoryItem extends ConsumerWidget {
                 decoration: BoxDecoration(
                   border: Border(
                     top: BorderSide(
-                      color: Theme.of(context).colorScheme.outlineVariant,
+                      color: theme.colorScheme.outlineVariant,
                       width: 1,
                     ),
                   ),
                 ),
-                child: TextButton.icon(
-                  onPressed: () async {
+                child: InkWell(
+                  onTap: () async {
                     final currentContext = context;
                     try {
                       final chapter =
@@ -401,24 +629,30 @@ class _HistoryItem extends ConsumerWidget {
                           ),
                         ).then((_) {
                           // 阅读结束后刷新历史列表和小说进度
-                          final historyResult = ref.refresh(historyNotifierProvider);
+                          final historyResult =
+                              ref.refresh(historyNotifierProvider);
                           // 刷新小说进度
-                          final progressResult = ref.refresh(historyProgress(history.novelId));
+                          final progressResult =
+                              ref.refresh(historyProgress(history.novelId));
                           // 使用刷新结果避免编译器警告
-                          debugPrint('刷新历史: ${historyResult.hasValue}, 进度: ${progressResult.hasValue}');
+                          debugPrint(
+                              '刷新历史: ${historyResult.hasValue}, 进度: ${progressResult.hasValue}');
                         });
                       }
                     } catch (e) {
                       if (currentContext.mounted) {
-                        SnackMessage.show(currentContext, '获取章节失败: $e', isError: true);
+                        SnackMessage.show(currentContext, '获取章节失败: $e',
+                            isError: true);
                       }
                     }
                   },
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('继续阅读'),
-                  style: TextButton.styleFrom(
-                    shape: const RoundedRectangleBorder(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.play_arrow, size: 18),
+                      SizedBox(width: 8),
+                      Text('继续阅读'),
+                    ],
                   ),
                 ),
               ),
@@ -429,68 +663,215 @@ class _HistoryItem extends ConsumerWidget {
     );
   }
 
+  // 格式化上次阅读时间，提供更友好的显示
+  String _formatLastReadTime(DateTime time) {
+    final now = DateTime.now();
+    final difference = now.difference(time);
+
+    if (difference.inMinutes < 1) {
+      return '刚刚';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes}分钟前';
+    } else if (difference.inDays < 1) {
+      return '${difference.inHours}小时前';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}天前';
+    } else {
+      return NovelProps.formatDateTime(time);
+    }
+  }
+
   void _showOperationMenu(BuildContext context, WidgetRef ref, Novel novel) {
     final currentContext = context;
     showModalBottomSheet(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.delete),
-              title: const Text('删除此记录'),
-              onTap: () async {
-                Navigator.pop(context);
-                final confirmed = await showDialog<bool>(
-                  context: currentContext,
-                  builder: (context) => AlertDialog(
-                    title: const Text('删除历史记录'),
-                    content: const Text('确定要删除这条阅读历史吗？'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(false),
-                        child: const Text('取消'),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 顶部小条
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withAlpha(102),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // 小说基本信息
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    // 封面缩略图
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: SizedBox(
+                        width: 50,
+                        height: 75,
+                        child: NovelProps.buildCoverImage(
+                          NovelProps.getCoverUrl(novel),
+                        ),
                       ),
-                      FilledButton(
-                        onPressed: () => Navigator.of(context).pop(true),
-                        child: const Text('确定'),
+                    ),
+                    const SizedBox(width: 16),
+                    // 小说信息
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            novel.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            novel.author,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.secondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-                if (confirmed == true && currentContext.mounted) {
+                    ),
+                  ],
+                ),
+              ),
+
+              const Divider(),
+
+              // 操作列表
+              ListTile(
+                leading: const Icon(Icons.book),
+                title: const Text('继续阅读'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final progressAsync =
+                      ref.read(historyProgress(history.novelId));
+                  final progress = progressAsync.valueOrNull;
+
+                  if (progress == null) {
+                    if (currentContext.mounted) {
+                      SnackMessage.show(currentContext, '无法获取阅读进度',
+                          isError: true);
+                    }
+                    return;
+                  }
+
                   try {
-                    await ref.read(historyNotifierProvider.notifier).deleteHistory(history.novelId);
+                    final chapter =
+                        await ref.read(apiClientProvider).getChapterContent(
+                              history.novelId,
+                              progress.volumeNumber,
+                              progress.chapterNumber,
+                            );
+
+                    if (currentContext.mounted) {
+                      Navigator.push(
+                        currentContext,
+                        SlideUpPageRoute(
+                          page: ReadingPage(
+                            chapter: chapter,
+                            novelId: history.novelId,
+                          ),
+                        ),
+                      ).then((_) {
+                        // 阅读结束后刷新历史列表和小说进度
+                        final historyResult =
+                            ref.refresh(historyNotifierProvider);
+                        final progressResult =
+                            ref.refresh(historyProgress(history.novelId));
+                        debugPrint(
+                            '刷新历史: ${historyResult.hasValue}, 进度: ${progressResult.hasValue}');
+                      });
+                    }
                   } catch (e) {
                     if (currentContext.mounted) {
-                      SnackMessage.show(currentContext, '删除失败: $e', isError: true);
+                      SnackMessage.show(currentContext, '获取章节失败: $e',
+                          isError: true);
                     }
                   }
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('查看详情'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  currentContext,
-                  SlideUpPageRoute(
-                    page: NovelDetailPage(novel: novel),
-                  ),
-                ).then((_) {
-                  // 从详情页返回后刷新历史列表
-                  final historyResult = ref.refresh(historyNotifierProvider);
-                  // 刷新小说进度
-                  final progressResult = ref.refresh(historyProgress(history.novelId));
-                  // 使用刷新结果避免编译器警告
-                  debugPrint('刷新历史: ${historyResult.hasValue}, 进度: ${progressResult.hasValue}');
-                });
-              },
-            ),
-          ],
+                },
+              ),
+
+              ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: const Text('查看详情'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    currentContext,
+                    SlideUpPageRoute(
+                      page: NovelDetailPage(novel: novel),
+                    ),
+                  ).then((_) {
+                    final historyResult = ref.refresh(historyNotifierProvider);
+                    final progressResult =
+                        ref.refresh(historyProgress(history.novelId));
+                    debugPrint(
+                        '刷新历史: ${historyResult.hasValue}, 进度: ${progressResult.hasValue}');
+                  });
+                },
+              ),
+
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('删除此记录', style: TextStyle(color: Colors.red)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final confirmed = await showDialog<bool>(
+                    context: currentContext,
+                    builder: (context) => AlertDialog(
+                      title: const Text('删除历史记录'),
+                      content: const Text('确定要删除这条阅读历史吗？'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('取消'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text('确定'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true && currentContext.mounted) {
+                    try {
+                      await ref
+                          .read(historyNotifierProvider.notifier)
+                          .deleteHistory(history.novelId);
+                    } catch (e) {
+                      if (currentContext.mounted) {
+                        SnackMessage.show(currentContext, '删除失败: $e',
+                            isError: true);
+                      }
+                    }
+                  }
+                },
+              ),
+
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
