@@ -28,6 +28,7 @@ class HistoryPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final historyAsync = ref.watch(historyNotifierProvider);
     final theme = Theme.of(context);
+    final sortType = ref.watch(historySortTypeProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -39,10 +40,58 @@ class HistoryPage extends ConsumerWidget {
               if (value == 'clear') {
                 _showClearHistoryDialog(context, ref);
               } else if (value == 'sort_time') {
-                // 按时间排序已在 provider 中实现，这里可以添加其他排序方式
+                ref.read(historyNotifierProvider.notifier).sortByTime();
+              } else if (value == 'sort_name') {
+                ref.read(historyNotifierProvider.notifier).sortByName();
               }
             },
             itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'sort_time',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 20,
+                      color: sortType == 'time'
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '按时间排序',
+                      style: TextStyle(
+                        color: sortType == 'time'
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'sort_name',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.sort_by_alpha,
+                      size: 20,
+                      color: sortType == 'name'
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '按名称排序',
+                      style: TextStyle(
+                        color: sortType == 'name'
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'clear',
                 child: Row(
@@ -50,16 +99,6 @@ class HistoryPage extends ConsumerWidget {
                     Icon(Icons.delete_outline, size: 20),
                     SizedBox(width: 8),
                     Text('清空历史'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'sort_time',
-                child: Row(
-                  children: [
-                    Icon(Icons.sort, size: 20),
-                    SizedBox(width: 8),
-                    Text('按时间排序'),
                   ],
                 ),
               ),
@@ -343,8 +382,6 @@ class _HistoryItem extends ConsumerWidget {
     }
 
     // 计算一个模拟的阅读进度百分比
-    // 假设：第1卷共20章，第2卷共20章，...，如果在第2卷第10章，进度约为 (20 + 10) / (总章节数)
-    // 这里简单起见，使用卷号和章节号的组合计算一个进度值
     final estimatedProgress =
         (progress.volumeNumber * 0.7 + progress.chapterNumber * 0.3) / 100;
     final clampedProgress = estimatedProgress.clamp(0.05, 0.95);
@@ -355,14 +392,29 @@ class _HistoryItem extends ConsumerWidget {
       background: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: theme.colorScheme.error,
+          color: theme.colorScheme.surfaceContainerHighest.withAlpha(123),
           borderRadius: BorderRadius.circular(12),
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
-        child: const Icon(
-          Icons.delete,
-          color: Colors.white,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Icon(
+              Icons.delete_outline,
+              color: theme.colorScheme.primary,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '删除',
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
       confirmDismiss: (direction) async {
@@ -378,7 +430,11 @@ class _HistoryItem extends ConsumerWidget {
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('确定'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                ),
+                child: const Text('删除'),
               ),
             ],
           ),
@@ -410,12 +466,9 @@ class _HistoryItem extends ConsumerWidget {
                 page: NovelDetailPage(novel: novel),
               ),
             ).then((_) {
-              // 从详情页返回后刷新历史列表
               final historyResult = ref.refresh(historyNotifierProvider);
-              // 刷新小说进度
               final progressResult =
                   ref.refresh(historyProgress(history.novelId));
-              // 使用刷新结果避免编译器警告
               debugPrint(
                   '刷新历史: ${historyResult.hasValue}, 进度: ${progressResult.hasValue}');
             });
@@ -513,14 +566,14 @@ class _HistoryItem extends ConsumerWidget {
                               Icon(
                                 Icons.person,
                                 size: 14,
-                                color: theme.colorScheme.secondary,
+                                color: theme.colorScheme.primary.withAlpha(191),
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 novel.author,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: theme.colorScheme.secondary,
+                                  color: theme.colorScheme.primary.withAlpha(191),
                                 ),
                               ),
                             ],
@@ -532,14 +585,15 @@ class _HistoryItem extends ConsumerWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.secondaryContainer,
+                              color: theme.colorScheme.primary.withAlpha(31),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               '第${progress.volumeNumber}卷 第${progress.chapterNumber}话',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: theme.colorScheme.onSecondaryContainer,
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
@@ -573,16 +627,15 @@ class _HistoryItem extends ConsumerWidget {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: theme.colorScheme.tertiaryContainer
-                                        .withAlpha(128),
+                                    color: theme.colorScheme.primary.withAlpha(21),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
                                     tag,
                                     style: TextStyle(
                                       fontSize: 10,
-                                      color:
-                                          theme.colorScheme.onTertiaryContainer,
+                                      color: theme.colorScheme.primary.withAlpha(230),
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 );
@@ -628,13 +681,10 @@ class _HistoryItem extends ConsumerWidget {
                             ),
                           ),
                         ).then((_) {
-                          // 阅读结束后刷新历史列表和小说进度
                           final historyResult =
                               ref.refresh(historyNotifierProvider);
-                          // 刷新小说进度
                           final progressResult =
                               ref.refresh(historyProgress(history.novelId));
-                          // 使用刷新结果避免编译器警告
                           debugPrint(
                               '刷新历史: ${historyResult.hasValue}, 进度: ${progressResult.hasValue}');
                         });

@@ -11,6 +11,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/read_history.dart';
 import '../models/novel.dart';
 import '../models/reading_progress.dart';
@@ -102,6 +103,44 @@ class HistoryNotifier extends _$HistoryNotifier {
       await _fetchHistory();
     }
   }
+
+  // 按时间排序
+  void sortByTime() {
+    final currentData = state.valueOrNull ?? [];
+    final sortedHistories = List<ReadHistory>.from(currentData)
+      ..sort((a, b) => b.lastRead.compareTo(a.lastRead));
+    state = AsyncValue.data(sortedHistories);
+    ref.read(historySortTypeProvider.notifier).state = 'time';
+  }
+
+  // 按名称排序
+  void sortByName() async {
+    final currentData = state.valueOrNull ?? [];
+    if (currentData.isEmpty) return;
+
+    try {
+      // 获取所有小说的详细信息
+      final novels = await Future.wait(
+        currentData.map((history) => ref.read(apiClientProvider).getNovelDetail(history.novelId)),
+      );
+
+      // 创建历史记录和小说标题的映射
+      final historyWithTitles = List<MapEntry<ReadHistory, String>>.from(
+        currentData.asMap().entries.map(
+          (entry) => MapEntry(entry.value, novels[entry.key].title),
+        ),
+      );
+
+      // 按标题排序
+      historyWithTitles.sort((a, b) => a.value.compareTo(b.value));
+
+      // 更新状态
+      state = AsyncValue.data(historyWithTitles.map((e) => e.key).toList());
+      ref.read(historySortTypeProvider.notifier).state = 'name';
+    } catch (e) {
+      debugPrint('❌ 按名称排序错误: $e');
+    }
+  }
 }
 
 // 使用手动创建Provider的方式，避免使用自动生成的代码
@@ -128,4 +167,6 @@ final historyProgress = FutureProvider.family<ReadingProgress?, String>((ref, no
     debugPrint('❌ 获取历史阅读进度错误: $e');
     rethrow;
   }
-}); 
+});
+
+final historySortTypeProvider = StateProvider<String>((ref) => 'time'); 
