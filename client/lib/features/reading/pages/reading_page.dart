@@ -14,8 +14,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/chapter.dart';
 import '../../../core/providers/reading_provider.dart';
 import '../../../core/providers/api_provider.dart';
+import '../../../core/providers/history_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/slide_animation.dart';
+import 'package:dio/dio.dart';
 
 class ReadingPage extends ConsumerStatefulWidget {
   final Chapter chapter;
@@ -34,24 +36,31 @@ class ReadingPage extends ConsumerStatefulWidget {
 class _ReadingPageState extends ConsumerState<ReadingPage> {
   late final ScrollController _scrollController;
   bool _isLoading = false;
+  DateTime _lastSaveTime = DateTime.now();
+  bool _isScrolling = false; // 标记是否正在滚动
+  DateTime _lastScrollTime = DateTime.now();
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
     _loadReadingProgress(); // 改为直接加载阅读进度
-    
+
     _setSystemUIMode(true);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-    
+
     // 确保初始状态下控制面板不显示
     Future.microtask(() {
       ref.read(readingNotifierProvider.notifier).setShowControls(false);
     });
+
+    // 添加滚动监听，在阅读过程中定期保存进度
+    _scrollController.addListener(_scrollListener);
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
     // 恢复系统UI
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -69,18 +78,27 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     setState(() => _isLoading = true);
     try {
       final apiClient = ref.read(apiClientProvider);
-      final progress = await apiClient.getReadProgress(widget.novelId);
-      
-      if (progress.volumeNumber == widget.chapter.volumeNumber &&
-          progress.chapterNumber == widget.chapter.chapterNumber) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _scrollController.hasClients) {
-            _scrollController.jumpTo(progress.position.toDouble());
-          }
-        });
+      try {
+        final progress = await apiClient.getReadProgress(widget.novelId);
+
+        if (progress != null &&
+            progress.volumeNumber == widget.chapter.volumeNumber &&
+            progress.chapterNumber == widget.chapter.chapterNumber) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _scrollController.hasClients) {
+              _scrollController.jumpTo(progress.position.toDouble());
+            }
+          });
+        }
+      } catch (e) {
+        if (e is DioException && e.error.toString().contains('响应数据格式错误')) {
+          debugPrint('🔍 阅读进度响应为null, 从头开始阅读');
+        } else {
+          debugPrint('❌ 获取阅读进度错误: $e');
+        }
       }
     } catch (e) {
-      // 如果获取进度失败，静默处理，从头开始阅读
+      debugPrint('❌ 加载进度失败: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -92,16 +110,65 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
   Future<void> _saveReadingProgress() async {
     try {
       if (!_scrollController.hasClients) return;
-      
+
+      // 防抖处理：距离上次保存时间至少2秒以上才执行保存
+      final now = DateTime.now();
+      if (now.difference(_lastSaveTime).inSeconds < 2) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      _lastSaveTime = now;
+
       final position = _scrollController.position.pixels.toInt();
-      await ref.read(readingNotifierProvider.notifier).updateReadingProgress(
-        novelId: widget.novelId,
-        volumeNumber: widget.chapter.volumeNumber,
-        chapterNumber: widget.chapter.chapterNumber,
-        position: position,
-      );
+      try {
+        debugPrint('📚 开始保存阅读进度: 位置=$position');
+        await ref.read(readingNotifierProvider.notifier).updateReadingProgress(
+              novelId: widget.novelId,
+              volumeNumber: widget.chapter.volumeNumber,
+              chapterNumber: widget.chapter.chapterNumber,
+              position: position,
+            );
+        debugPrint('✅ 保存阅读进度成功');
+      } catch (e) {
+        debugPrint('❌ 保存阅读进度API调用错误: $e');
+      }
+
+      // 确保所有相关数据都刷新
+      try {
+        ref.invalidate(historyNotifierProvider);
+        await ref.read(historyNotifierProvider.notifier).refresh();
+
+        ref.invalidate(historyProgress(widget.novelId));
+
+        debugPrint('✅ 所有历史相关数据刷新成功');
+      } catch (e) {
+        debugPrint('❌ 刷新历史记录错误: $e');
+      }
     } catch (e) {
-      // 保存失败静默处理
+      debugPrint('❌ 保存阅读进度错误: $e');
+      // 失败时仍然尝试刷新历史记录
+      try {
+        ref.invalidate(historyNotifierProvider);
+        ref.invalidate(historyProgress(widget.novelId));
+      } catch (e) {
+        debugPrint('❌ 刷新历史记录状态错误: $e');
+      }
+    }
+  }
+
+  // 滚动监听回调
+  void _scrollListener() {
+    final now = DateTime.now();
+    if (now.difference(_lastScrollTime).inSeconds >= 10) {
+      _lastScrollTime = now;
+      // 每10秒自动保存一次阅读进度
+      if (!_isScrolling) {
+        _isScrolling = true;
+        // 使用延迟执行，避免频繁保存
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _saveReadingProgress();
+          _isScrolling = false;
+        });
+      }
     }
   }
 
@@ -109,9 +176,9 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
   Widget build(BuildContext context) {
     final readingState = ref.watch(readingNotifierProvider);
     final themeMode = ref.watch(themeNotifierProvider);
-    final isDark = themeMode == ThemeMode.dark || 
-                   (themeMode == ThemeMode.system && 
-                    MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+    final isDark = themeMode == ThemeMode.dark ||
+        (themeMode == ThemeMode.system &&
+            MediaQuery.platformBrightnessOf(context) == Brightness.dark);
 
     // 根据控制面板的显示状态切换系统UI
     _setSystemUIMode(!readingState.showControls);
@@ -120,7 +187,13 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
       canPop: true,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) {
+          // 保存阅读进度
           await _saveReadingProgress();
+
+          if (mounted) {
+            final progressResult = ref.refresh(historyProgress(widget.novelId));
+            debugPrint('退出阅读页面时刷新进度: ${progressResult.hasValue}');
+          }
         }
       },
       child: Scaffold(
@@ -131,7 +204,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
             Positioned.fill(
               child: _buildReadingContent(readingState, isDark),
             ),
-            
+
             // 控制面板
             if (readingState.showControls)
               Positioned.fill(
@@ -176,7 +249,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
 
   Widget _buildControlPanel(BuildContext context, bool isDark) {
     final foregroundColor = isDark ? Colors.white : Colors.black87;
-    final headerFooterColor = isDark 
+    final headerFooterColor = isDark
         ? Color.lerp(Colors.black, Colors.white, 0.1)
         : Color.lerp(Colors.white, Colors.black, 0.1);
 
@@ -202,6 +275,10 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
                   GestureDetector(
                     onTap: () async {
                       await _saveReadingProgress();
+                      // 刷新历史记录
+                      await ref
+                          .read(historyNotifierProvider.notifier)
+                          .refresh();
                       if (mounted && context.mounted) {
                         Navigator.of(context).pop();
                       }
@@ -227,19 +304,21 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
               ),
             ),
           ),
-          
+
           // 中间区域
           Expanded(
             child: GestureDetector(
               onTap: () {
-                ref.read(readingNotifierProvider.notifier).setShowControls(false);
+                ref
+                    .read(readingNotifierProvider.notifier)
+                    .setShowControls(false);
               },
               child: Container(
                 color: Colors.transparent,
               ),
             ),
           ),
-          
+
           // 底部功能按钮
           SlideAnimation(
             direction: SlideDirection.fromBottom,
@@ -284,4 +363,4 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
   }
-} 
+}

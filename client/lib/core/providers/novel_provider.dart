@@ -20,22 +20,17 @@ class NovelNotifier extends _$NovelNotifier {
   ApiClient get _apiClient => ref.read(apiClientProvider);
 
   List<Novel>? _homeNovels;
-  List<Novel>? _searchResults;
-  bool _isSearchMode = false;
 
   @override
   FutureOr<List<Novel>> build() async {
     // 确保初始状态加载完整列表
-    _isSearchMode = false;
     _homeNovels = await _apiClient.getNovels();
     return _homeNovels ?? [];
   }
 
   Future<void> searchNovels(String keyword) async {
-    _isSearchMode = true;
     state = const AsyncValue.loading();
     final searchResult = await AsyncValue.guard(() => _apiClient.searchNovels(keyword: keyword));
-    _searchResults = searchResult.valueOrNull;
     state = searchResult;
   }
 
@@ -46,7 +41,6 @@ class NovelNotifier extends _$NovelNotifier {
 
   Future<void> refresh() async {
     // 如果是从搜索页面返回，则应该显示全部小说列表
-    _isSearchMode = false;
     
     if (_homeNovels != null) {
       state = AsyncValue.data(_homeNovels!);
@@ -59,7 +53,6 @@ class NovelNotifier extends _$NovelNotifier {
   }
 
   Future<void> refreshHome() async {
-    _isSearchMode = false;
     state = const AsyncValue.loading();
     _homeNovels = await _apiClient.getNovels();
     state = AsyncValue.data(_homeNovels ?? []);

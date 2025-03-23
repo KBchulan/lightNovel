@@ -651,7 +651,7 @@ class ApiClient {
   }
 
   // 获取阅读进度
-  Future<ReadingProgress> getReadProgress(String novelId) async {
+  Future<ReadingProgress?> getReadProgress(String novelId) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '/user/reading/progress/$novelId',
@@ -659,13 +659,18 @@ class ApiClient {
 
       final data = response.data;
       if (data == null || data['data'] == null) {
-        throw DioException(
-          requestOptions: response.requestOptions,
-          error: '响应数据格式错误',
-        );
+        debugPrint('❌ 获取阅读进度返回空数据，用户可能没有阅读记录');
+        return null;
       }
 
       return ReadingProgress.fromJson(data['data'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        debugPrint('❌ 获取阅读进度返回404, 用户没有阅读记录');
+        return null;
+      }
+      debugPrint('❌ 获取阅读进度错误: $e');
+      rethrow;
     } catch (e) {
       debugPrint('❌ 获取阅读进度错误: $e');
       rethrow;

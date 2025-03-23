@@ -128,10 +128,16 @@ class ReadingNotifier extends _$ReadingNotifier {
     try {
       final apiClient = ref.read(apiClientProvider);
       final progress = await apiClient.getReadProgress(novelId);
+      if (progress == null) {
+        debugPrint('Provider: 未找到阅读进度记录');
+        state = state.copyWith(readingProgress: null);
+        return;
+      }
       debugPrint('Provider: 获取到阅读进度: $progress');
       state = state.copyWith(readingProgress: progress);
     } catch (e) {
       debugPrint('❌ Provider: 获取阅读进度错误: $e');
+      state = state.copyWith(readingProgress: null);
       rethrow;
     }
   }
