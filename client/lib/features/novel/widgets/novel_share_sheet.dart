@@ -58,7 +58,8 @@ class NovelShareSheet extends StatelessWidget {
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: Icon(Icons.close, color: theme.colorScheme.onSurfaceVariant),
+                  icon: Icon(Icons.close,
+                      color: theme.colorScheme.onSurfaceVariant),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -162,13 +163,13 @@ class NovelShareSheet extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('确定', style: TextStyle(color: theme.colorScheme.primary)),
+            child:
+                Text('确定', style: TextStyle(color: theme.colorScheme.primary)),
           ),
         ],
       ),
     );
   }
-
 }
 
 class _ShareItem extends StatelessWidget {
@@ -218,4 +219,4 @@ class _ShareItem extends StatelessWidget {
       ),
     );
   }
-} 
+}

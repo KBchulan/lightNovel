@@ -33,7 +33,8 @@ class SlideAnimation extends StatefulWidget {
   State<SlideAnimation> createState() => _SlideAnimationState();
 }
 
-class _SlideAnimationState extends State<SlideAnimation> with SingleTickerProviderStateMixin {
+class _SlideAnimationState extends State<SlideAnimation>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
 
@@ -92,4 +93,4 @@ class _SlideAnimationState extends State<SlideAnimation> with SingleTickerProvid
       child: widget.child,
     );
   }
-} 
+}

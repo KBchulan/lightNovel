@@ -5,7 +5,7 @@
 //
 // @author     KBchulan
 // @date       2025/03/19
-// @history    
+// @history
 // ****************************************************************************
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -27,10 +27,10 @@ class SearchHistory extends _$SearchHistory {
 
   Future<void> addSearch(String keyword) async {
     if (keyword.isEmpty) return;
-    
+
     final currentState = await future;
     final newHistory = List<String>.from(currentState);
-    
+
     // 如果已存在，先移除旧的
     newHistory.remove(keyword);
     // 添加到开头
@@ -47,7 +47,7 @@ class SearchHistory extends _$SearchHistory {
   Future<void> removeSearch(String keyword) async {
     final currentState = await future;
     final newHistory = currentState.where((item) => item != keyword).toList();
-    
+
     await _storage.saveStringList(_storageKey, newHistory);
     state = AsyncData(newHistory);
   }
@@ -56,4 +56,4 @@ class SearchHistory extends _$SearchHistory {
     await _storage.remove(_storageKey);
     state = const AsyncData(<String>[]);
   }
-} 
+}

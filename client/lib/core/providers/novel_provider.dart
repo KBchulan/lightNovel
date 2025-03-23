@@ -5,7 +5,7 @@
 //
 // @author     KBchulan
 // @date       2025/03/19
-// @history    
+// @history
 // ****************************************************************************
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -30,7 +30,8 @@ class NovelNotifier extends _$NovelNotifier {
 
   Future<void> searchNovels(String keyword) async {
     state = const AsyncValue.loading();
-    final searchResult = await AsyncValue.guard(() => _apiClient.searchNovels(keyword: keyword));
+    final searchResult =
+        await AsyncValue.guard(() => _apiClient.searchNovels(keyword: keyword));
     state = searchResult;
   }
 
@@ -41,7 +42,7 @@ class NovelNotifier extends _$NovelNotifier {
 
   Future<void> refresh() async {
     // 如果是从搜索页面返回，则应该显示全部小说列表
-    
+
     if (_homeNovels != null) {
       state = AsyncValue.data(_homeNovels!);
     } else {

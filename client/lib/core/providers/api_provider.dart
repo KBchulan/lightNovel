@@ -19,4 +19,4 @@ part 'api_provider.g.dart';
 ApiClient apiClient(Ref ref) {
   final deviceService = ref.watch(deviceServiceProvider);
   return ApiClient(deviceService);
-} 
+}

@@ -34,17 +34,17 @@ class HistoryNotifier extends _$HistoryNotifier {
     try {
       final apiClient = ref.read(apiClientProvider);
       final result = await apiClient.getReadHistory();
-      
+
       // 确保历史记录的唯一性，使用 Map 来去重
       final uniqueHistories = <String, ReadHistory>{};
       for (final history in result) {
         uniqueHistories[history.novelId] = history;
       }
-      
+
       // 按最后阅读时间排序
       final sortedHistories = uniqueHistories.values.toList()
         ..sort((a, b) => b.lastRead.compareTo(a.lastRead));
-      
+
       state = AsyncValue.data(sortedHistories);
     } catch (e) {
       debugPrint('❌ 获取历史记录错误: $e');
@@ -82,20 +82,19 @@ class HistoryNotifier extends _$HistoryNotifier {
     try {
       final apiClient = ref.read(apiClientProvider);
       final currentData = state.valueOrNull ?? [];
-      
+
       // 先乐观更新UI
-      final updatedHistories = currentData
-          .where((history) => history.novelId != novelId)
-          .toList();
-      
+      final updatedHistories =
+          currentData.where((history) => history.novelId != novelId).toList();
+
       state = AsyncValue.data(updatedHistories);
-      
+
       // 然后执行实际删除操作
       await Future.wait([
         apiClient.deleteReadHistory(novelId),
         apiClient.deleteReadProgress(novelId),
       ]);
-      
+
       debugPrint('✅ 删除历史记录成功: $novelId');
     } catch (e) {
       debugPrint('❌ 删除历史记录错误: $e');
@@ -121,14 +120,15 @@ class HistoryNotifier extends _$HistoryNotifier {
     try {
       // 获取所有小说的详细信息
       final novels = await Future.wait(
-        currentData.map((history) => ref.read(apiClientProvider).getNovelDetail(history.novelId)),
+        currentData.map((history) =>
+            ref.read(apiClientProvider).getNovelDetail(history.novelId)),
       );
 
       // 创建历史记录和小说标题的映射
       final historyWithTitles = List<MapEntry<ReadHistory, String>>.from(
         currentData.asMap().entries.map(
-          (entry) => MapEntry(entry.value, novels[entry.key].title),
-        ),
+              (entry) => MapEntry(entry.value, novels[entry.key].title),
+            ),
       );
 
       // 按标题排序
@@ -144,7 +144,8 @@ class HistoryNotifier extends _$HistoryNotifier {
 }
 
 // 使用手动创建Provider的方式，避免使用自动生成的代码
-final historyNovelProvider = FutureProvider.family<Novel?, String>((ref, novelId) async {
+final historyNovelProvider =
+    FutureProvider.family<Novel?, String>((ref, novelId) async {
   ref.keepAlive();
   try {
     final apiClient = ref.read(apiClientProvider);
@@ -157,7 +158,8 @@ final historyNovelProvider = FutureProvider.family<Novel?, String>((ref, novelId
 });
 
 // 使用手动创建Provider的方式，避免使用自动生成的代码
-final historyProgress = FutureProvider.family<ReadingProgress?, String>((ref, novelId) async {
+final historyProgress =
+    FutureProvider.family<ReadingProgress?, String>((ref, novelId) async {
   final apiClient = ref.read(apiClientProvider);
   try {
     // API可能返回null
@@ -169,4 +171,4 @@ final historyProgress = FutureProvider.family<ReadingProgress?, String>((ref, no
   }
 });
 
-final historySortTypeProvider = StateProvider<String>((ref) => 'time'); 
+final historySortTypeProvider = StateProvider<String>((ref) => 'time');

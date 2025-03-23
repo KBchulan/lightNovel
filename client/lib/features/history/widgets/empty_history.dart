@@ -28,7 +28,7 @@ class EmptyHistory extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.7, 
+            height: MediaQuery.of(context).size.height * 0.7,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -44,7 +44,8 @@ class EmptyHistory extends StatelessWidget {
                         width: 140,
                         height: 140,
                         decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest.withAlpha(20),
+                          color:
+                              colorScheme.surfaceContainerHighest.withAlpha(20),
                           borderRadius: BorderRadius.circular(70),
                           boxShadow: [
                             BoxShadow(
@@ -63,7 +64,8 @@ class EmptyHistory extends StatelessWidget {
                                 width: 100,
                                 height: 100,
                                 decoration: BoxDecoration(
-                                  color: colorScheme.surfaceContainerHighest.withAlpha(40),
+                                  color: colorScheme.surfaceContainerHighest
+                                      .withAlpha(40),
                                   borderRadius: BorderRadius.circular(50),
                                   boxShadow: [
                                     BoxShadow(
@@ -74,7 +76,7 @@ class EmptyHistory extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              
+
                               // 图标和线条设计
                               Container(
                                 width: 80,
@@ -107,9 +109,9 @@ class EmptyHistory extends StatelessWidget {
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 28),
-                
+
                 // 标题文字
                 TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0.0, end: 1.0),
@@ -134,9 +136,9 @@ class EmptyHistory extends StatelessWidget {
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // 副标题描述
                 TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0.0, end: 1.0),
@@ -161,9 +163,9 @@ class EmptyHistory extends StatelessWidget {
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // 简洁的发现按钮
                 TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0.0, end: 1.0),
@@ -176,12 +178,14 @@ class EmptyHistory extends StatelessWidget {
                         onPressed: () {
                           debugPrint('我被点击了');
                           // 发送通知
-                          SwitchToHomeFromHistoryNotification().dispatch(context);
+                          SwitchToHomeFromHistoryNotification()
+                              .dispatch(context);
                         },
                         icon: const Icon(Icons.explore_outlined),
                         label: const Text('浏览小说'),
                         style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 28, vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
@@ -191,9 +195,9 @@ class EmptyHistory extends StatelessWidget {
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 48),
-                
+
                 // 底部装饰元素
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

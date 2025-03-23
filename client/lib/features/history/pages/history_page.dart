@@ -32,7 +32,7 @@ class HistoryPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('阅读历史'),
+        title: const Text('历史'),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
@@ -573,7 +573,8 @@ class _HistoryItem extends ConsumerWidget {
                                 novel.author,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: theme.colorScheme.primary.withAlpha(191),
+                                  color:
+                                      theme.colorScheme.primary.withAlpha(191),
                                 ),
                               ),
                             ],
@@ -627,14 +628,16 @@ class _HistoryItem extends ConsumerWidget {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary.withAlpha(21),
+                                    color:
+                                        theme.colorScheme.primary.withAlpha(21),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
                                     tag,
                                     style: TextStyle(
                                       fontSize: 10,
-                                      color: theme.colorScheme.primary.withAlpha(230),
+                                      color: theme.colorScheme.primary
+                                          .withAlpha(230),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),

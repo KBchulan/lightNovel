@@ -68,7 +68,7 @@ class _MainPageState extends ConsumerState<MainPage> {
     return Scaffold(
       body: NotificationListener<Notification>(
         onNotification: (notification) {
-          if (notification is SwitchToHomeNotification || 
+          if (notification is SwitchToHomeNotification ||
               notification is SwitchToHomeFromHistoryNotification) {
             setState(() => _currentIndex = 0);
             return true;
@@ -163,7 +163,9 @@ class _NavigationBarItem extends StatelessWidget {
                       end: Alignment.bottomRight,
                       colors: [
                         isSelected ? primaryColor : inactiveColor,
-                        isSelected ? primaryColor.withAlpha(230) : inactiveColor,
+                        isSelected
+                            ? primaryColor.withAlpha(230)
+                            : inactiveColor,
                       ],
                     ).createShader(bounds),
                     child: Icon(

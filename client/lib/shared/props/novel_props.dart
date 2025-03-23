@@ -133,12 +133,13 @@ class _NetworkImageWithRetryState extends State<_NetworkImageWithRetry> {
   @override
   Widget build(BuildContext context) {
     if (_hasError) {
-      return widget.errorWidget ?? Container(
-        width: widget.width,
-        height: widget.height,
-        color: Colors.grey[200],
-        child: const Icon(Icons.broken_image, size: 48, color: Colors.grey),
-      );
+      return widget.errorWidget ??
+          Container(
+            width: widget.width,
+            height: widget.height,
+            color: Colors.grey[200],
+            child: const Icon(Icons.broken_image, size: 48, color: Colors.grey),
+          );
     }
 
     return Image.network(
@@ -151,26 +152,28 @@ class _NetworkImageWithRetryState extends State<_NetworkImageWithRetry> {
       filterQuality: FilterQuality.high,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
-        return widget.placeholder ?? Container(
-          width: widget.width,
-          height: widget.height,
-          color: Colors.grey[200],
-          child: const Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
+        return widget.placeholder ??
+            Container(
+              width: widget.width,
+              height: widget.height,
+              color: Colors.grey[200],
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
       },
       errorBuilder: (context, error, stackTrace) {
         _tryNextFormat();
-        return widget.placeholder ?? Container(
-          width: widget.width,
-          height: widget.height,
-          color: Colors.grey[200],
-          child: const Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
+        return widget.placeholder ??
+            Container(
+              width: widget.width,
+              height: widget.height,
+              color: Colors.grey[200],
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
       },
     );
   }
-} 
+}

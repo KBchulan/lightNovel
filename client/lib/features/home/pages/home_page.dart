@@ -5,7 +5,7 @@
 //
 // @author     KBchulan
 // @date       2025/03/19
-// @history    
+// @history
 // ****************************************************************************
 
 import 'package:flutter/material.dart';
@@ -57,7 +57,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: SearchBox(
                       onSubmitted: (value) {
                         if (value.isNotEmpty) {
-                          ref.read(novelNotifierProvider.notifier).searchNovels(value);
+                          ref
+                              .read(novelNotifierProvider.notifier)
+                              .searchNovels(value);
                         }
                       },
                     ),
@@ -94,14 +96,17 @@ class _HomePageState extends ConsumerState<HomePage> {
                   final filteredNovels = selectedTags.contains(NovelTags.all)
                       ? novels
                       : novels.where((novel) {
-                          return novel.tags.any((tag) => selectedTags.contains(tag));
+                          return novel.tags
+                              .any((tag) => selectedTags.contains(tag));
                         }).toList();
 
                   return RefreshIndicator(
-                    onRefresh: () => ref.read(novelNotifierProvider.notifier).refresh(),
+                    onRefresh: () =>
+                        ref.read(novelNotifierProvider.notifier).refresh(),
                     child: GridView.builder(
                       padding: const EdgeInsets.all(16),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         childAspectRatio: 0.7,
                         crossAxisSpacing: 16,
@@ -110,7 +115,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                       itemCount: filteredNovels.length,
                       itemBuilder: (context, index) {
                         // 倒着排序
-                        final novel = filteredNovels[filteredNovels.length - index - 1];
+                        final novel =
+                            filteredNovels[filteredNovels.length - index - 1];
                         return NovelCard(
                           novel: novel,
                           onTap: () {
@@ -153,4 +159,4 @@ class _HomePageState extends ConsumerState<HomePage> {
       ),
     );
   }
-} 
+}

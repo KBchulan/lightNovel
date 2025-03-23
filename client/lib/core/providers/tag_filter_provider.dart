@@ -5,7 +5,7 @@
 //
 // @author     KBchulan
 // @date       2025/03/19
-// @history    
+// @history
 // ****************************************************************************
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -28,7 +28,7 @@ class TagFilter extends _$TagFilter {
       if (newTags.contains(NovelTags.all)) {
         newTags.remove(NovelTags.all);
       }
-      
+
       if (newTags.contains(tag)) {
         newTags.remove(tag);
         if (newTags.isEmpty) {
@@ -37,7 +37,7 @@ class TagFilter extends _$TagFilter {
       } else {
         newTags.add(tag);
       }
-      
+
       state = newTags;
     }
   }
@@ -45,4 +45,4 @@ class TagFilter extends _$TagFilter {
   bool isSelected(String tag) {
     return state.contains(tag);
   }
-} 
+}

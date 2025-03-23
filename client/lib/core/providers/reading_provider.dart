@@ -20,7 +20,7 @@ part 'reading_provider.g.dart';
 // 阅读模式
 enum ReadingMode {
   scroll, // 滚动模式
-  page,   // 翻页模式
+  page, // 翻页模式
 }
 
 // 阅读状态
@@ -102,7 +102,7 @@ class ReadingNotifier extends _$ReadingNotifier {
         ),
         apiClient.updateReadHistory(novelId),
       ]);
-      
+
       // 更新本地状态
       state = state.copyWith(
         readingProgress: ReadingProgress(
@@ -115,7 +115,6 @@ class ReadingNotifier extends _$ReadingNotifier {
           updatedAt: DateTime.now(),
         ),
       );
-      
     } catch (e) {
       debugPrint('❌ 更新阅读进度错误: $e');
       rethrow;
@@ -180,4 +179,4 @@ class ReadingNotifier extends _$ReadingNotifier {
       rethrow;
     }
   }
-} 
+}

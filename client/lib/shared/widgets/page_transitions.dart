@@ -5,7 +5,7 @@
 //
 // @author     KBchulan
 // @date       2025/03/19
-// @history    
+// @history
 // ****************************************************************************
 
 import 'package:flutter/material.dart';
@@ -43,7 +43,8 @@ class SlideUpPageRoute<T> extends BasePageRoute<T> {
             const end = Offset.zero;
             const curve = Curves.easeInOut;
 
-            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            var tween =
+                Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
             var offsetAnimation = animation.drive(tween);
 
             return SlideTransition(
@@ -66,7 +67,8 @@ class SlideHorizontalPageRoute<T> extends BasePageRoute<T> {
             const begin = Offset(1.0, 0.0);
             const end = Offset.zero;
 
-            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: BasePageRoute.defaultCurve));
+            var tween = Tween(begin: begin, end: end)
+                .chain(CurveTween(curve: BasePageRoute.defaultCurve));
             var offsetAnimation = animation.drive(tween);
 
             return SlideTransition(
@@ -100,8 +102,10 @@ class ScalePageRoute<T> extends BasePageRoute<T> {
           duration: BasePageRoute.fastDuration,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const curve = Curves.easeInOut;
-            var scaleTween = Tween(begin: 0.9, end: 1.0).chain(CurveTween(curve: curve));
-            var opacityTween = Tween(begin: 0.5, end: 1.0).chain(CurveTween(curve: curve));
+            var scaleTween =
+                Tween(begin: 0.9, end: 1.0).chain(CurveTween(curve: curve));
+            var opacityTween =
+                Tween(begin: 0.5, end: 1.0).chain(CurveTween(curve: curve));
 
             return ScaleTransition(
               scale: animation.drive(scaleTween),
@@ -130,7 +134,9 @@ class SharedAxisPageRoute<T> extends BasePageRoute<T> {
                 var slideAnimation = Tween(
                   begin: const Offset(1.0, 0.0),
                   end: Offset.zero,
-                ).chain(CurveTween(curve: BasePageRoute.defaultCurve)).animate(animation);
+                )
+                    .chain(CurveTween(curve: BasePageRoute.defaultCurve))
+                    .animate(animation);
                 transitionChild = SlideTransition(
                   position: slideAnimation,
                   child: child,
@@ -140,7 +146,9 @@ class SharedAxisPageRoute<T> extends BasePageRoute<T> {
                 var scaleAnimation = Tween(
                   begin: 0.9,
                   end: 1.0,
-                ).chain(CurveTween(curve: BasePageRoute.defaultCurve)).animate(animation);
+                )
+                    .chain(CurveTween(curve: BasePageRoute.defaultCurve))
+                    .animate(animation);
                 transitionChild = ScaleTransition(
                   scale: scaleAnimation,
                   child: child,
@@ -185,9 +193,10 @@ class BookPageRoute<T> extends BasePageRoute<T> {
                 .chain(CurveTween(curve: curve))
                 .animate(animation);
 
-            var rotateAnimation = Tween(begin: reverse ? 0.0 : 0.1, end: reverse ? -0.1 : 0.0)
-                .chain(CurveTween(curve: curve))
-                .animate(animation);
+            var rotateAnimation =
+                Tween(begin: reverse ? 0.0 : 0.1, end: reverse ? -0.1 : 0.0)
+                    .chain(CurveTween(curve: curve))
+                    .animate(animation);
 
             return Transform(
               alignment: reverse ? Alignment.centerRight : Alignment.centerLeft,
@@ -218,7 +227,7 @@ class SearchResultPageRoute<T> extends BasePageRoute<T> {
             // 定义更平滑的动画曲线
             const curve = Curves.easeOutQuart;
             const reverseCurve = Curves.easeInQuart;
-            
+
             // 主页面进入动画
             var slideAnimation = Tween(
               begin: const Offset(1.0, 0.0),
@@ -227,7 +236,7 @@ class SearchResultPageRoute<T> extends BasePageRoute<T> {
               parent: animation,
               curve: curve,
             ));
-            
+
             // 主页面透明度动画
             var fadeAnimation = Tween(
               begin: 0.0,
@@ -236,7 +245,7 @@ class SearchResultPageRoute<T> extends BasePageRoute<T> {
               parent: animation,
               curve: curve,
             ));
-            
+
             // 前一页面退出动画
             var secondaryFadeAnimation = Tween(
               begin: 1.0,
@@ -245,7 +254,7 @@ class SearchResultPageRoute<T> extends BasePageRoute<T> {
               parent: secondaryAnimation,
               curve: reverseCurve,
             ));
-            
+
             // 为前一页面添加轻微缩放效果，使过渡更自然
             var secondaryScaleAnimation = Tween(
               begin: 1.0,
@@ -254,7 +263,7 @@ class SearchResultPageRoute<T> extends BasePageRoute<T> {
               parent: secondaryAnimation,
               curve: reverseCurve,
             ));
-            
+
             return Stack(
               children: [
                 // 前一页面
@@ -298,12 +307,16 @@ class NovelDetailPageRoute<T> extends BasePageRoute<T> {
             var scaleAnimation = Tween(
               begin: isReverse ? 1.0 : 0.95,
               end: isReverse ? 0.95 : 1.0,
-            ).chain(CurveTween(curve: BasePageRoute.defaultCurve)).animate(animation);
+            )
+                .chain(CurveTween(curve: BasePageRoute.defaultCurve))
+                .animate(animation);
 
             var fadeAnimation = Tween(
               begin: isReverse ? 1.0 : 0.3,
               end: isReverse ? 0.3 : 1.0,
-            ).chain(CurveTween(curve: BasePageRoute.defaultCurve)).animate(animation);
+            )
+                .chain(CurveTween(curve: BasePageRoute.defaultCurve))
+                .animate(animation);
 
             var secondaryScaleAnimation = Tween(
               begin: isReverse ? 0.95 : 1.0,
@@ -338,4 +351,4 @@ enum SharedAxisTransitionType {
   horizontal,
   scaled,
   fade,
-} 
+}

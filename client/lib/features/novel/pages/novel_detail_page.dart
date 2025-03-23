@@ -97,7 +97,7 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
       final progressAsync = ref.refresh(historyProgress(widget.novel.id));
       // 正确获取值，不对非Future类型使用await
       final progress = progressAsync.valueOrNull;
-      
+
       if (mounted) {
         setState(() {
           _readingProgress = progress;

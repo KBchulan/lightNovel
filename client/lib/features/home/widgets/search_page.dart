@@ -5,7 +5,7 @@
 //
 // @author     KBchulan
 // @date       2025/03/19
-// @history    
+// @history
 // ****************************************************************************
 
 import 'package:flutter/material.dart';
@@ -21,12 +21,12 @@ class SearchPage extends ConsumerWidget {
 
   void _handleSearch(BuildContext context, WidgetRef ref, String value) {
     if (value.isEmpty) return;
-    
+
     ref.read(searchHistoryProvider.notifier).addSearch(value);
-    
+
     // 先将状态设置为loading，但不执行实际搜索
     ref.read(novelNotifierProvider.notifier).setLoading();
-    
+
     // 导航到搜索结果页面
     Navigator.of(context).push(
       SearchResultPageRoute(
@@ -95,7 +95,9 @@ class SearchPage extends ConsumerWidget {
                       trailing: IconButton(
                         icon: const Icon(Icons.close),
                         onPressed: () {
-                          ref.read(searchHistoryProvider.notifier).removeSearch(keyword);
+                          ref
+                              .read(searchHistoryProvider.notifier)
+                              .removeSearch(keyword);
                         },
                       ),
                       onTap: () => _handleSearch(context, ref, keyword),
@@ -120,4 +122,4 @@ class SearchPage extends ConsumerWidget {
       ),
     );
   }
-} 
+}

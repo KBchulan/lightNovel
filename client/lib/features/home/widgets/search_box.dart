@@ -5,7 +5,7 @@
 //
 // @author     KBchulan
 // @date       2025/03/19
-// @history    
+// @history
 // ****************************************************************************
 
 import 'package:flutter/material.dart';
@@ -67,12 +67,12 @@ class _SearchBoxState extends ConsumerState<SearchBox> {
         duration: const Duration(milliseconds: 200),
         height: 40,
         decoration: BoxDecoration(
-          color: isFocused 
+          color: isFocused
               ? theme.colorScheme.surface.withAlpha(204)
               : theme.colorScheme.surface.withAlpha(51),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isFocused 
+            color: isFocused
                 ? theme.colorScheme.primary.withAlpha(179)
                 : theme.colorScheme.onSurface.withAlpha(13),
             width: isFocused ? 1.5 : 0.5,
@@ -113,4 +113,4 @@ class _SearchBoxState extends ConsumerState<SearchBox> {
       ),
     );
   }
-} 
+}

@@ -30,11 +30,15 @@ class VolumeNotifier extends _$VolumeNotifier {
     });
   }
 
-  Future<List<ChapterInfo>> fetchChapters(String novelId, int volumeNumber) async {
+  Future<List<ChapterInfo>> fetchChapters(
+      String novelId, int volumeNumber) async {
     return await ref.read(apiClientProvider).getChapters(novelId, volumeNumber);
   }
 
-  Future<Chapter> fetchChapterContent(String novelId, int volumeNumber, int chapterNumber) async {
-    return await ref.read(apiClientProvider).getChapterContent(novelId, volumeNumber, chapterNumber);
+  Future<Chapter> fetchChapterContent(
+      String novelId, int volumeNumber, int chapterNumber) async {
+    return await ref
+        .read(apiClientProvider)
+        .getChapterContent(novelId, volumeNumber, chapterNumber);
   }
-} 
+}

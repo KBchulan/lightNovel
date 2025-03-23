@@ -175,14 +175,18 @@ class _ThemeModeOption extends StatelessWidget {
               Icon(
                 icon,
                 size: 24,
-                color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withAlpha(179),
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface.withAlpha(179),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
                   title,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withAlpha(179),
+                    color: isSelected
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface.withAlpha(179),
                     fontWeight: isSelected ? FontWeight.w600 : null,
                   ),
                 ),

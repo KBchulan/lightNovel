@@ -18,10 +18,10 @@ class SnackMessage {
     Duration? duration,
   }) {
     final theme = Theme.of(context);
-    
+
     // 清除当前显示的SnackBar
     ScaffoldMessenger.of(context).clearSnackBars();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -29,14 +29,15 @@ class SnackMessage {
             Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: (isError 
-                    ? theme.colorScheme.error 
-                    : theme.colorScheme.primary).withAlpha(31),
+                color: (isError
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.primary)
+                    .withAlpha(31),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 isError ? Icons.error_outline : Icons.check_circle_outline,
-                color: isError 
+                color: isError
                     ? theme.colorScheme.error
                     : theme.colorScheme.primary,
                 size: 20,
@@ -68,4 +69,4 @@ class SnackMessage {
       ),
     );
   }
-} 
+}

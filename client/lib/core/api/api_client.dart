@@ -413,7 +413,7 @@ class ApiClient {
       for (final favorite in favoritesList) {
         final favoriteData = favorite as Map<String, dynamic>;
         final novelId = favoriteData['novelId'] as String;
-        
+
         try {
           final novel = await getNovelDetail(novelId);
           novels.add(novel);
@@ -599,7 +599,7 @@ class ApiClient {
       final result = historyList
           .map((json) => ReadHistory.fromJson(json as Map<String, dynamic>))
           .toList();
-      
+
       debugPrint('📚 API: 获取到 ${result.length} 条阅读历史');
       return result;
     } catch (e) {

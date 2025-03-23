@@ -24,4 +24,4 @@ class ReadHistory with _$ReadHistory {
 
   factory ReadHistory.fromJson(Map<String, dynamic> json) =>
       _$ReadHistoryFromJson(json);
-} 
+}
