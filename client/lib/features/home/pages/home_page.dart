@@ -28,10 +28,159 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
+  bool _shouldShowAnimation = true;
+  
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  // 构建小说卡片，根据条件决定是否添加动画
+  Widget _buildNovelCard(dynamic novel, int index, bool withAnimation) {
+    // 基础卡片
+    final card = NovelCard(
+      novel: novel,
+      onTap: () {
+        Navigator.push(
+          context,
+          NovelDetailPageRoute(page: NovelDetailPage(novel: novel)),
+        );
+      },
+    );
+    
+    // 如果不需要动画，直接返回卡片
+    if (!withAnimation) return card;
+    
+    // 添加动画效果
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 300 + index * 50),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 30 * (1 - value)),
+          child: Opacity(
+            opacity: value.clamp(0.0, 1.0),
+            child: child,
+          ),
+        );
+      },
+      child: card,
+    );
+  }
+
+  // 处理刷新操作
+  Future<void> _handleRefresh() async {
+    // 标记为刷新状态，以便触发动画
+    setState(() {
+      _shouldShowAnimation = true;
+    });
+    
+    // 等待数据刷新完成
+    await ref.read(novelNotifierProvider.notifier).refresh();
+    
+    // 延迟重置动画状态，确保动画有足够时间完成
+    await Future.delayed(const Duration(milliseconds: 600));
+    
+    if (mounted) {
+      setState(() {
+        _shouldShowAnimation = false;
+      });
+    }
+  }
+
+  // 构建错误状态视图
+  Widget _buildErrorView(Object error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 48),
+          const SizedBox(height: 16),
+          Text('加载失败: ${error.toString()}'),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              // 重试时重新开启动画
+              setState(() {
+                _shouldShowAnimation = true;
+              });
+              ref.invalidate(novelNotifierProvider);
+            },
+            child: const Text('重试'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 构建AppBar
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: Row(
+        children: [
+          const Text('首页'),
+          const SizedBox(width: 12),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  FadePageRoute(
+                    page: const SearchPage(),
+                  ),
+                );
+              },
+              child: AbsorbPointer(
+                child: SearchBox(
+                  onSubmitted: (value) {
+                    if (value.isNotEmpty) {
+                      ref.read(novelNotifierProvider.notifier).searchNovels(value);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // 构建标签栏
+  Widget _buildTagBar(Set<String> selectedTags) {
+    return SizedBox(
+      height: 50,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: NovelTags.allTags.map((tag) {
+          return AnimatedFilterChip(
+            label: tag,
+            selected: selectedTags.contains(tag),
+            onSelected: (_) {
+              ref.read(tagFilterProvider.notifier).toggleTag(tag);
+            },
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final novelsAsync = ref.watch(novelNotifierProvider);
     final selectedTags = ref.watch(tagFilterProvider);
+
+    // 数据加载完成后延迟关闭动画标记
+    if (novelsAsync.hasValue && _shouldShowAnimation) {
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) {
+          setState(() {
+            _shouldShowAnimation = false;
+          });
+        }
+      });
+    }
 
     return GestureDetector(
       onTap: () {
@@ -39,59 +188,18 @@ class _HomePageState extends ConsumerState<HomePage> {
         FocusScope.of(context).unfocus();
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Row(
-            children: [
-              const Text('首页'),
-              const SizedBox(width: 12),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      FadePageRoute(
-                        page: const SearchPage(),
-                      ),
-                    );
-                  },
-                  child: AbsorbPointer(
-                    child: SearchBox(
-                      onSubmitted: (value) {
-                        if (value.isNotEmpty) {
-                          ref
-                              .read(novelNotifierProvider.notifier)
-                              .searchNovels(value);
-                        }
-                      },
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        appBar: _buildAppBar(),
         body: Column(
           children: [
-            // 分类导航
-            SizedBox(
-              height: 50,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: NovelTags.allTags.map((tag) {
-                  return AnimatedFilterChip(
-                    label: tag,
-                    selected: selectedTags.contains(tag),
-                    onSelected: (_) {
-                      ref.read(tagFilterProvider.notifier).toggleTag(tag);
-                    },
-                  );
-                }).toList(),
-              ),
-            ),
+            // A. 分类导航
+            _buildTagBar(selectedTags),
+            
             // 小说列表
             Expanded(
               child: novelsAsync.when(
                 data: (novels) {
+                  // 不再需要在这里处理首次加载动画标记
+                  
                   // 根据选中的标签筛选小说
                   final filteredNovels = selectedTags.contains(NovelTags.all)
                       ? novels
@@ -101,8 +209,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         }).toList();
 
                   return RefreshIndicator(
-                    onRefresh: () =>
-                        ref.read(novelNotifierProvider.notifier).refresh(),
+                    onRefresh: _handleRefresh,
                     child: GridView.builder(
                       padding: const EdgeInsets.all(16),
                       gridDelegate:
@@ -117,17 +224,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                         // 倒着排序
                         final novel =
                             filteredNovels[filteredNovels.length - index - 1];
-                        return NovelCard(
-                          novel: novel,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              NovelDetailPageRoute(
-                                page: NovelDetailPage(novel: novel),
-                              ),
-                            );
-                          },
-                        );
+                            
+                        return _buildNovelCard(novel, index, _shouldShowAnimation);
                       },
                     ),
                   );
@@ -135,23 +233,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 loading: () => const Center(
                   child: CircularProgressIndicator(),
                 ),
-                error: (error, stack) => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 48),
-                      const SizedBox(height: 16),
-                      Text('加载失败: ${error.toString()}'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () {
-                          ref.invalidate(novelNotifierProvider);
-                        },
-                        child: const Text('重试'),
-                      ),
-                    ],
-                  ),
-                ),
+                error: (error, stack) => _buildErrorView(error),
               ),
             ),
           ],
