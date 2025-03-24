@@ -18,6 +18,7 @@ import '../../../shared/widgets/page_transitions.dart';
 import '../../../shared/props/novel_props.dart';
 import '../../novel/pages/novel_detail_page.dart';
 import '../widgets/empty_bookshelf.dart';
+import '../../../shared/widgets/network_error.dart';
 
 // 定义一个自定义通知类
 class SwitchToHomeNotification extends Notification {}
@@ -73,60 +74,61 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
     final theme = Theme.of(context);
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('书架'),
+        actions: [
+          // 视图切换按钮
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: IconButton(
+              key: ValueKey(isGridView),
+              icon: AnimatedIcon(
+                icon: AnimatedIcons.view_list,
+                progress: _controller,
+                color: theme.colorScheme.primary,
+              ),
+              onPressed: () {
+                final notifier =
+                    ref.read(bookshelfViewModeProvider.notifier);
+                notifier.state = !notifier.state;
+                if (notifier.state) {
+                  _controller.reverse();
+                } else {
+                  _controller.forward();
+                }
+              },
+            ),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () =>
             ref.read(favoriteNotifierProvider.notifier).fetchFavorites(),
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverAppBar(
-              expandedHeight: 0,
-              floating: false,
-              pinned: true,
-              elevation: 0,
-              backgroundColor: theme.colorScheme.surface,
-              title: const Text('书架'),
-              actions: [
-                // 视图切换按钮
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: IconButton(
-                    key: ValueKey(isGridView),
-                    icon: AnimatedIcon(
-                      icon: AnimatedIcons.view_list,
-                      progress: _controller,
-                      color: theme.colorScheme.primary,
-                    ),
-                    onPressed: () {
-                      final notifier =
-                          ref.read(bookshelfViewModeProvider.notifier);
-                      notifier.state = !notifier.state;
-                      if (notifier.state) {
-                        _controller.reverse();
-                      } else {
-                        _controller.forward();
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
-
-            // 内容区域
-            SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: favoritesAsync.when(
-                data: (favorites) {
-                  if (favorites.isEmpty) {
-                    return EmptyBookshelf(
+        child: favoritesAsync.when(
+          data: (favorites) {
+            if (favorites.isEmpty) {
+              return CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.all(16),
+                    sliver: EmptyBookshelf(
                       onExplore: () {
                         SwitchToHomeNotification().dispatch(context);
                       },
-                    );
-                  }
+                    ),
+                  ),
+                ],
+              );
+            }
 
-                  if (isGridView) {
-                    return SliverGrid(
+            if (isGridView) {
+              return CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.all(16),
+                    sliver: SliverGrid(
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
@@ -171,150 +173,50 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
                         },
                         childCount: favorites.length,
                       ),
-                    );
-                  } else {
-                    return SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final novel = favorites[index];
-                          return TweenAnimationBuilder<double>(
-                            tween: Tween(begin: 0.0, end: 1.0),
-                            duration: Duration(milliseconds: 300 + index * 50),
-                            curve: Curves.easeOutCubic,
-                            builder: (context, value, child) {
-                              return Transform.translate(
-                                offset: Offset(0, 30 * (1 - value)),
-                                child: Opacity(
-                                  opacity: value.clamp(0.0, 1.0),
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: _ListViewNovelCard(novel: novel),
-                            ),
-                          );
-                        },
-                        childCount: favorites.length,
-                      ),
-                    );
-                  }
-                },
-                loading: () => SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.0, end: 1.0),
-                      duration: const Duration(milliseconds: 600),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, value, child) {
-                        return Transform.scale(
-                          scale: value,
-                          child: Opacity(
-                            opacity: value,
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: const CircularProgressIndicator(),
                     ),
                   ),
-                ),
-                error: (error, stack) => SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Stack(
-                    children: [
-                      Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            TweenAnimationBuilder<double>(
-                              tween: Tween(begin: 0.0, end: 1.0),
-                              duration: const Duration(milliseconds: 500),
-                              curve: Curves.easeOutCubic,
-                              builder: (context, value, child) {
-                                return Transform.scale(
-                                  scale: value,
-                                  child: Opacity(
-                                    opacity: value,
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(24),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.error.withAlpha(26),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.error_outline,
-                                  size: 48,
-                                  color: theme.colorScheme.error,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              '加载失败了喵',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: theme.colorScheme.error,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (error.toString() != 'null')
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 32),
-                                child: Text(
-                                  error.toString(),
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color:
-                                        theme.colorScheme.error.withAlpha(204),
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            const SizedBox(height: 24),
-                            FilledButton.icon(
-                              onPressed: () {
-                                ref
-                                    .read(favoriteNotifierProvider.notifier)
-                                    .fetchFavorites();
-                              },
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('重试'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: theme.colorScheme.error,
-                                foregroundColor: theme.colorScheme.onError,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 28,
-                                  vertical: 14,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                              ),
-                            ),
-                          ],
+                ],
+              );
+            } else {
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: favorites.length,
+                itemBuilder: (context, index) {
+                  final novel = favorites[index];
+                  return TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: Duration(milliseconds: 300 + index * 50),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, child) {
+                      return Transform.translate(
+                        offset: Offset(0, 30 * (1 - value)),
+                        child: Opacity(
+                          opacity: value.clamp(0.0, 1.0),
+                          child: child,
                         ),
-                      ),
-                      // 添加一个可拉动区域以触发RefreshIndicator
-                      ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.5),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _ListViewNovelCard(novel: novel),
+                    ),
+                  );
+                },
+              );
+            }
+          },
+          loading: () => const Center(
+            child: CircularProgressIndicator(),
+          ),
+          error: (error, stack) => Stack(
+            children: [
+              NetworkError(
+                message: error.toString(),
+                onRetry: () => ref.read(favoriteNotifierProvider.notifier).fetchFavorites(),
+                showPullToRefresh: true,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

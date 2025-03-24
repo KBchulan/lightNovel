@@ -20,6 +20,7 @@ import '../../../shared/props/novel_props.dart';
 import '../../novel/pages/novel_detail_page.dart';
 import '../../reading/pages/reading_page.dart';
 import '../widgets/empty_history.dart';
+import '../../../shared/widgets/network_error.dart';
 
 class HistoryPage extends ConsumerWidget {
   const HistoryPage({super.key});
@@ -190,51 +191,10 @@ class HistoryPage extends ConsumerWidget {
           ),
           error: (error, stack) => Stack(
             children: [
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: theme.colorScheme.error,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      '加载失败',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: theme.colorScheme.error,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 32),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.errorContainer.withAlpha(128),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        error.toString(),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: theme.colorScheme.onErrorContainer,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: () => ref.refresh(historyNotifierProvider),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('重试'),
-                    ),
-                  ],
-                ),
+              NetworkError(
+                message: error.toString(),
+                onRetry: () => ref.refresh(historyNotifierProvider),
               ),
-              // 添加一个可拉动区域以触发RefreshIndicator
-              ListView(),
             ],
           ),
         ),

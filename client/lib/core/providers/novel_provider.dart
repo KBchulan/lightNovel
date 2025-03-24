@@ -12,6 +12,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../api/api_client.dart';
 import '../models/novel.dart';
 import 'api_provider.dart';
+import 'package:dio/dio.dart';
 
 part 'novel_provider.g.dart';
 
@@ -76,8 +77,13 @@ class FavoriteNotifier extends _$FavoriteNotifier {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       try {
-        return await ref.read(apiClientProvider).getFavorites();
+        final result = await ref.read(apiClientProvider).getFavorites();
+        return result;
       } catch (e) {
+        // 如果是网络连接错误，直接抛出异常
+        if (e is DioException) {
+          rethrow;
+        }
         // 如果是空响应导致的错误，返回空列表
         if (e.toString().contains('null')) {
           return const [];

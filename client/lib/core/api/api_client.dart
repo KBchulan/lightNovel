@@ -428,7 +428,12 @@ class ApiClient {
       return novels;
     } catch (e) {
       debugPrint('⚠️ API: 获取收藏列表出现异常: $e');
-      if (e is DioException && e.error.toString().contains('响应数据格式错误')) {
+      // 如果是网络连接错误，直接抛出异常
+      if (e is DioException) {
+        rethrow;
+      }
+      // 如果是空响应导致的错误，返回空列表
+      if (e.toString().contains('null')) {
         return [];
       }
       rethrow;
