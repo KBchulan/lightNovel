@@ -39,6 +39,7 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   bool _shouldShowAnimation = true;
+  bool _isContentReady = false;
 
   @override
   void initState() {
@@ -58,7 +59,19 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
       final deviceService = ref.read(deviceServiceProvider);
       await deviceService.getDeviceId();
       if (mounted) {
-        ref.read(favoriteNotifierProvider.notifier).fetchFavorites();
+        await ref.read(favoriteNotifierProvider.notifier).fetchFavorites();
+        setState(() {
+          _isContentReady = true;
+        });
+        
+        // 数据加载完成后延迟关闭动画标记
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) {
+            setState(() {
+              _shouldShowAnimation = false;
+            });
+          }
+        });
       }
     });
   }
@@ -75,17 +88,10 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
     final isGridView = ref.watch(bookshelfViewModeProvider);
     final theme = Theme.of(context);
     
-    // 数据加载完成后延迟关闭动画标记
-    if (favoritesAsync.hasValue && _shouldShowAnimation) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          setState(() {
-            _shouldShowAnimation = false;
-          });
-        }
-      });
-    }
+    // 判断内容是否准备就绪
+    final contentReady = _isContentReady && favoritesAsync.hasValue;
 
+    // 动画标志
     final shouldAnimate = AnimationManager.shouldAnimateAfterDataLoad(
       hasData: favoritesAsync.hasValue,
       isLoading: favoritesAsync.isLoading,
@@ -120,107 +126,141 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () {
-          setState(() {
-            _shouldShowAnimation = true;
-          });
-          return ref.read(favoriteNotifierProvider.notifier).fetchFavorites();
-        },
-        child: favoritesAsync.when(
-          data: (favorites) {
-            if (favorites.isEmpty) {
-              return CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.all(16),
-                    sliver: EmptyBookshelf(
-                      onExplore: () {
-                        SwitchToHomeNotification().dispatch(context);
-                      },
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            if (isGridView) {
-              return CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.all(16),
-                    sliver: SliverGrid(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 0.7,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final novel = favorites[index];
-                          
-                          return AnimationManager.buildStaggeredListItem(
-                            index: index,
-                            withAnimation: shouldAnimate,
-                            type: AnimationType.scale,
-                            child: Hero(
-                              tag: 'novel_${novel.id}',
-                              child: Material(
-                                type: MaterialType.transparency,
-                                child: NovelCard(
-                                  novel: novel,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      NovelDetailPageRoute(
-                                        page: NovelDetailPage(novel: novel),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                        childCount: favorites.length,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            } else {
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: favorites.length,
-                itemBuilder: (context, index) {
-                  final novel = favorites[index];
-                  
-                  return AnimationManager.buildStaggeredListItem(
-                    index: index,
-                    withAnimation: shouldAnimate,
-                    type: AnimationType.slideUp,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _ListViewNovelCard(novel: novel),
-                    ),
-                  );
-                },
-              );
+      body: AnimatedOpacity(
+        opacity: contentReady ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+        child: RefreshIndicator(
+          onRefresh: () async {
+            setState(() {
+              _shouldShowAnimation = true;
+              _isContentReady = false;
+            });
+            
+            await ref.read(favoriteNotifierProvider.notifier).fetchFavorites();
+            
+            if (mounted) {
+              setState(() {
+                _isContentReady = true;
+              });
+              
+              // 刷新后重新开始动画
+              Future.delayed(const Duration(milliseconds: 800), () {
+                if (mounted) {
+                  setState(() {
+                    _shouldShowAnimation = false;
+                  });
+                }
+              });
             }
           },
-          loading: () => const Center(
-            child: CircularProgressIndicator(),
-          ),
-          error: (error, stack) => Stack(
+          child: Stack(
             children: [
-              NetworkError(
-                message: error.toString(),
-                onRetry: () => ref.read(favoriteNotifierProvider.notifier).fetchFavorites(),
-                showPullToRefresh: true,
+              if (!contentReady)
+                Container(
+                  color: theme.scaffoldBackgroundColor,
+                ),
+              favoritesAsync.when(
+                data: (favorites) {
+                  if (favorites.isEmpty) {
+                    return CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverPadding(
+                          padding: const EdgeInsets.all(16),
+                          sliver: EmptyBookshelf(
+                            onExplore: () {
+                              SwitchToHomeNotification().dispatch(context);
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+
+                  if (isGridView) {
+                    return CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverPadding(
+                          padding: const EdgeInsets.all(16),
+                          sliver: SliverGrid(
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.7,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                            ),
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final novel = favorites[index];
+                                
+                                return AnimationManager.buildStaggeredListItem(
+                                  index: index,
+                                  withAnimation: shouldAnimate,
+                                  type: AnimationType.fade,
+                                  duration: AnimationManager.normalDuration,
+                                  child: Hero(
+                                    tag: 'novel_${novel.id}',
+                                    child: Material(
+                                      type: MaterialType.transparency,
+                                      child: NovelCard(
+                                        novel: novel,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            FadePageRoute(
+                                              page: NovelDetailPage(novel: novel),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              childCount: favorites.length,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  } else {
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: favorites.length,
+                      itemBuilder: (context, index) {
+                        final novel = favorites[index];
+                        
+                        return AnimationManager.buildStaggeredListItem(
+                          index: index,
+                          withAnimation: shouldAnimate,
+                          type: AnimationType.fade,
+                          duration: AnimationManager.normalDuration,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _ListViewNovelCard(novel: novel),
+                          ),
+                        );
+                      },
+                    );
+                  }
+                },
+                loading: () => contentReady 
+                  ? const SizedBox.shrink() 
+                  : const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                error: (error, stack) => Stack(
+                  children: [
+                    NetworkError(
+                      message: error.toString(),
+                      onRetry: () => ref.read(favoriteNotifierProvider.notifier).fetchFavorites(),
+                      showPullToRefresh: true,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -253,7 +293,7 @@ class _ListViewNovelCard extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            NovelDetailPageRoute(
+            FadePageRoute(
               page: NovelDetailPage(novel: novel),
             ),
           );

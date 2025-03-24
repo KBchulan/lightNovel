@@ -48,10 +48,8 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
     super.initState();
     _shouldShowAnimation = true;
     
-    // 加载卷列表和收藏状态
     _loadAllData();
     
-    // 延迟关闭动画标记，确保动画完整播放一次
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) {
         setState(() {
@@ -63,7 +61,6 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
 
   Future<void> _loadAllData() async {
     setState(() {
-      _isDataLoaded = false;
       _isLoadingProgress = true;
       _shouldShowAnimation = true;
     });
@@ -224,14 +221,22 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
     }
   }
 
+  // 添加一个简介格式化工具函数
+  String _formatDescription(String description) {
+    // 分割段落
+    List<String> paragraphs = description.split('\n').where((p) => p.trim().isNotEmpty).toList();
+    
+    // 为每段添加两个全角空格作为首行缩进
+    return paragraphs.map((p) => '　　${p.trim()}').join('\n\n');
+  }
+
   @override
   Widget build(BuildContext context) {
     final volumesAsync = ref.watch(volumeNotifierProvider);
+    final theme = Theme.of(context);
     
-    // 内容是否已准备好显示
     final contentReady = volumesAsync.hasValue && _isDataLoaded && !volumesAsync.isLoading && !_isLoadingProgress;
     
-    // 动画标志，只有内容准备好且需要动画时才为true
     final shouldAnimate = AnimationManager.shouldAnimateAfterDataLoad(
       hasData: volumesAsync.hasValue && _isDataLoaded,
       isLoading: volumesAsync.isLoading || _isLoadingProgress || !_isDataLoaded,
@@ -241,21 +246,22 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () async {
+          // 创建一个渐变过渡的效果
           setState(() {
             _shouldShowAnimation = true;
           });
           
+          // 不直接设置_isDataLoaded为false，而是使用透明度过渡
           await _loadAllData();
         },
         child: AnimatedOpacity(
-          opacity: contentReady ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeOut,
+          opacity: contentReady ? 1.0 : 0.5, // 使用半透明而不是完全隐藏
+          duration: const Duration(milliseconds: 700),
+          curve: Curves.easeInOut,
           // 主内容
           child: Stack(
             children: [
               CustomScrollView(
-                // 当数据未加载完成时禁用滚动
                 physics: !_isDataLoaded ? const NeverScrollableScrollPhysics() : null,
                 slivers: [
                   SliverAppBar(
@@ -352,7 +358,7 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -366,20 +372,27 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: widget.novel.tags.map((tag) {
-                                  return Chip(
-                                    label: Text(tag),
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    labelStyle: TextStyle(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimaryContainer,
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary.withAlpha(38),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      tag,
+                                      style: TextStyle(
+                                        color: theme.colorScheme.primary,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   );
                                 }).toList(),
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 20),
                           ],
 
                           // 操作按钮
@@ -394,8 +407,17 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                                     onPressed: _isDataLoaded ? _toggleFavorite : null,
                                     icon: Icon(_isFavorite
                                         ? Icons.favorite
-                                        : Icons.favorite_border),
+                                        : Icons.favorite_border,
+                                       color: _isFavorite 
+                                           ? theme.colorScheme.primary
+                                           : null),
                                     label: Text(_isFavorite ? '已收藏' : '收藏'),
+                                    style: OutlinedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -492,6 +514,12 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                                     label: Text(_isLoadingProgress
                                         ? '加载中...'
                                         : (_readingProgress != null ? '继续阅读' : '开始阅读')),
+                                    style: FilledButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -503,28 +531,31 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                               withAnimation: shouldAnimate,
                               type: AnimationType.fade,
                               duration: AnimationManager.shortDuration,
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        Text(
-                                          '上次读到：第${_readingProgress!.volumeNumber}卷 第${_readingProgress!.chapterNumber}话',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color:
-                                                Theme.of(context).colorScheme.secondary,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 3)
-                                      ],
+                              child: Container(
+                                width: double.infinity,
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.bookmark,
+                                      size: 16,
+                                      color: theme.colorScheme.primary,
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '上次读到：第${_readingProgress!.volumeNumber}卷 第${_readingProgress!.chapterNumber}话',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 16),
 
                           // 简介
                           AnimationManager.buildAnimatedElement(
@@ -534,21 +565,22 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   '简介',
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 12),
                                 _ExpandableDescription(
-                                  description: widget.novel.description,
+                                  description: _formatDescription(widget.novel.description),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 24),
 
                           // 目录
                           AnimationManager.buildAnimatedElement(
@@ -559,17 +591,19 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Text(
+                                Text(
                                   '目录',
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 12),
                                 _VolumeList(
                                   novel: widget.novel,
                                   shouldShowAnimation: shouldAnimate,
+                                  currentReading: _readingProgress,
                                 ),
                               ],
                             ),
@@ -581,11 +615,49 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                 ],
               ),
               
-              // 在数据加载时显示背景色
-              if (!contentReady)
-                Container(
+              // 加载状态指示器覆盖层 - 使用淡入淡出效果
+              AnimatedOpacity(
+                opacity: (!contentReady) ? 0.7 : 0.0,
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeInOut,
+                child: !contentReady ? Container(
                   color: Theme.of(context).scaffoldBackgroundColor,
-                ),
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface.withAlpha(231),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(25),
+                            blurRadius: 10,
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 3,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            '正在刷新...',
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ) : const SizedBox.shrink(),
+              ),
             ],
           ),
         ),
@@ -597,10 +669,12 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
 class _VolumeList extends ConsumerStatefulWidget {
   final Novel novel;
   final bool shouldShowAnimation;
+  final ReadingProgress? currentReading;
 
   const _VolumeList({
     required this.novel,
     this.shouldShowAnimation = false,
+    this.currentReading,
   });
 
   @override
@@ -609,6 +683,47 @@ class _VolumeList extends ConsumerStatefulWidget {
 
 class _VolumeListState extends ConsumerState<_VolumeList> {
   final Set<int> _expandedVolumes = {};
+  bool _initialExpansionDone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 初始化时不直接设置，而是在数据加载后处理
+  }
+
+  @override
+  void didUpdateWidget(_VolumeList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    final volumesAsync = ref.read(volumeNotifierProvider);
+    if (volumesAsync.hasValue && 
+        widget.currentReading != null && 
+        !_initialExpansionDone) {
+      _initialExpansionDone = true;
+      
+      Future.microtask(() {
+        if (mounted) {
+          _expandVolume(widget.currentReading!.volumeNumber);
+        }
+      });
+    }
+  }
+
+  // 加载章节并展开卷
+  Future<void> _expandVolume(int volumeNumber) async {
+    if (!ref.read(chapterNotifierProvider.notifier).isCached(widget.novel.id, volumeNumber)) {
+      await ref.read(chapterNotifierProvider.notifier).fetchChapters(
+            widget.novel.id,
+            volumeNumber,
+          );
+    }
+
+    if (mounted) {
+      setState(() {
+        _expandedVolumes.add(volumeNumber);
+      });
+    }
+  }
 
   Future<void> _toggleVolume(int volumeNumber) async {
     if (_expandedVolumes.contains(volumeNumber)) {
@@ -618,16 +733,7 @@ class _VolumeListState extends ConsumerState<_VolumeList> {
       return;
     }
 
-    if (!ref.read(chapterNotifierProvider.notifier).isCached(widget.novel.id, volumeNumber)) {
-      await ref.read(chapterNotifierProvider.notifier).fetchChapters(
-            widget.novel.id,
-            volumeNumber,
-          );
-    }
-
-    setState(() {
-      _expandedVolumes.add(volumeNumber);
-    });
+    await _expandVolume(volumeNumber);
   }
 
   @override
@@ -686,78 +792,144 @@ class _VolumeListState extends ConsumerState<_VolumeList> {
       children: volumes.map((volume) {
         final isExpanded = _expandedVolumes.contains(volume.volumeNumber);
         final volumeChapters = chapters[volume.volumeNumber] ?? [];
+        final isCurrentVolume = widget.currentReading != null && 
+                               widget.currentReading!.volumeNumber == volume.volumeNumber;
 
         return AnimationManager.buildStaggeredListItem(
           index: volumes.indexOf(volume),
           withAnimation: widget.shouldShowAnimation,
           type: AnimationType.fade,
           duration: AnimationManager.mediumDuration,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                visualDensity: const VisualDensity(vertical: -4),
-                title: Text(
-                  '第 ${volume.volumeNumber} 卷',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
-                subtitle: Text('共 ${volume.chapterCount} 话'),
-                trailing: AnimatedRotation(
-                  duration: const Duration(milliseconds: 200),
-                  turns: isExpanded ? 0.5 : 0,
-                  child: const Icon(Icons.expand_more),
-                ),
-                onTap: () => _toggleVolume(volume.volumeNumber),
+          child: Card(
+            margin: const EdgeInsets.symmetric(vertical: 4.0),
+            color: null,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+              side: BorderSide(
+                color: isCurrentVolume
+                    ? theme.colorScheme.primary.withAlpha(60)
+                    : theme.colorScheme.outlineVariant.withAlpha(78),
+                width: 1,
               ),
-              ClipRect(
-                child: AnimatedAlign(
-                  duration: const Duration(milliseconds: 200),
-                  heightFactor: isExpanded ? 1.0 : 0.0,
-                  alignment: Alignment.center,
-                  curve: Curves.easeInOut,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: volumeChapters.map((chapterInfo) => ListTile(
-                          contentPadding: const EdgeInsets.only(left: 32),
-                          visualDensity: const VisualDensity(vertical: -4),
-                          title: Text(
-                            '第 ${chapterInfo.chapterNumber} 话  ${chapterInfo.title}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: theme.colorScheme.onSurface.withAlpha(222),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 卷标题
+                ListTile(
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Text(
+                              '第 ${volume.volumeNumber} 卷',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: isCurrentVolume
+                                    ? theme.colorScheme.primary
+                                    : null,
+                              ),
                             ),
-                          ),
-                          onTap: () async {
-                            // 获取章节内容
-                            final chapter = await ref
-                                .read(volumeNotifierProvider.notifier)
-                                .fetchChapterContent(
-                                  widget.novel.id,
-                                  volume.volumeNumber,
-                                  chapterInfo.chapterNumber,
-                                );
-
-                            if (context.mounted) {
-                              Navigator.push(
-                                context,
-                                FadePageRoute(
-                                  page: ReadingPage(
-                                    chapter: chapter,
-                                    novelId: widget.novel.id,
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                        )).toList(),
+                            if (isCurrentVolume) ...[
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.bookmark,
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      AnimatedRotation(
+                        turns: isExpanded ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(
+                          Icons.keyboard_arrow_down,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
                   ),
+                  subtitle: Text('共 ${volume.chapterCount} 话'),
+                  onTap: () => _toggleVolume(volume.volumeNumber),
                 ),
-              ),
-            ],
+                // 章节列表
+                AnimatedCrossFade(
+                  firstChild: Container(),
+                  secondChild: Column(
+                    children: volumeChapters.map((chapterInfo) {
+                      final isCurrentChapter = widget.currentReading != null &&
+                          widget.currentReading!.volumeNumber == volume.volumeNumber &&
+                          widget.currentReading!.chapterNumber == chapterInfo.chapterNumber;
+                          
+                      return ListTile(
+                        contentPadding: const EdgeInsets.only(left: 32, right: 16),
+                        visualDensity: const VisualDensity(vertical: -4),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '第 ${chapterInfo.chapterNumber} 话：${chapterInfo.title}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: isCurrentChapter ? FontWeight.bold : FontWeight.normal,
+                                  color: isCurrentChapter
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.onSurface.withAlpha(222),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (isCurrentChapter)
+                              Icon(
+                                Icons.bookmark,
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              ),
+                          ],
+                        ),
+                        tileColor: isCurrentChapter
+                            ? theme.colorScheme.primaryContainer.withAlpha(30)
+                            : null,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        onTap: () async {
+                          // 获取章节内容
+                          final chapter = await ref
+                              .read(volumeNotifierProvider.notifier)
+                              .fetchChapterContent(
+                                widget.novel.id,
+                                volume.volumeNumber,
+                                chapterInfo.chapterNumber,
+                              );
+
+                          if (context.mounted) {
+                            Navigator.push(
+                              context,
+                              FadePageRoute(
+                                page: ReadingPage(
+                                  chapter: chapter,
+                                  novelId: widget.novel.id,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  crossFadeState: isExpanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  duration: AnimationManager.shortDuration,
+                ),
+              ],
+            ),
           ),
         );
       }).toList(),
@@ -782,14 +954,17 @@ class _ExpandableDescriptionState extends State<_ExpandableDescription> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           widget.description,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
-            height: 1.5,
+            height: 1.6,
+            color: theme.colorScheme.onSurface.withAlpha(231),
           ),
           maxLines: _isExpanded ? null : _maxLines,
           overflow: _isExpanded ? null : TextOverflow.ellipsis,
@@ -808,7 +983,7 @@ class _ExpandableDescriptionState extends State<_ExpandableDescription> {
                 Text(
                   _isExpanded ? '收起' : '展开',
                   style: TextStyle(
-                    color: Theme.of(context).primaryColor,
+                    color: Theme.of(context).colorScheme.primary,
                     fontSize: 14,
                   ),
                 ),
@@ -816,7 +991,7 @@ class _ExpandableDescriptionState extends State<_ExpandableDescription> {
                   _isExpanded
                       ? Icons.keyboard_arrow_up
                       : Icons.keyboard_arrow_down,
-                  color: Theme.of(context).primaryColor,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 16,
                 ),
               ],
