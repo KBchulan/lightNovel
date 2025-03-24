@@ -41,7 +41,7 @@ class DeviceService {
     String? deviceId = await _storage.getData<String>(_deviceIdKey);
     if (deviceId != null) {
       _cachedDeviceId = deviceId;
-      await _writeDeviceIdToFile(deviceId); // 同步到文件
+      await _writeDeviceIdToFile(deviceId);
       return deviceId;
     }
 
@@ -82,7 +82,7 @@ class DeviceService {
   Future<void> _writeDeviceIdToFile(String deviceId) async {
     try {
       final directory = await _getApplicationDocumentsDirectory();
-      debugPrint('📁 尝试写入设备ID文件，目录: ${directory.path}');
+      debugPrint('📁 尝试写入设备ID文件, 目录: ${directory.path}');
       final file = File('${directory.path}/$_deviceIdFileName');
       
       final content = '''// 设备ID文件
