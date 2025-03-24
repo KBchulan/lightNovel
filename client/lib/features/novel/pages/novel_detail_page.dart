@@ -558,7 +558,7 @@ class _VolumeListState extends ConsumerState<_VolumeList> {
                               '第 ${chapterInfo.chapterNumber} 话  ${chapterInfo.title}',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: theme.colorScheme.onSurface.withOpacity(0.87),
+                                color: theme.colorScheme.onSurface.withAlpha(222),
                               ),
                             ),
                             onTap: () async {

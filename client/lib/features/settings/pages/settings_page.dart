@@ -32,17 +32,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final uri = Uri.parse(url);
     // 在异步操作前先检查context是否挂载
     if (!mounted) return;
-    
+
     try {
       if (!await url_launcher.launchUrl(uri)) {
-        if (mounted) {  // 再次检查mounted状态
+        if (mounted) {
+          // 再次检查mounted状态
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('无法打开链接: $url')),
           );
         }
       }
     } catch (e) {
-      if (mounted) {  // 异常处理中也要检查mounted状态
+      if (mounted) {
+        // 异常处理中也要检查mounted状态
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('打开链接失败: $e')),
         );
@@ -55,17 +57,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final uri = Uri.parse('mailto:$email?subject=${AppConfig.appName}用户反馈');
     // 在异步操作前先检查context是否挂载
     if (!mounted) return;
-    
+
     try {
       if (!await url_launcher.launchUrl(uri)) {
-        if (mounted) {  // 再次检查mounted状态
+        if (mounted) {
+          // 再次检查mounted状态
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('无法打开邮件客户端')),
           );
         }
       }
     } catch (e) {
-      if (mounted) {  // 异常处理中也要检查mounted状态
+      if (mounted) {
+        // 异常处理中也要检查mounted状态
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('发送邮件失败: $e')),
         );
@@ -77,16 +81,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Future<void> _handleThemeChange(ThemeMode? value) async {
     if (value != null) {
       final currentThemeMode = ref.read(themeNotifierProvider);
-      // 如果切换到当前系统主题，直接切换
       if (value == ThemeMode.system) {
         ref.read(themeNotifierProvider.notifier).setThemeMode(value);
         return;
       }
-      // 如果切换到与当前主题相同的模式，不执行动画
       if (value == currentThemeMode) {
         return;
       }
-      // 其他情况执行动画切换
       ref.read(themeNotifierProvider.notifier).setThemeMode(value);
     }
   }
@@ -427,7 +428,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     required String value,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           Icon(
@@ -481,6 +482,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     title,

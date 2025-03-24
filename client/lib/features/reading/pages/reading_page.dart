@@ -39,11 +39,13 @@ class ReadingPage extends ConsumerStatefulWidget {
 }
 
 class _ReadingPageState extends ConsumerState<ReadingPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final ScrollController _scrollController;
   late final AnimationController _controlPanelController;
+  late final AnimationController _bottomSheetController;
   late final Animation<double> _controlPanelAnimation;
   bool _isLoading = false;
+  bool _isChapterLoading = false; // 添加章节加载状态
   DateTime _lastSaveTime = DateTime.now();
   bool _isScrolling = false;
   DateTime _lastScrollTime = DateTime.now();
@@ -55,6 +57,10 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     _scrollController = ScrollController();
     _controlPanelController = AnimationController(
       duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _bottomSheetController = AnimationController(
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
     _controlPanelAnimation = CurvedAnimation(
@@ -90,6 +96,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
     _controlPanelController.dispose();
+    _bottomSheetController.dispose();
     // 恢复系统UI
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([
@@ -139,10 +146,10 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     if (_isScrolling) return;
 
     final now = DateTime.now();
-    if (now.difference(_lastScrollTime).inSeconds >= 10) {
+    if (now.difference(_lastScrollTime).inMilliseconds >= 500) {
       _lastScrollTime = now;
       _isScrolling = true;
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) {
           _saveReadingProgress();
           _isScrolling = false;
@@ -159,8 +166,8 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       if (!_scrollController.hasClients && position == null) return;
 
       final now = DateTime.now();
-      if (now.difference(_lastSaveTime).inSeconds < 2) {
-        await Future.delayed(const Duration(milliseconds: 100));
+      if (now.difference(_lastSaveTime).inMilliseconds < 1000) {
+        await Future.delayed(const Duration(milliseconds: 50));
       }
       _lastSaveTime = now;
 
@@ -192,6 +199,11 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     _isTransitioning = true;
 
     try {
+      // 显示加载指示器
+      if (mounted) {
+        setState(() => _isChapterLoading = true);
+      }
+
       await _saveReadingProgress(position: 0);
 
       final apiClient = ref.read(apiClientProvider);
@@ -221,6 +233,9 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
         );
       }
     } finally {
+      if (mounted) {
+        setState(() => _isChapterLoading = false);
+      }
       _isTransitioning = false;
     }
   }
@@ -254,7 +269,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                     decoration: BoxDecoration(
                       color: isDark
                           ? theme.colorScheme.surfaceContainerHighest
-                          : theme.colorScheme.surfaceContainerHighest,
+                          : theme.colorScheme.surfaceContainer,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
@@ -295,17 +310,14 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
   void _showBottomSheet(Widget sheet) {
     // 先显示系统UI
     _setSystemUIMode(false);
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       isDismissible: true,
       enableDrag: true,
-      transitionAnimationController: AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 300),
-      ),
+      transitionAnimationController: _bottomSheetController,
       builder: (context) => sheet,
     ).whenComplete(() {
       // 如果控制面板已经隐藏，则恢复隐藏系统UI
@@ -346,6 +358,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
   Widget build(BuildContext context) {
     final readingState = ref.watch(readingNotifierProvider);
     final themeMode = ref.watch(themeNotifierProvider);
+    Theme.of(context);
     final isDark = themeMode == ThemeMode.dark ||
         (themeMode == ThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
@@ -376,6 +389,19 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                 child: FadeTransition(
                   opacity: _controlPanelAnimation,
                   child: _buildControlPanel(context, isDark),
+                ),
+              ),
+
+            // 章节加载指示器
+            if (_isChapterLoading)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withAlpha(78),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
                 ),
               ),
           ],
