@@ -11,7 +11,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/novel.dart';
-import '../../../core/models/chapter_info.dart';
 import '../../../core/models/reading_progress.dart';
 import '../../../shared/props/novel_props.dart';
 import '../../../core/providers/volume_provider.dart';
@@ -22,6 +21,7 @@ import '../../reading/pages/reading_page.dart';
 import '../../../core/providers/api_provider.dart';
 import '../../../shared/widgets/snack_message.dart';
 import '../../../core/providers/novel_provider.dart';
+import '../../../core/providers/chapter_provider.dart';
 
 class NovelDetailPage extends ConsumerStatefulWidget {
   final Novel novel;
@@ -477,7 +477,6 @@ class _VolumeList extends ConsumerStatefulWidget {
 }
 
 class _VolumeListState extends ConsumerState<_VolumeList> {
-  final Map<int, List<ChapterInfo>> _chapters = {};
   final Set<int> _expandedVolumes = {};
 
   Future<void> _toggleVolume(int volumeNumber) async {
@@ -488,15 +487,11 @@ class _VolumeListState extends ConsumerState<_VolumeList> {
       return;
     }
 
-    if (!_chapters.containsKey(volumeNumber)) {
-      final chapters =
-          await ref.read(volumeNotifierProvider.notifier).fetchChapters(
-                widget.novel.id,
-                volumeNumber,
-              );
-      setState(() {
-        _chapters[volumeNumber] = chapters;
-      });
+    if (!ref.read(chapterNotifierProvider.notifier).isCached(widget.novel.id, volumeNumber)) {
+      await ref.read(chapterNotifierProvider.notifier).fetchChapters(
+            widget.novel.id,
+            volumeNumber,
+          );
     }
 
     setState(() {
@@ -507,6 +502,8 @@ class _VolumeListState extends ConsumerState<_VolumeList> {
   @override
   Widget build(BuildContext context) {
     final volumesAsync = ref.watch(volumeNotifierProvider);
+    final chapters = ref.watch(chapterNotifierProvider);
+    final theme = Theme.of(context);
 
     return volumesAsync.when(
       data: (volumes) {
@@ -523,7 +520,7 @@ class _VolumeListState extends ConsumerState<_VolumeList> {
           mainAxisSize: MainAxisSize.min,
           children: volumes.map((volume) {
             final isExpanded = _expandedVolumes.contains(volume.volumeNumber);
-            final chapters = _chapters[volume.volumeNumber] ?? [];
+            final volumeChapters = chapters[volume.volumeNumber] ?? [];
 
             return Column(
               mainAxisSize: MainAxisSize.min,
@@ -539,50 +536,58 @@ class _VolumeListState extends ConsumerState<_VolumeList> {
                     ),
                   ),
                   subtitle: Text('共 ${volume.chapterCount} 话'),
-                  trailing: Icon(
-                    isExpanded ? Icons.expand_less : Icons.expand_more,
+                  trailing: AnimatedRotation(
+                    duration: const Duration(milliseconds: 200),
+                    turns: isExpanded ? 0.5 : 0,
+                    child: const Icon(Icons.expand_more),
                   ),
                   onTap: () => _toggleVolume(volume.volumeNumber),
                 ),
-                if (isExpanded)
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: chapters
-                        .map((chapterInfo) => ListTile(
-                              contentPadding: const EdgeInsets.only(left: 16),
-                              visualDensity: const VisualDensity(vertical: -4),
-                              title: Text(
-                                '第 ${chapterInfo.chapterNumber} 话 ${chapterInfo.title}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                ),
+                ClipRect(
+                  child: AnimatedAlign(
+                    duration: const Duration(milliseconds: 200),
+                    heightFactor: isExpanded ? 1.0 : 0.0,
+                    alignment: Alignment.center,
+                    curve: Curves.easeInOut,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: volumeChapters.map((chapterInfo) => ListTile(
+                            contentPadding: const EdgeInsets.only(left: 32),
+                            visualDensity: const VisualDensity(vertical: -4),
+                            title: Text(
+                              '第 ${chapterInfo.chapterNumber} 话  ${chapterInfo.title}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: theme.colorScheme.onSurface.withOpacity(0.87),
                               ),
-                              onTap: () async {
-                                // 获取章节内容
-                                final chapter = await ref
-                                    .read(volumeNotifierProvider.notifier)
-                                    .fetchChapterContent(
-                                      widget.novel.id,
-                                      volume.volumeNumber,
-                                      chapterInfo.chapterNumber,
-                                    );
-
-                                if (context.mounted) {
-                                  Navigator.push(
-                                    context,
-                                    SharedAxisPageRoute(
-                                      page: ReadingPage(
-                                        chapter: chapter,
-                                        novelId: widget.novel.id,
-                                      ),
-                                      type: SharedAxisTransitionType.horizontal,
-                                    ),
+                            ),
+                            onTap: () async {
+                              // 获取章节内容
+                              final chapter = await ref
+                                  .read(volumeNotifierProvider.notifier)
+                                  .fetchChapterContent(
+                                    widget.novel.id,
+                                    volume.volumeNumber,
+                                    chapterInfo.chapterNumber,
                                   );
-                                }
-                              },
-                            ))
-                        .toList(),
+
+                              if (context.mounted) {
+                                Navigator.push(
+                                  context,
+                                  SharedAxisPageRoute(
+                                    page: ReadingPage(
+                                      chapter: chapter,
+                                      novelId: widget.novel.id,
+                                    ),
+                                    type: SharedAxisTransitionType.horizontal,
+                                  ),
+                                );
+                              }
+                            },
+                          )).toList(),
+                    ),
                   ),
+                ),
               ],
             );
           }).toList(),

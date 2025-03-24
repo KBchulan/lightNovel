@@ -347,6 +347,85 @@ class NovelDetailPageRoute<T> extends BasePageRoute<T> {
         );
 }
 
+/// 章节切换页面过渡动画
+class ChapterTransitionRoute<T> extends BasePageRoute<T> {
+  final bool isNext;
+
+  ChapterTransitionRoute({
+    required super.page,
+    this.isNext = true,
+  }) : super(
+          duration: const Duration(milliseconds: 400),
+          reverseDuration: const Duration(milliseconds: 400),
+          opaque: true,
+          barrierColor: Colors.transparent,
+          maintainState: true,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            // 定义动画曲线
+            const curve = Curves.easeInOutCubic;
+
+            // 主页面进入动画
+            var slideAnimation = Tween(
+              begin: Offset(isNext ? 1.0 : -1.0, 0.0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: curve,
+            ));
+
+            // 主页面透明度动画
+            var fadeAnimation = Tween(
+              begin: 0.0,
+              end: 1.0,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: curve,
+            ));
+
+            // 前一页面退出动画
+            var secondarySlideAnimation = Tween(
+              begin: Offset.zero,
+              end: Offset(isNext ? -1.0 : 1.0, 0.0),
+            ).animate(CurvedAnimation(
+              parent: secondaryAnimation,
+              curve: curve,
+            ));
+
+            // 前一页面透明度动画
+            var secondaryFadeAnimation = Tween(
+              begin: 1.0,
+              end: 0.0,
+            ).animate(CurvedAnimation(
+              parent: secondaryAnimation,
+              curve: curve,
+            ));
+
+            return Stack(
+              children: [
+                // 前一页面
+                SlideTransition(
+                  position: secondarySlideAnimation,
+                  child: FadeTransition(
+                    opacity: secondaryFadeAnimation,
+                    child: Container(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                    ),
+                  ),
+                ),
+                // 当前页面
+                SlideTransition(
+                  position: slideAnimation,
+                  child: FadeTransition(
+                    opacity: fadeAnimation,
+                    child: child,
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+}
+
 enum SharedAxisTransitionType {
   horizontal,
   scaled,

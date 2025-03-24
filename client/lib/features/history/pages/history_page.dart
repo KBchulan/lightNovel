@@ -293,10 +293,9 @@ class _HistoryItem extends ConsumerWidget {
     final progressAsync = ref.watch(historyProgress(history.novelId));
     final theme = Theme.of(context);
 
-    // 检查是否正在加载
     final isLoading = novelAsync.isLoading || progressAsync.isLoading;
-    // 检查是否加载出错
     final hasError = novelAsync.hasError || progressAsync.hasError;
+
     // 获取数据
     final novel = novelAsync.valueOrNull;
     final progress = progressAsync.valueOrNull;

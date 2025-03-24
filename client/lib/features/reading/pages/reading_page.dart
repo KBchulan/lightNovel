@@ -18,6 +18,11 @@ import '../../../core/providers/history_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/slide_animation.dart';
 import 'package:dio/dio.dart';
+import '../../../shared/widgets/page_transitions.dart';
+import '../widgets/chapter_list_sheet.dart';
+import '../widgets/bookmark_sheet.dart';
+import '../widgets/comment_sheet.dart';
+import '../widgets/settings_sheet.dart';
 
 class ReadingPage extends ConsumerStatefulWidget {
   final Chapter chapter;
@@ -33,18 +38,30 @@ class ReadingPage extends ConsumerStatefulWidget {
   ConsumerState<ReadingPage> createState() => _ReadingPageState();
 }
 
-class _ReadingPageState extends ConsumerState<ReadingPage> {
+class _ReadingPageState extends ConsumerState<ReadingPage>
+    with SingleTickerProviderStateMixin {
   late final ScrollController _scrollController;
+  late final AnimationController _controlPanelController;
+  late final Animation<double> _controlPanelAnimation;
   bool _isLoading = false;
   DateTime _lastSaveTime = DateTime.now();
-  bool _isScrolling = false; // 标记是否正在滚动
+  bool _isScrolling = false;
   DateTime _lastScrollTime = DateTime.now();
+  bool _isTransitioning = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _loadReadingProgress(); // 改为直接加载阅读进度
+    _controlPanelController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _controlPanelAnimation = CurvedAnimation(
+      parent: _controlPanelController,
+      curve: Curves.easeInOut,
+    );
+    _loadReadingProgress();
 
     _setSystemUIMode(true);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -52,16 +69,27 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     // 确保初始状态下控制面板不显示
     Future.microtask(() {
       ref.read(readingNotifierProvider.notifier).setShowControls(false);
+      _controlPanelController.value = 0;
     });
 
     // 添加滚动监听，在阅读过程中定期保存进度
     _scrollController.addListener(_scrollListener);
   }
 
+  // 控制系统UI的显示和隐藏, true为隐藏, false为显示
+  void _setSystemUIMode(bool hideUI) {
+    if (hideUI) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+    } else {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+  }
+
   @override
   void dispose() {
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
+    _controlPanelController.dispose();
     // 恢复系统UI
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([
@@ -73,7 +101,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     super.dispose();
   }
 
-  // 加载阅读进度
+  // 加载阅读进度，从服务器获取上次阅读位置
   Future<void> _loadReadingProgress() async {
     setState(() => _isLoading = true);
     try {
@@ -106,68 +134,212 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     }
   }
 
-  // 保存阅读进度
-  Future<void> _saveReadingProgress() async {
-    try {
-      if (!_scrollController.hasClients) return;
+  // 优化滚动监听，使用防抖
+  void _scrollListener() {
+    if (_isScrolling) return;
 
-      // 防抖, 距离上次保存时间至少2秒以上才执行保存
+    final now = DateTime.now();
+    if (now.difference(_lastScrollTime).inSeconds >= 10) {
+      _lastScrollTime = now;
+      _isScrolling = true;
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _saveReadingProgress();
+          _isScrolling = false;
+        }
+      });
+    }
+  }
+
+  // 优化保存进度，使用防抖
+  Future<void> _saveReadingProgress({int? position}) async {
+    if (_isTransitioning) return;
+
+    try {
+      if (!_scrollController.hasClients && position == null) return;
+
       final now = DateTime.now();
       if (now.difference(_lastSaveTime).inSeconds < 2) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
       _lastSaveTime = now;
 
-      final position = _scrollController.position.pixels.toInt();
-      try {
-        debugPrint('📚 开始保存阅读进度: 位置=$position');
-        await ref.read(readingNotifierProvider.notifier).updateReadingProgress(
+      final savePosition =
+          position ?? _scrollController.position.pixels.toInt();
+
+      // 使用 Future.wait 并行处理多个异步操作
+      await Future.wait([
+        ref.read(readingNotifierProvider.notifier).updateReadingProgress(
               novelId: widget.novelId,
               volumeNumber: widget.chapter.volumeNumber,
               chapterNumber: widget.chapter.chapterNumber,
-              position: position,
-            );
-        debugPrint('✅ 保存阅读进度成功');
-      } catch (e) {
-        debugPrint('❌ 保存阅读进度API调用错误: $e');
-      }
+              position: savePosition,
+            ),
+        ref.read(historyNotifierProvider.notifier).refresh(),
+      ]);
 
-      // 确保所有相关数据都刷新
-      try {
-        ref.invalidate(historyNotifierProvider);
-        await ref.read(historyNotifierProvider.notifier).refresh();
-
-        ref.invalidate(historyProgress(widget.novelId));
-
-        debugPrint('✅ 所有历史相关数据刷新成功');
-      } catch (e) {
-        debugPrint('❌ 刷新历史记录错误: $e');
-      }
+      // 并行刷新状态
+      ref.invalidate(historyNotifierProvider);
+      ref.invalidate(historyProgress(widget.novelId));
     } catch (e) {
       debugPrint('❌ 保存阅读进度错误: $e');
-      // 失败时仍然尝试刷新历史记录
-      try {
-        ref.invalidate(historyNotifierProvider);
-        ref.invalidate(historyProgress(widget.novelId));
-      } catch (e) {
-        debugPrint('❌ 刷新历史记录状态错误: $e');
-      }
     }
   }
 
-  // 滚动监听回调
-  void _scrollListener() {
-    final now = DateTime.now();
-    if (now.difference(_lastScrollTime).inSeconds >= 10) {
-      _lastScrollTime = now;
-      if (!_isScrolling) {
-        _isScrolling = true;
-        Future.delayed(const Duration(milliseconds: 500), () {
-          _saveReadingProgress();
-          _isScrolling = false;
-        });
+  // 优化章节切换
+  Future<void> _handleChapterTransition(bool isNext) async {
+    if (_isTransitioning) return;
+    _isTransitioning = true;
+
+    try {
+      await _saveReadingProgress(position: 0);
+
+      final apiClient = ref.read(apiClientProvider);
+      final chapter = await apiClient.getChapterContent(
+        widget.novelId,
+        widget.chapter.volumeNumber,
+        widget.chapter.chapterNumber + (isNext ? 1 : -1),
+      );
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          ChapterTransitionRoute(
+            page: ReadingPage(
+              novelId: widget.novelId,
+              chapter: chapter,
+            ),
+            isNext: isNext,
+          ),
+        );
       }
+    } catch (e) {
+      if (mounted) {
+        _showCustomSnackBar(
+          context,
+          isNext ? '已经是当前卷的最后一话了 \n 休息一下吧喵' : '已经是当前卷的第一话了 \n 前面没有了喵',
+        );
+      }
+    } finally {
+      _isTransitioning = false;
     }
+  }
+
+  // 显示自定义提示
+  void _showCustomSnackBar(BuildContext context, String message) {
+    final overlay = Overlay.of(context);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final overlayEntry = OverlayEntry(
+      builder: (context) => Positioned.fill(
+        child: Material(
+          color: Colors.transparent,
+          child: Center(
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 1.0, end: 0.0),
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              builder: (context, value, child) {
+                return Transform.translate(
+                  offset: Offset(value * MediaQuery.of(context).size.width, 0),
+                  child: Container(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.85,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 20,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? theme.colorScheme.surfaceContainerHighest
+                          : theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(39),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w500,
+                        height: 1.6,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 2), () {
+      overlayEntry.remove();
+    });
+  }
+
+  // 显示底部弹窗的通用方法
+  void _showBottomSheet(Widget sheet) {
+    // 先显示系统UI
+    _setSystemUIMode(false);
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
+      transitionAnimationController: AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 300),
+      ),
+      builder: (context) => sheet,
+    ).whenComplete(() {
+      // 如果控制面板已经隐藏，则恢复隐藏系统UI
+      if (!ref.read(readingNotifierProvider).showControls) {
+        _setSystemUIMode(true);
+      }
+    });
+  }
+
+  // 优化控制面板显示/隐藏
+  void _toggleControls(bool show) {
+    if (show) {
+      _setSystemUIMode(false);
+      _controlPanelController.forward();
+    } else {
+      _controlPanelController.reverse().whenComplete(() {
+        if (mounted) {
+          _setSystemUIMode(true);
+        }
+      });
+    }
+    ref.read(readingNotifierProvider.notifier).setShowControls(show);
+  }
+
+  // 处理文本内容，使其更符合阅读习惯
+  String _formatContent(String content) {
+    final paragraphs = content.split('\n');
+    return paragraphs.map((paragraph) {
+      paragraph = paragraph.trim();
+
+      if (paragraph.isEmpty) return '';
+
+      return '　$paragraph';
+    }).join('\n\n'); // 段落之间用一个换行符分隔
   }
 
   @override
@@ -178,16 +350,11 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
         (themeMode == ThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
 
-    // 根据控制面板的显示状态切换系统UI
-    _setSystemUIMode(!readingState.showControls);
-
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) {
-          // 保存阅读进度
           await _saveReadingProgress();
-
           if (mounted) {
             final progressResult = ref.refresh(historyProgress(widget.novelId));
             debugPrint('退出阅读页面时刷新进度: ${progressResult.hasValue}');
@@ -206,7 +373,10 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
             // 控制面板
             if (readingState.showControls)
               Positioned.fill(
-                child: _buildControlPanel(context, isDark),
+                child: FadeTransition(
+                  opacity: _controlPanelAnimation,
+                  child: _buildControlPanel(context, isDark),
+                ),
               ),
           ],
         ),
@@ -214,15 +384,14 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     );
   }
 
+  // 优化阅读内容构建
   Widget _buildReadingContent(ReadingState state, bool isDark) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
     return GestureDetector(
-      onTap: () {
-        ref.read(readingNotifierProvider.notifier).toggleShowControls();
-      },
+      onTap: () => _toggleControls(!state.showControls),
       child: SingleChildScrollView(
         controller: _scrollController,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -231,10 +400,10 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
           children: [
             const SizedBox(height: 16),
             Text(
-              widget.chapter.content,
+              _formatContent(widget.chapter.content),
               style: TextStyle(
                 fontSize: 16,
-                height: 1.8,
+                height: 1.5,
                 color: isDark ? Colors.white : Colors.black87,
               ),
             ),
@@ -245,6 +414,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     );
   }
 
+  // 修改底部按钮的点击事件
   Widget _buildControlPanel(BuildContext context, bool isDark) {
     final foregroundColor = isDark ? Colors.white : Colors.black87;
     final headerFooterColor = isDark
@@ -273,7 +443,6 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
                   GestureDetector(
                     onTap: () async {
                       await _saveReadingProgress();
-                      // 刷新历史记录
                       await ref
                           .read(historyNotifierProvider.notifier)
                           .refresh();
@@ -306,11 +475,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
           // 中间区域
           Expanded(
             child: GestureDetector(
-              onTap: () {
-                ref
-                    .read(readingNotifierProvider.notifier)
-                    .setShowControls(false);
-              },
+              onTap: () => _toggleControls(false),
               child: Container(
                 color: Colors.transparent,
               ),
@@ -331,11 +496,40 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildFunctionButton(Icons.skip_previous, foregroundColor),
-                  _buildFunctionButton(Icons.home, foregroundColor),
-                  _buildFunctionButton(Icons.bookmark_border, foregroundColor),
-                  _buildFunctionButton(Icons.settings, foregroundColor),
-                  _buildFunctionButton(Icons.skip_next, foregroundColor),
+                  _buildFunctionButton(
+                    Icons.arrow_back_ios,
+                    foregroundColor,
+                    onTap: () => _handleChapterTransition(false),
+                  ),
+                  _buildFunctionButton(
+                    Icons.bookmark_border,
+                    foregroundColor,
+                    onTap: () => _showBottomSheet(const BookmarkSheet()),
+                  ),
+                  _buildFunctionButton(
+                    Icons.menu,
+                    foregroundColor,
+                    onTap: () => _showBottomSheet(ChapterListSheet(
+                      novelId: widget.novelId,
+                      currentVolumeNumber: widget.chapter.volumeNumber,
+                      currentChapterNumber: widget.chapter.chapterNumber,
+                    )),
+                  ),
+                  _buildFunctionButton(
+                    Icons.chat_bubble_outline,
+                    foregroundColor,
+                    onTap: () => _showBottomSheet(const CommentSheet()),
+                  ),
+                  _buildFunctionButton(
+                    Icons.settings,
+                    foregroundColor,
+                    onTap: () => _showBottomSheet(const SettingsSheet()),
+                  ),
+                  _buildFunctionButton(
+                    Icons.arrow_forward_ios,
+                    foregroundColor,
+                    onTap: () => _handleChapterTransition(true),
+                  ),
                 ],
               ),
             ),
@@ -345,20 +539,22 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     );
   }
 
-  Widget _buildFunctionButton(IconData icon, Color color) {
-    return Icon(
-      icon,
-      color: color,
-      size: 28,
+  // 构建功能按钮，包含图标和点击事件
+  Widget _buildFunctionButton(
+    IconData icon,
+    Color color, {
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Icon(
+          icon,
+          color: color,
+          size: 28,
+        ),
+      ),
     );
-  }
-
-  // 控制系统UI的显示和隐藏
-  void _setSystemUIMode(bool hideUI) {
-    if (hideUI) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
-    } else {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    }
   }
 }

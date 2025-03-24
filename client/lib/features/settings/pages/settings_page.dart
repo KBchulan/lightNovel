@@ -225,58 +225,65 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           },
         ),
         if (_isAppExpanded) ...[
-          _buildInfoItem(
-            theme,
-            icon: Icons.book,
-            title: '应用名称',
-            value: AppConfig.appName,
-          ),
-          _buildInfoItem(
-            theme,
-            icon: Icons.tag,
-            title: '版本号',
-            value: AppConfig.appVersion,
-          ),
-          _buildActionItem(
-            theme,
-            icon: Icons.update,
-            title: '检查更新',
-            onTap: () {
-              // 显示检查更新的提示
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('当前已是最新版本')),
-              );
-            },
-          ),
-          _buildActionItem(
-            theme,
-            icon: Icons.data_usage,
-            title: '清除缓存',
-            onTap: () {
-              // 显示清除缓存的对话框
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('确认清除缓存?'),
-                  content: const Text('这将清除所有本地缓存数据，但不会影响您的收藏。'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('取消'),
-                    ),
-                    FilledButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('缓存已清除')),
-                        );
-                      },
-                      child: const Text('确认'),
-                    ),
-                  ],
+          Padding(
+            padding: const EdgeInsets.only(left: 25),
+            child: Column(
+              children: [
+                _buildInfoItem(
+                  theme,
+                  icon: Icons.book,
+                  title: '应用名称',
+                  value: AppConfig.appName,
                 ),
-              );
-            },
+                _buildInfoItem(
+                  theme,
+                  icon: Icons.tag,
+                  title: '版本号',
+                  value: AppConfig.appVersion,
+                ),
+                _buildActionItem(
+                  theme,
+                  icon: Icons.update,
+                  title: '检查更新',
+                  onTap: () {
+                    // 显示检查更新的提示
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('当前已是最新版本')),
+                    );
+                  },
+                ),
+                _buildActionItem(
+                  theme,
+                  icon: Icons.data_usage,
+                  title: '清除缓存',
+                  onTap: () {
+                    // 显示清除缓存的对话框
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('确认清除缓存?'),
+                        content: const Text('这将清除所有本地缓存数据，但不会影响您的收藏。'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('取消'),
+                          ),
+                          FilledButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('缓存已清除')),
+                              );
+                            },
+                            child: const Text('确认'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 8),
         ],
@@ -301,74 +308,81 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           },
         ),
         if (_isAboutExpanded) ...[
-          _buildInfoItem(
-            theme,
-            icon: Icons.person_outline,
-            title: '作者',
-            value: AppConfig.authorName,
-          ),
-          _buildActionItem(
-            theme,
-            icon: Icons.email,
-            title: '联系方式',
-            subtitle: AppConfig.authorEmail,
-            onTap: () => _sendEmail(AppConfig.authorEmail),
-          ),
-          _buildActionItem(
-            theme,
-            icon: Icons.code,
-            title: 'GitHub',
-            subtitle: '查看项目源码',
-            onTap: () => _launchUrl(AppConfig.githubUrl),
-          ),
-          _buildActionItem(
-            theme,
-            icon: Icons.volunteer_activism,
-            title: '支持作者',
-            subtitle: '如果您喜欢这个应用',
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('支持作者'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('感谢您的支持，您可以通过以下方式支持我：'),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildSupportButton(
-                            theme,
-                            icon: Icons.star,
-                            label: 'Star项目',
-                            onTap: () => _launchUrl(AppConfig.githubUrl),
-                          ),
-                          _buildSupportButton(
-                            theme,
-                            icon: Icons.share,
-                            label: '分享应用',
-                            onTap: () {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('分享功能开发中')),
-                              );
-                            },
+          Padding(
+            padding: const EdgeInsets.only(left: 25),
+            child: Column(
+              children: [
+                _buildInfoItem(
+                  theme,
+                  icon: Icons.person_outline,
+                  title: '作者',
+                  value: AppConfig.authorName,
+                ),
+                _buildActionItem(
+                  theme,
+                  icon: Icons.email,
+                  title: '联系方式',
+                  subtitle: AppConfig.authorEmail,
+                  onTap: () => _sendEmail(AppConfig.authorEmail),
+                ),
+                _buildActionItem(
+                  theme,
+                  icon: Icons.code,
+                  title: 'GitHub',
+                  subtitle: '查看项目源码',
+                  onTap: () => _launchUrl(AppConfig.githubUrl),
+                ),
+                _buildActionItem(
+                  theme,
+                  icon: Icons.volunteer_activism,
+                  title: '支持作者',
+                  subtitle: '如果您喜欢这个应用',
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('支持作者'),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('感谢您的支持，您可以通过以下方式支持我：'),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildSupportButton(
+                                  theme,
+                                  icon: Icons.star,
+                                  label: 'Star项目',
+                                  onTap: () => _launchUrl(AppConfig.githubUrl),
+                                ),
+                                _buildSupportButton(
+                                  theme,
+                                  icon: Icons.share,
+                                  label: '分享应用',
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('分享功能开发中')),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('关闭'),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('关闭'),
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              );
-            },
+              ],
+            ),
           ),
           const SizedBox(height: 8),
         ],
@@ -579,7 +593,7 @@ class _ThemeModeOption extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              const SizedBox(width: 40), // 缩进对齐
+              const SizedBox(width: 25), // 缩进对齐
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
