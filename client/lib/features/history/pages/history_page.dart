@@ -14,7 +14,7 @@ import '../../../core/models/novel.dart';
 import '../../../core/models/read_history.dart';
 import '../../../core/providers/history_provider.dart';
 import '../../../core/providers/api_provider.dart';
-import '../../../shared/widgets/page_transitions.dart';
+import '../../../shared/animations/page_transitions.dart';
 import '../../../shared/widgets/snack_message.dart';
 import '../../../shared/props/novel_props.dart';
 import '../../novel/pages/novel_detail_page.dart';

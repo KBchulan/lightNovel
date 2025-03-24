@@ -9,6 +9,7 @@
 // ****************************************************************************
 
 import 'package:flutter/material.dart';
+import '../../../shared/animations/animation_manager.dart';
 
 class AnimatedFilterChip extends StatelessWidget {
   final String label;
@@ -29,10 +30,10 @@ class AnimatedFilterChip extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: AnimationManager.shortDuration,
         child: FilterChip(
           label: AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 200),
+            duration: AnimationManager.shortDuration,
             style: TextStyle(
               color: selected
                   ? theme.colorScheme.onPrimary

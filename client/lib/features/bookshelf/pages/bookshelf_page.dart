@@ -14,8 +14,9 @@ import '../../../core/providers/novel_provider.dart';
 import '../../../core/services/device_service.dart';
 import '../../../core/models/novel.dart';
 import '../../../shared/widgets/novel_card.dart';
-import '../../../shared/widgets/page_transitions.dart';
+import '../../../shared/animations/page_transitions.dart';
 import '../../../shared/props/novel_props.dart';
+import '../../../shared/animations/animation_manager.dart';
 import '../../novel/pages/novel_detail_page.dart';
 import '../widgets/empty_bookshelf.dart';
 import '../../../shared/widgets/network_error.dart';
@@ -37,6 +38,7 @@ class BookshelfPage extends ConsumerStatefulWidget {
 class _BookshelfPageState extends ConsumerState<BookshelfPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  bool _shouldShowAnimation = true;
 
   @override
   void initState() {
@@ -72,6 +74,23 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
     final favoritesAsync = ref.watch(favoriteNotifierProvider);
     final isGridView = ref.watch(bookshelfViewModeProvider);
     final theme = Theme.of(context);
+    
+    // 数据加载完成后延迟关闭动画标记
+    if (favoritesAsync.hasValue && _shouldShowAnimation) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          setState(() {
+            _shouldShowAnimation = false;
+          });
+        }
+      });
+    }
+
+    final shouldAnimate = AnimationManager.shouldAnimateAfterDataLoad(
+      hasData: favoritesAsync.hasValue,
+      isLoading: favoritesAsync.isLoading,
+      hasError: favoritesAsync.hasError,
+    ) && _shouldShowAnimation;
 
     return Scaffold(
       appBar: AppBar(
@@ -102,8 +121,12 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () =>
-            ref.read(favoriteNotifierProvider.notifier).fetchFavorites(),
+        onRefresh: () {
+          setState(() {
+            _shouldShowAnimation = true;
+          });
+          return ref.read(favoriteNotifierProvider.notifier).fetchFavorites();
+        },
         child: favoritesAsync.when(
           data: (favorites) {
             if (favorites.isEmpty) {
@@ -139,19 +162,11 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
                           final novel = favorites[index];
-                          return TweenAnimationBuilder<double>(
-                            tween: Tween(begin: 0.0, end: 1.0),
-                            duration: Duration(milliseconds: 300 + index * 50),
-                            curve: Curves.easeOutCubic,
-                            builder: (context, value, child) {
-                              return Transform.scale(
-                                scale: value,
-                                child: Opacity(
-                                  opacity: value.clamp(0.0, 1.0),
-                                  child: child,
-                                ),
-                              );
-                            },
+                          
+                          return AnimationManager.buildStaggeredListItem(
+                            index: index,
+                            withAnimation: shouldAnimate,
+                            type: AnimationType.scale,
                             child: Hero(
                               tag: 'novel_${novel.id}',
                               child: Material(
@@ -183,19 +198,11 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
                 itemCount: favorites.length,
                 itemBuilder: (context, index) {
                   final novel = favorites[index];
-                  return TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    duration: Duration(milliseconds: 300 + index * 50),
-                    curve: Curves.easeOutCubic,
-                    builder: (context, value, child) {
-                      return Transform.translate(
-                        offset: Offset(0, 30 * (1 - value)),
-                        child: Opacity(
-                          opacity: value.clamp(0.0, 1.0),
-                          child: child,
-                        ),
-                      );
-                    },
+                  
+                  return AnimationManager.buildStaggeredListItem(
+                    index: index,
+                    withAnimation: shouldAnimate,
+                    type: AnimationType.slideUp,
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: _ListViewNovelCard(novel: novel),

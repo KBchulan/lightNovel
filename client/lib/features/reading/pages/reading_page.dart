@@ -16,9 +16,10 @@ import '../../../core/providers/reading_provider.dart';
 import '../../../core/providers/api_provider.dart';
 import '../../../core/providers/history_provider.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../shared/widgets/slide_animation.dart';
+import '../../../shared/animations/slide_animation.dart';
+import '../../../shared/animations/animation_manager.dart';
 import 'package:dio/dio.dart';
-import '../../../shared/widgets/page_transitions.dart';
+import '../../../shared/animations/page_transitions.dart';
 import '../widgets/chapter_list_sheet.dart';
 import '../widgets/bookmark_sheet.dart';
 import '../widgets/comment_sheet.dart';
@@ -216,12 +217,12 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          ChapterTransitionRoute(
+          SharedAxisPageRoute(
             page: ReadingPage(
               novelId: widget.novelId,
               chapter: chapter,
             ),
-            isNext: isNext,
+            type: SharedAxisTransitionType.horizontal,
           ),
         );
       }
@@ -246,54 +247,51 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    final snackBarWidget = AnimationManager.buildAnimatedElement(
+      type: AnimationType.slideHorizontal,
+      duration: AnimationManager.normalDuration,
+      curve: AnimationManager.defaultCurve,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.85,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 28,
+          vertical: 20,
+        ),
+        decoration: BoxDecoration(
+          color: isDark
+              ? theme.colorScheme.surfaceContainerHighest
+              : theme.colorScheme.surfaceContainer,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(39),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: theme.colorScheme.onSurface,
+            fontSize: 17,
+            fontWeight: FontWeight.w500,
+            height: 1.6,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ),
+    );
+
     final overlayEntry = OverlayEntry(
       builder: (context) => Positioned.fill(
         child: Material(
           color: Colors.transparent,
           child: Center(
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 1.0, end: 0.0),
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              builder: (context, value, child) {
-                return Transform.translate(
-                  offset: Offset(value * MediaQuery.of(context).size.width, 0),
-                  child: Container(
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.85,
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 28,
-                      vertical: 20,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? theme.colorScheme.surfaceContainerHighest
-                          : theme.colorScheme.surfaceContainer,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(39),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      message,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: theme.colorScheme.onSurface,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w500,
-                        height: 1.6,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+            child: snackBarWidget,
           ),
         ),
       ),
@@ -537,8 +535,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                     foregroundColor,
                     onTap: () => _showBottomSheet(ChapterListSheet(
                       novelId: widget.novelId,
-                      currentVolumeNumber: widget.chapter.volumeNumber,
-                      currentChapterNumber: widget.chapter.chapterNumber,
+                      currentChapter: widget.chapter,
                     )),
                   ),
                   _buildFunctionButton(

@@ -12,19 +12,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/volume_provider.dart';
 import '../../../core/providers/chapter_provider.dart';
-import '../../../shared/widgets/page_transitions.dart';
+import '../../../core/models/chapter.dart';
+import '../../../core/models/chapter_info.dart';
 import '../pages/reading_page.dart';
+import '../../../shared/animations/page_transitions.dart';
+import '../../../shared/animations/animation_manager.dart';
 
 class ChapterListSheet extends ConsumerStatefulWidget {
   final String novelId;
-  final int currentVolumeNumber;
-  final int currentChapterNumber;
+  final Chapter currentChapter;
 
   const ChapterListSheet({
     super.key,
     required this.novelId,
-    required this.currentVolumeNumber,
-    required this.currentChapterNumber,
+    required this.currentChapter,
   });
 
   @override
@@ -32,228 +33,282 @@ class ChapterListSheet extends ConsumerStatefulWidget {
 }
 
 class _ChapterListSheetState extends ConsumerState<ChapterListSheet> {
-  final DraggableScrollableController _controller = DraggableScrollableController();
   final Set<int> _expandedVolumes = {};
-  bool _isFullScreen = false;
+  bool _shouldShowAnimation = true;
 
   @override
   void initState() {
     super.initState();
-    _expandedVolumes.add(widget.currentVolumeNumber);
-    
-    // 预加载当前卷的章节
+    // 预加载当前卷的内容
     Future.microtask(() {
-      ref.read(chapterNotifierProvider.notifier).fetchChapters(
-            widget.novelId,
-            widget.currentVolumeNumber,
-          );
+      final currentVolumeNumber = widget.currentChapter.volumeNumber;
+      _toggleVolume(currentVolumeNumber, autoExpand: true);
     });
-
-    _controller.addListener(_onDragUpdate);
+    
+    // 延迟关闭动画标记，确保动画完整播放一次
+    Future.delayed(AnimationManager.longDuration, () {
+      if (mounted) {
+        setState(() {
+          _shouldShowAnimation = false;
+        });
+      }
+    });
   }
 
-  @override
-  void dispose() {
-    _controller.removeListener(_onDragUpdate);
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onDragUpdate() {
-    final size = _controller.size;
-    if (size >= 0.9 && !_isFullScreen) {
-      setState(() => _isFullScreen = true);
-    } else if (size < 0.9 && _isFullScreen) {
-      setState(() => _isFullScreen = false);
-    }
-  }
-
-  Future<void> _toggleVolume(int volumeNumber) async {
-    if (_expandedVolumes.contains(volumeNumber)) {
+  Future<void> _toggleVolume(int volumeNumber, {bool autoExpand = false}) async {
+    if (!autoExpand && _expandedVolumes.contains(volumeNumber)) {
       setState(() {
         _expandedVolumes.remove(volumeNumber);
       });
       return;
     }
 
+    // 预加载章节
     if (!ref.read(chapterNotifierProvider.notifier).isCached(widget.novelId, volumeNumber)) {
-      await ref.read(chapterNotifierProvider.notifier).fetchChapters(
-            widget.novelId,
-            volumeNumber,
+      try {
+        await ref
+            .read(chapterNotifierProvider.notifier)
+            .fetchChapters(widget.novelId, volumeNumber);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('加载章节失败')),
           );
+        }
+        return;
+      }
     }
 
-    setState(() {
-      _expandedVolumes.add(volumeNumber);
-    });
+    // 展开卷
+    if (mounted) {
+      setState(() {
+        _expandedVolumes.add(volumeNumber);
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final volumesAsync = ref.watch(volumeNotifierProvider);
+    final chapterList = ref.watch(chapterNotifierProvider);
     final theme = Theme.of(context);
-    final volumes = ref.watch(volumeNotifierProvider).value ?? [];
-    final chapters = ref.watch(chapterNotifierProvider);
 
-    return NotificationListener<DraggableScrollableNotification>(
-      onNotification: (notification) {
-        if (notification.extent <= notification.minExtent) {
-          Navigator.of(context).pop();
-        }
-        return true;
-      },
-      child: DraggableScrollableSheet(
-        initialChildSize: 0.5,
-        minChildSize: 0.3,
-        maxChildSize: 0.95,
-        controller: _controller,
-        builder: (context, scrollController) {
-          return Container(
-            decoration: BoxDecoration(
-              color: theme.scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
-              ),
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.5,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(28),
+              topRight: Radius.circular(28),
             ),
-            child: Column(
-              children: [
-                // 标题区域（作为拖动把手）
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onVerticalDragUpdate: (details) {
-                    // 计算新的面板高度
-                    final delta = details.primaryDelta! / MediaQuery.of(context).size.height;
-                    final newSize = _controller.size - delta;
-                    // 确保新的高度在有效范围内
-                    if (newSize >= 0.3 && newSize <= 0.95) {
-                      _controller.jumpTo(newSize);
-                    }
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    color: Colors.transparent,
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: theme.dividerColor,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                          child: Row(
-                            children: [
-                              Text(
-                                '目录',
-                                style: theme.textTheme.titleLarge,
-                              ),
-                              const Spacer(),
-                              Text(
-                                '第${widget.currentVolumeNumber}卷 第${widget.currentChapterNumber}话',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+          ),
+          child: Column(
+            children: [
+              // 顶部拖动条
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface.withAlpha(25),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                // 分割线
-                const Divider(height: 1),
-                // 目录列表
-                Expanded(
-                  child: ListView.builder(
-                    controller: scrollController,
-                    itemCount: volumes.length,
-                    itemBuilder: (context, index) {
-                      final volume = volumes[index];
-                      final isExpanded = _expandedVolumes.contains(volume.volumeNumber);
-                      final volumeChapters = chapters[volume.volumeNumber] ?? [];
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '目录',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: volumesAsync.when(
+                  data: (volumes) {
+                    if (volumes.isEmpty) {
+                      return const Center(child: Text('暂无数据'));
+                    }
 
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ListTile(
-                            title: Text(
-                              '第 ${volume.volumeNumber} 卷',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16,
+                    return ListView.builder(
+                      controller: scrollController,
+                      itemCount: volumes.length,
+                      itemBuilder: (context, index) {
+                        final volume = volumes[index];
+                        final isExpanded = _expandedVolumes.contains(volume.volumeNumber);
+                        final isCurrentVolume = widget.currentChapter.volumeNumber == volume.volumeNumber;
+                        final volumeChapters = chapterList[volume.volumeNumber] ?? [];
+
+                        return AnimationManager.buildStaggeredListItem(
+                          index: index,
+                          withAnimation: _shouldShowAnimation,
+                          type: AnimationType.slideUp,
+                          duration: AnimationManager.mediumDuration,
+                          child: Card(
+                            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                            color: isCurrentVolume 
+                                ? theme.colorScheme.primaryContainer.withAlpha(78)
+                                : null,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: theme.colorScheme.outlineVariant.withAlpha(78),
+                                width: 1,
                               ),
                             ),
-                            subtitle: Text('共 ${volume.chapterCount} 话'),
-                            trailing: AnimatedRotation(
-                              duration: const Duration(milliseconds: 200),
-                              turns: isExpanded ? 0.5 : 0,
-                              child: const Icon(Icons.expand_more),
-                            ),
-                            onTap: () => _toggleVolume(volume.volumeNumber),
-                          ),
-                          ClipRect(
-                            child: AnimatedAlign(
-                              duration: const Duration(milliseconds: 200),
-                              heightFactor: isExpanded ? 1.0 : 0.0,
-                              alignment: Alignment.center,
-                              curve: Curves.easeInOut,
-                              child: Column(
-                                children: volumeChapters.map((chapter) => ListTile(
-                                      dense: true,
-                                      contentPadding: const EdgeInsets.only(left: 32),
-                                      selected: widget.currentVolumeNumber == volume.volumeNumber &&
-                                          widget.currentChapterNumber == chapter.chapterNumber,
-                                      selectedTileColor: theme.colorScheme.primaryContainer.withAlpha(78),
-                                      title: Text(
-                                        '第 ${chapter.chapterNumber} 话  ${chapter.title}',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: widget.currentVolumeNumber == volume.volumeNumber &&
-                                                  widget.currentChapterNumber == chapter.chapterNumber
-                                              ? theme.colorScheme.primary
-                                              : null,
+                            child: Column(
+                              children: [
+                                // 卷标题
+                                ListTile(
+                                  title: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          '第 ${volume.volumeNumber} 卷',
+                                          style: theme.textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
-                                      onTap: () async {
-                                        final chapterContent = await ref
-                                            .read(volumeNotifierProvider.notifier)
-                                            .fetchChapterContent(
-                                              widget.novelId,
-                                              volume.volumeNumber,
-                                              chapter.chapterNumber,
-                                            );
-
-                                        if (context.mounted) {
-                                          Navigator.pushReplacement(
-                                            context,
-                                            ChapterTransitionRoute(
-                                              page: ReadingPage(
-                                                chapter: chapterContent,
-                                                novelId: widget.novelId,
-                                              ),
-                                              isNext: chapter.chapterNumber > widget.currentChapterNumber,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    )).toList(),
-                              ),
+                                      AnimatedRotation(
+                                        turns: isExpanded ? 0.5 : 0,
+                                        duration: AnimationManager.shortDuration,
+                                        child: Icon(
+                                          Icons.keyboard_arrow_down,
+                                          color: theme.colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  subtitle: volume.chapterCount > 0 
+                                    ? Text('共 ${volume.chapterCount} 章') 
+                                    : null,
+                                  onTap: () => _toggleVolume(volume.volumeNumber),
+                                ),
+                                // 章节列表
+                                AnimatedCrossFade(
+                                  firstChild: Container(),
+                                  secondChild: Column(
+                                    children: volumeChapters.map((chapter) {
+                                      final isCurrentChapter = 
+                                          chapter.chapterNumber == widget.currentChapter.chapterNumber &&
+                                          volume.volumeNumber == widget.currentChapter.volumeNumber;
+                                          
+                                      return _ChapterListItem(
+                                        chapter: chapter,
+                                        volumeNumber: volume.volumeNumber,
+                                        isCurrentChapter: isCurrentChapter,
+                                        novelId: widget.novelId,
+                                      );
+                                    }).toList(),
+                                  ),
+                                  crossFadeState: isExpanded
+                                      ? CrossFadeState.showSecond
+                                      : CrossFadeState.showFirst,
+                                  duration: AnimationManager.shortDuration,
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (error, stack) => Center(child: Text('加载出错: $error')),
                 ),
-              ],
-            ),
-          );
-        },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ChapterListItem extends ConsumerWidget {
+  final ChapterInfo chapter;
+  final int volumeNumber;
+  final bool isCurrentChapter;
+  final String novelId;
+
+  const _ChapterListItem({
+    required this.chapter,
+    required this.volumeNumber,
+    required this.isCurrentChapter,
+    required this.novelId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    
+    return ListTile(
+      contentPadding: const EdgeInsets.only(left: 20.0, right: 16.0),
+      title: Text(
+        '第 ${chapter.chapterNumber} 章: ${chapter.title}',
+        style: theme.textTheme.bodyMedium?.copyWith(
+          fontWeight: isCurrentChapter ? FontWeight.bold : null,
+          color: isCurrentChapter 
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurface,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
+      // 高亮显示当前阅读章节
+      tileColor: isCurrentChapter
+          ? theme.colorScheme.primaryContainer.withAlpha(52)
+          : null,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      onTap: () async {
+        final loadingChapter = await ref
+            .read(volumeNotifierProvider.notifier)
+            .fetchChapterContent(
+              novelId,
+              volumeNumber,
+              chapter.chapterNumber,
+            );
+
+        if (context.mounted) {
+          // 关闭底部弹窗
+          Navigator.pop(context);
+          
+          // 如果不是当前章节，跳转到对应章节
+          if (!isCurrentChapter) {
+            Navigator.pushReplacement(
+              context,
+              SharedAxisPageRoute(
+                page: ReadingPage(
+                  chapter: loadingChapter,
+                  novelId: novelId,
+                ),
+                type: SharedAxisTransitionType.horizontal,
+              ),
+            );
+          }
+        }
+      },
     );
   }
 } 

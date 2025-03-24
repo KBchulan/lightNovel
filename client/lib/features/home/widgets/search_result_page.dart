@@ -12,7 +12,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/novel_provider.dart';
 import '../../../shared/widgets/novel_card.dart';
-import '../../../shared/widgets/page_transitions.dart';
+import '../../../shared/animations/page_transitions.dart';
+import '../../../shared/animations/animation_manager.dart';
 import '../../../features/novel/pages/novel_detail_page.dart';
 import 'search_box.dart';
 
@@ -29,12 +30,23 @@ class SearchResultPage extends ConsumerStatefulWidget {
 }
 
 class _SearchResultPageState extends ConsumerState<SearchResultPage> {
+  bool _shouldShowAnimation = true;
+  
   @override
   void initState() {
     super.initState();
     // 在初始化时执行搜索
     Future.microtask(() {
       ref.read(novelNotifierProvider.notifier).searchNovels(widget.keyword);
+    });
+    
+    // 延迟关闭动画标记，确保动画完整播放一次
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        setState(() {
+          _shouldShowAnimation = false;
+        });
+      }
     });
   }
 
@@ -50,6 +62,12 @@ class _SearchResultPageState extends ConsumerState<SearchResultPage> {
   @override
   Widget build(BuildContext context) {
     final searchResultsAsync = ref.watch(novelNotifierProvider);
+    
+    final shouldAnimate = AnimationManager.shouldAnimateAfterDataLoad(
+      hasData: searchResultsAsync.hasValue,
+      isLoading: searchResultsAsync.isLoading,
+      hasError: searchResultsAsync.hasError,
+    ) && _shouldShowAnimation;
 
     return PopScope(
       canPop: true,
@@ -93,25 +111,34 @@ class _SearchResultPageState extends ConsumerState<SearchResultPage> {
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: searchResultsAsync.when(
-                data: (novels) => Text(
-                  '"${widget.keyword}" 的搜索结果 (${novels.length})',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+            AnimationManager.buildAnimatedElement(
+              withAnimation: shouldAnimate, 
+              type: AnimationType.slideUp,
+              duration: AnimationManager.shortDuration,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: searchResultsAsync.when(
+                  data: (novels) => Text(
+                    '"${widget.keyword}" 的搜索结果 (${novels.length})',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+                  loading: () => const Text('搜索中...'),
+                  error: (_, __) => const Text('搜索失败'),
                 ),
-                loading: () => const Text('搜索中...'),
-                error: (_, __) => const Text('搜索失败'),
               ),
             ),
             Expanded(
               child: searchResultsAsync.when(
                 data: (novels) => novels.isEmpty
-                    ? const Center(
-                        child: Text('没有找到相关小说'),
+                    ? Center(
+                        child: AnimationManager.buildAnimatedElement(
+                          withAnimation: shouldAnimate,
+                          type: AnimationType.fade,
+                          child: const Text('没有找到相关小说'),
+                        ),
                       )
                     : GridView.builder(
                         padding: const EdgeInsets.all(16),
@@ -125,7 +152,9 @@ class _SearchResultPageState extends ConsumerState<SearchResultPage> {
                         itemCount: novels.length,
                         itemBuilder: (context, index) {
                           final novel = novels[index];
-                          return NovelCard(
+                          
+                          // 基础卡片
+                          final card = NovelCard(
                             novel: novel,
                             onTap: () {
                               Navigator.push(
@@ -135,6 +164,14 @@ class _SearchResultPageState extends ConsumerState<SearchResultPage> {
                                 ),
                               );
                             },
+                          );
+                          
+                          // 使用动画管理器包装卡片
+                          return AnimationManager.buildStaggeredListItem(
+                            child: card,
+                            index: index,
+                            withAnimation: shouldAnimate,
+                            type: AnimationType.combined,
                           );
                         },
                       ),

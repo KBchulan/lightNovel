@@ -15,7 +15,8 @@ import '../../../core/models/reading_progress.dart';
 import '../../../shared/props/novel_props.dart';
 import '../../../core/providers/volume_provider.dart';
 import '../../../core/providers/history_provider.dart';
-import '../../../shared/widgets/page_transitions.dart';
+import '../../../shared/animations/page_transitions.dart';
+import '../../../shared/animations/animation_manager.dart';
 import '../widgets/novel_share_sheet.dart';
 import '../../reading/pages/reading_page.dart';
 import '../../../core/providers/api_provider.dart';
@@ -39,6 +40,7 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
   bool _isFavorite = false;
   bool _isLoadingProgress = true;
   ReadingProgress? _readingProgress;
+  bool _shouldShowAnimation = true;
 
   @override
   void initState() {
@@ -55,6 +57,15 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
         await ref.read(historyNotifierProvider.notifier).refresh();
       } catch (e) {
         debugPrint('❌ 初始化数据加载错误: $e');
+      }
+    });
+    
+    // 延迟关闭动画标记，确保动画完整播放一次
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        setState(() {
+          _shouldShowAnimation = false;
+        });
       }
     });
   }
@@ -146,9 +157,21 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final volumesAsync = ref.watch(volumeNotifierProvider);
+    
+    final shouldAnimate = AnimationManager.shouldAnimateAfterDataLoad(
+      hasData: volumesAsync.hasValue,
+      isLoading: volumesAsync.isLoading || _isLoadingProgress,
+      hasError: volumesAsync.hasError,
+    ) && _shouldShowAnimation;
+
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () async {
+          setState(() {
+            _shouldShowAnimation = true;
+          });
+          
           try {
             await Future.wait([
               ref
@@ -163,6 +186,14 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
             if (context.mounted) {
               SnackMessage.show(context, errorMsg, isError: true);
             }
+          }
+          
+          // 延迟关闭动画标记，确保动画完整播放一次
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (mounted) {
+            setState(() {
+              _shouldShowAnimation = false;
+            });
           }
         },
         child: CustomScrollView(
@@ -267,192 +298,225 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                   children: [
                     // 标签
                     if (widget.novel.tags.isNotEmpty) ...[
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: widget.novel.tags.map((tag) {
-                          return Chip(
-                            label: Text(tag),
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            labelStyle: TextStyle(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onPrimaryContainer,
-                            ),
-                          );
-                        }).toList(),
+                      AnimationManager.buildAnimatedElement(
+                        withAnimation: shouldAnimate,
+                        type: AnimationType.slideUp,
+                        duration: AnimationManager.shortDuration,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: widget.novel.tags.map((tag) {
+                            return Chip(
+                              label: Text(tag),
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              labelStyle: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer,
+                              ),
+                            );
+                          }).toList(),
+                        ),
                       ),
                       const SizedBox(height: 16),
                     ],
 
                     // 操作按钮
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _toggleFavorite,
-                            icon: Icon(_isFavorite
-                                ? Icons.favorite
-                                : Icons.favorite_border),
-                            label: Text(_isFavorite ? '已收藏' : '收藏'),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: _isLoadingProgress
-                                ? null
-                                : () async {
-                                    if (_readingProgress != null) {
-                                      // 继续阅读
-                                      final volume = await ref
-                                          .read(volumeNotifierProvider.notifier)
-                                          .fetchChapterContent(
-                                            widget.novel.id,
-                                            _readingProgress!.volumeNumber,
-                                            _readingProgress!.chapterNumber,
-                                          );
-
-                                      if (context.mounted) {
-                                        Navigator.push(
-                                          context,
-                                          SharedAxisPageRoute(
-                                            page: ReadingPage(
-                                              chapter: volume,
-                                              novelId: widget.novel.id,
-                                            ),
-                                            type: SharedAxisTransitionType
-                                                .horizontal,
-                                          ),
-                                        );
-                                      }
-                                    } else {
-                                      // 从头开始阅读
-                                      final volumesAsync =
-                                          ref.read(volumeNotifierProvider);
-                                      final volumes = volumesAsync.value;
-                                      if (volumes == null || volumes.isEmpty) {
-                                        if (context.mounted) {
-                                          SnackMessage.show(
-                                            context,
-                                            '服务器没有这些章节喵',
-                                            isError: true,
-                                            duration: const Duration(
-                                                milliseconds: 500),
-                                          );
-                                        }
-                                        return;
-                                      }
-
-                                      final firstVolume = volumes.first;
-                                      final chapters = await ref
-                                          .read(volumeNotifierProvider.notifier)
-                                          .fetchChapters(
-                                            widget.novel.id,
-                                            firstVolume.volumeNumber,
-                                          );
-
-                                      if (chapters.isEmpty) {
-                                        if (context.mounted) {
-                                          SnackMessage.show(
-                                            context,
-                                            '服务器没有这些章节喵',
-                                            isError: true,
-                                            duration: const Duration(
-                                                milliseconds: 500),
-                                          );
-                                        }
-                                        return;
-                                      }
-
-                                      final firstChapterInfo = chapters.first;
-                                      final firstChapter = await ref
-                                          .read(volumeNotifierProvider.notifier)
-                                          .fetchChapterContent(
-                                            widget.novel.id,
-                                            firstVolume.volumeNumber,
-                                            firstChapterInfo.chapterNumber,
-                                          );
-
-                                      if (context.mounted) {
-                                        Navigator.push(
-                                          context,
-                                          SharedAxisPageRoute(
-                                            page: ReadingPage(
-                                              chapter: firstChapter,
-                                              novelId: widget.novel.id,
-                                            ),
-                                            type: SharedAxisTransitionType
-                                                .horizontal,
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  },
-                            icon: Icon(_isLoadingProgress
-                                ? Icons.hourglass_empty
-                                : Icons.book),
-                            label: Text(_isLoadingProgress
-                                ? '加载中...'
-                                : (_readingProgress != null ? '继续阅读' : '开始阅读')),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    if (_readingProgress != null && !_isLoadingProgress)
-                      Row(
+                    AnimationManager.buildAnimatedElement(
+                      withAnimation: shouldAnimate,
+                      type: AnimationType.slideUp,
+                      duration: AnimationManager.normalDuration,
+                      child: Row(
                         children: [
                           Expanded(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '上次读到：第${_readingProgress!.volumeNumber}卷 第${_readingProgress!.chapterNumber}话',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color:
-                                        Theme.of(context).colorScheme.secondary,
-                                  ),
-                                ),
-                                const SizedBox(width: 3)
-                              ],
+                            child: OutlinedButton.icon(
+                              onPressed: _toggleFavorite,
+                              icon: Icon(_isFavorite
+                                  ? Icons.favorite
+                                  : Icons.favorite_border),
+                              label: Text(_isFavorite ? '已收藏' : '收藏'),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: _isLoadingProgress
+                                  ? null
+                                  : () async {
+                                      if (_readingProgress != null) {
+                                        // 继续阅读
+                                        final volume = await ref
+                                            .read(volumeNotifierProvider.notifier)
+                                            .fetchChapterContent(
+                                              widget.novel.id,
+                                              _readingProgress!.volumeNumber,
+                                              _readingProgress!.chapterNumber,
+                                            );
+
+                                        if (context.mounted) {
+                                          Navigator.push(
+                                            context,
+                                            SharedAxisPageRoute(
+                                              page: ReadingPage(
+                                                chapter: volume,
+                                                novelId: widget.novel.id,
+                                              ),
+                                              type: SharedAxisTransitionType
+                                                  .horizontal,
+                                            ),
+                                          );
+                                        }
+                                      } else {
+                                        // 从头开始阅读
+                                        final volumesAsync =
+                                            ref.read(volumeNotifierProvider);
+                                        final volumes = volumesAsync.value;
+                                        if (volumes == null || volumes.isEmpty) {
+                                          if (context.mounted) {
+                                            SnackMessage.show(
+                                              context,
+                                              '服务器没有这些章节喵',
+                                              isError: true,
+                                              duration: const Duration(
+                                                  milliseconds: 500),
+                                            );
+                                          }
+                                          return;
+                                        }
+
+                                        final firstVolume = volumes.first;
+                                        final chapters = await ref
+                                            .read(volumeNotifierProvider.notifier)
+                                            .fetchChapters(
+                                              widget.novel.id,
+                                              firstVolume.volumeNumber,
+                                            );
+
+                                        if (chapters.isEmpty) {
+                                          if (context.mounted) {
+                                            SnackMessage.show(
+                                              context,
+                                              '服务器没有这些章节喵',
+                                              isError: true,
+                                              duration: const Duration(
+                                                  milliseconds: 500),
+                                            );
+                                          }
+                                          return;
+                                        }
+
+                                        final firstChapterInfo = chapters.first;
+                                        final firstChapter = await ref
+                                            .read(volumeNotifierProvider.notifier)
+                                            .fetchChapterContent(
+                                              widget.novel.id,
+                                              firstVolume.volumeNumber,
+                                              firstChapterInfo.chapterNumber,
+                                            );
+
+                                        if (context.mounted) {
+                                          Navigator.push(
+                                            context,
+                                            SharedAxisPageRoute(
+                                              page: ReadingPage(
+                                                chapter: firstChapter,
+                                                novelId: widget.novel.id,
+                                              ),
+                                              type: SharedAxisTransitionType
+                                                  .horizontal,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                              icon: Icon(_isLoadingProgress
+                                  ? Icons.hourglass_empty
+                                  : Icons.book),
+                              label: Text(_isLoadingProgress
+                                  ? '加载中...'
+                                  : (_readingProgress != null ? '继续阅读' : '开始阅读')),
                             ),
                           ),
                         ],
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_readingProgress != null && !_isLoadingProgress)
+                      AnimationManager.buildAnimatedElement(
+                        withAnimation: shouldAnimate,
+                        type: AnimationType.fade,
+                        duration: AnimationManager.shortDuration,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '上次读到：第${_readingProgress!.volumeNumber}卷 第${_readingProgress!.chapterNumber}话',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color:
+                                          Theme.of(context).colorScheme.secondary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 3)
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     const SizedBox(height: 3),
 
                     // 简介
-                    const Text(
-                      '简介',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    AnimationManager.buildAnimatedElement(
+                      withAnimation: shouldAnimate,
+                      type: AnimationType.slideUp,
+                      duration: AnimationManager.mediumDuration,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '简介',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _ExpandableDescription(
+                            description: widget.novel.description,
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    _ExpandableDescription(
-                      description: widget.novel.description,
                     ),
                     const SizedBox(height: 16),
 
                     // 目录
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          '目录',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                    AnimationManager.buildAnimatedElement(
+                      withAnimation: shouldAnimate,
+                      type: AnimationType.slideUp,
+                      duration: AnimationManager.longDuration,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            '目录',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        _VolumeList(novel: widget.novel),
-                      ],
+                          const SizedBox(height: 8),
+                          _VolumeList(
+                            novel: widget.novel,
+                            shouldShowAnimation: shouldAnimate,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -467,9 +531,11 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
 
 class _VolumeList extends ConsumerStatefulWidget {
   final Novel novel;
+  final bool shouldShowAnimation;
 
   const _VolumeList({
     required this.novel,
+    this.shouldShowAnimation = false,
   });
 
   @override
@@ -522,73 +588,79 @@ class _VolumeListState extends ConsumerState<_VolumeList> {
             final isExpanded = _expandedVolumes.contains(volume.volumeNumber);
             final volumeChapters = chapters[volume.volumeNumber] ?? [];
 
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  visualDensity: const VisualDensity(vertical: -4),
-                  title: Text(
-                    '第 ${volume.volumeNumber} 卷',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
+            return AnimationManager.buildStaggeredListItem(
+              index: volumes.indexOf(volume),
+              withAnimation: widget.shouldShowAnimation,
+              type: AnimationType.slideUp,
+              duration: AnimationManager.mediumDuration,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    visualDensity: const VisualDensity(vertical: -4),
+                    title: Text(
+                      '第 ${volume.volumeNumber} 卷',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
                     ),
+                    subtitle: Text('共 ${volume.chapterCount} 话'),
+                    trailing: AnimatedRotation(
+                      duration: const Duration(milliseconds: 200),
+                      turns: isExpanded ? 0.5 : 0,
+                      child: const Icon(Icons.expand_more),
+                    ),
+                    onTap: () => _toggleVolume(volume.volumeNumber),
                   ),
-                  subtitle: Text('共 ${volume.chapterCount} 话'),
-                  trailing: AnimatedRotation(
-                    duration: const Duration(milliseconds: 200),
-                    turns: isExpanded ? 0.5 : 0,
-                    child: const Icon(Icons.expand_more),
-                  ),
-                  onTap: () => _toggleVolume(volume.volumeNumber),
-                ),
-                ClipRect(
-                  child: AnimatedAlign(
-                    duration: const Duration(milliseconds: 200),
-                    heightFactor: isExpanded ? 1.0 : 0.0,
-                    alignment: Alignment.center,
-                    curve: Curves.easeInOut,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: volumeChapters.map((chapterInfo) => ListTile(
-                            contentPadding: const EdgeInsets.only(left: 32),
-                            visualDensity: const VisualDensity(vertical: -4),
-                            title: Text(
-                              '第 ${chapterInfo.chapterNumber} 话  ${chapterInfo.title}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: theme.colorScheme.onSurface.withAlpha(222),
+                  ClipRect(
+                    child: AnimatedAlign(
+                      duration: const Duration(milliseconds: 200),
+                      heightFactor: isExpanded ? 1.0 : 0.0,
+                      alignment: Alignment.center,
+                      curve: Curves.easeInOut,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: volumeChapters.map((chapterInfo) => ListTile(
+                              contentPadding: const EdgeInsets.only(left: 32),
+                              visualDensity: const VisualDensity(vertical: -4),
+                              title: Text(
+                                '第 ${chapterInfo.chapterNumber} 话  ${chapterInfo.title}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: theme.colorScheme.onSurface.withAlpha(222),
+                                ),
                               ),
-                            ),
-                            onTap: () async {
-                              // 获取章节内容
-                              final chapter = await ref
-                                  .read(volumeNotifierProvider.notifier)
-                                  .fetchChapterContent(
-                                    widget.novel.id,
-                                    volume.volumeNumber,
-                                    chapterInfo.chapterNumber,
-                                  );
+                              onTap: () async {
+                                // 获取章节内容
+                                final chapter = await ref
+                                    .read(volumeNotifierProvider.notifier)
+                                    .fetchChapterContent(
+                                      widget.novel.id,
+                                      volume.volumeNumber,
+                                      chapterInfo.chapterNumber,
+                                    );
 
-                              if (context.mounted) {
-                                Navigator.push(
-                                  context,
-                                  SharedAxisPageRoute(
-                                    page: ReadingPage(
-                                      chapter: chapter,
-                                      novelId: widget.novel.id,
+                                if (context.mounted) {
+                                  Navigator.push(
+                                    context,
+                                    SharedAxisPageRoute(
+                                      page: ReadingPage(
+                                        chapter: chapter,
+                                        novelId: widget.novel.id,
+                                      ),
+                                      type: SharedAxisTransitionType.horizontal,
                                     ),
-                                    type: SharedAxisTransitionType.horizontal,
-                                  ),
-                                );
-                              }
-                            },
-                          )).toList(),
+                                  );
+                                }
+                              },
+                            )).toList(),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           }).toList(),
         );
