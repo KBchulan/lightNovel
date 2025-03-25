@@ -175,7 +175,7 @@ class _BookmarkSheetState extends ConsumerState<BookmarkSheet> {
           child: Center(
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0.8, end: 1.0),
-              duration: const Duration(milliseconds: 250),
+              duration: const Duration(milliseconds: 600),
               curve: Curves.easeOutCubic,
               builder: (context, scale, child) {
                 return Transform.scale(
@@ -189,7 +189,7 @@ class _BookmarkSheetState extends ConsumerState<BookmarkSheet> {
                   vertical: isSuccess ? 24 : 20, 
                   horizontal: isSuccess ? 0 : 24
                 ),
-                decoration: BoxDecoration(
+      decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
@@ -276,8 +276,8 @@ class _BookmarkSheetState extends ConsumerState<BookmarkSheet> {
   // 构建错误状态内容
   Widget _buildErrorContent(ThemeData theme, String? message) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
+        mainAxisSize: MainAxisSize.min,
+        children: [
         Container(
           width: 48,
           height: 48,
@@ -364,303 +364,372 @@ class _BookmarkSheetState extends ConsumerState<BookmarkSheet> {
     return Material(
       color: Colors.transparent,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        child: DraggableScrollableSheet(
-          initialChildSize: keyboardVisible ? 0.86 : 0.53,
-          minChildSize: 0.25,
-          maxChildSize: 0.90,
-          expand: false,
-          snap: true,
-          snapSizes: keyboardVisible ? [0.86] : [0.53],
-          builder: (context, scrollController) {
-            return Container(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(28),
-                  topRight: Radius.circular(28),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        child: NotificationListener<DraggableScrollableNotification>(
+          onNotification: (notification) {
+            // 可以在这里监听拖动事件
+            return false;
+          },
+          child: DraggableScrollableSheet(
+            initialChildSize: keyboardVisible ? 0.88 : 0.56,
+            minChildSize: 0.25,
+            maxChildSize: 0.88,
+            expand: false,
+            snap: true,
+            snapSizes: keyboardVisible ? [0.88] : [0.56],
+            controller: DraggableScrollableController(),
+            builder: (context, scrollController) {
+              return AnimatedPadding(
+                padding: EdgeInsets.only(
+                  bottom: keyboardVisible ? 0 : 0,
                 ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 顶部拖动条
-                  Padding(
-                    padding: const EdgeInsets.only(top: 15.0),
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.onSurface.withAlpha(25),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.fastOutSlowIn,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(28),
+                      topRight: Radius.circular(28),
                     ),
-                  ),
-
-                  // 标题栏 - 更紧凑的版本
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6.0, vertical: 2.0),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            '添加书签',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          visualDensity: VisualDensity.compact,
-                          iconSize: 22,
-                        ),
-                        const SizedBox(width: 16),
-                      ],
-                    ),
-                  ),
-
-                  // 内容区域
-                  Expanded(
-                    child: ListView(
-                      controller: scrollController,
-                      padding: EdgeInsets.only(
-                        left: 16.0,
-                        right: 16.0,
-                        top: 6.0,
-                        bottom: keyboardVisible ? keyboardHeight + 16.0 : 16.0,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(25),
+                        blurRadius: 8,
+                        offset: const Offset(0, -2),
                       ),
-                      children: [
-                        // 当前章节信息
-                        Card(
-                          elevation: 0,
-                          color:
-                              theme.colorScheme.primaryContainer.withAlpha(60),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                              color: theme.colorScheme.primary.withAlpha(25),
-                              width: 1,
-                            ),
-                          ),
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(10.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.book_outlined,
-                                      color: theme.colorScheme.primary,
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '当前位置',
-                                      style:
-                                          theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: theme.colorScheme.primary,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.primary
-                                            .withAlpha(25),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        _getProgressPercentage(),
-                                        style: TextStyle(
-                                          color: theme.colorScheme.primary,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  '第${widget.chapter.volumeNumber}卷 第${widget.chapter.chapterNumber}章',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                if (firstSentence.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.surfaceContainer
-                                          .withAlpha(70),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      firstSentence,
-                                      style: TextStyle(
-                                        color: theme.colorScheme.onSurface,
-                                        fontSize: 14,
-                                        height: 1.3,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 顶部拖动条
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeOutCubic,
+                        padding: const EdgeInsets.only(top: 15.0),
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.onSurface.withAlpha(25),
+                            borderRadius: BorderRadius.circular(2),
                           ),
                         ),
+                      ),
 
-                        const SizedBox(height: 14),
-
-                        // 笔记输入框
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      // 标题栏 - 更紧凑的版本
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6.0, vertical: 2.0),
+                        child: Row(
                           children: [
-                            Text(
-                              '备注',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Theme(
-                              // 覆盖输入框选中时的颜色
-                              data: Theme.of(context).copyWith(
-                                inputDecorationTheme: InputDecorationTheme(
-                                  fillColor: theme.colorScheme.surfaceContainer,
-                                  filled: true,
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '添加书签',
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
                                 ),
                               ),
-                              child: TextField(
-                                controller: _noteController,
-                                decoration: InputDecoration(
-                                  hintText: '记录一下此时的想法和感受吧...',
-                                  hintStyle: TextStyle(
-                                    color: theme.colorScheme.onSurfaceVariant.withAlpha(123),
-                                    fontSize: 14,
-                                  ),
-                                  border: OutlineInputBorder(
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.pop(context),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              visualDensity: VisualDensity.compact,
+                              iconSize: 22,
+                            ),
+                            const SizedBox(width: 16),
+                          ],
+                        ),
+                      ),
+
+                      // 内容区域
+                      Expanded(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOutCubic,
+                          child: ListView(
+                            controller: scrollController,
+                            padding: EdgeInsets.only(
+                              left: 16.0,
+                              right: 16.0,
+                              top: 6.0,
+                              bottom: keyboardVisible 
+                                ? keyboardHeight + 16.0 
+                                : 16.0,
+                            ),
+                            children: [
+                              // 当前章节信息
+                              Hero(
+                                tag: 'bookmark_card',
+                                flightShuttleBuilder: (_, __, ___, ____, _____) => const SizedBox(),
+                                child: Card(
+                                  elevation: 0,
+                                  color:
+                                      theme.colorScheme.primaryContainer.withAlpha(30),
+                                  shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                      color: theme.colorScheme.outlineVariant
-                                          .withAlpha(80),
+                                    side: BorderSide(
+                                      color: theme.colorScheme.primary.withAlpha(25),
                                       width: 1,
                                     ),
                                   ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                      color: theme.colorScheme.primary,
-                                      width: 1.5,
+                                  margin: EdgeInsets.zero,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(10.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.book_outlined,
+                                              color: theme.colorScheme.primary,
+                                              size: 18,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              '当前位置',
+                                              style:
+                                                  theme.textTheme.titleMedium?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: theme.colorScheme.primary,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: theme.colorScheme.primary
+                                                    .withAlpha(25),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                _getProgressPercentage(),
+                                                style: TextStyle(
+                                                  color: theme.colorScheme.primary,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          '第${widget.chapter.volumeNumber}卷 第${widget.chapter.chapterNumber}章',
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        if (firstSentence.isNotEmpty) ...[
+                                          const SizedBox(height: 8),
+                                          TweenAnimationBuilder<double>(
+                                            tween: Tween(begin: 0.9, end: 1.0),
+                                            duration: const Duration(milliseconds: 400),
+                                            curve: Curves.easeOutCubic,
+                                            builder: (context, value, child) {
+                                              return Opacity(
+                                                opacity: value,
+                                                child: child,
+                                              );
+                                            },
+                                            child: Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: theme.colorScheme.surfaceContainer
+                                                    .withAlpha(70),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                firstSentence,
+                                                style: TextStyle(
+                                                  color: theme.colorScheme.onSurface,
+                                                  fontSize: 14,
+                                                  height: 1.3,
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                   ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 10,
-                                  ),
-                                  // 保持填充颜色不变
-                                  fillColor: theme.colorScheme.surfaceContainer,
-                                  filled: true,
                                 ),
-                                style: theme.textTheme.bodyMedium,
-                                minLines: 3,
-                                maxLines: 4,
-                                onTap: () {
-                                  // 确保当点击输入框时，弹窗展开到最大
-                                  WidgetsBinding.instance
-                                      .addPostFrameCallback((_) {
-                                    if (mounted &&
-                                        scrollController.hasClients) {
-                                      scrollController.animateTo(
-                                        0.0, // 滚动到顶部
-                                        duration:
-                                            const Duration(milliseconds: 200),
-                                        curve: Curves.easeOut,
-                                      );
-                                    }
-                                  });
-                                },
                               ),
-                            ),
-                            if (_errorMessage != null) ...[
-                              const SizedBox(height: 6),
-                              Text(
-                                _errorMessage!,
-                                style: TextStyle(
-                                  color: theme.colorScheme.error,
-                                  fontSize: 13,
+
+                              const SizedBox(height: 14),
+
+                              // 笔记输入框
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeOutCubic,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '备注',
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Theme(
+                                      // 覆盖输入框选中时的颜色
+                                      data: Theme.of(context).copyWith(
+                                        inputDecorationTheme: InputDecorationTheme(
+                                          fillColor: theme.colorScheme.surfaceContainer,
+                                          filled: true,
+                                        ),
+                                      ),
+                                      child: Focus(
+                                        onFocusChange: (hasFocus) {
+                                          if (hasFocus) {
+                                            // 当获取焦点时，可以在这里添加额外的动画逻辑
+                                          } else {
+                                            // 当失去焦点时，可以在这里添加额外的动画逻辑
+                                          }
+                                        },
+                                        child: TextField(
+                                          controller: _noteController,
+                                          decoration: InputDecoration(
+                                            hintText: '记录一下此时的想法和感受吧...',
+                                            hintStyle: TextStyle(
+                                              color: theme.colorScheme.onSurfaceVariant.withAlpha(123),
+                                              fontSize: 14,
+                                            ),
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: BorderSide.none,
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: BorderSide(
+                                                color: theme.colorScheme.outlineVariant
+                                                    .withAlpha(80),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: BorderSide(
+                                                color: theme.colorScheme.primary,
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                            contentPadding: const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 10,
+                                            ),
+                                            // 保持填充颜色不变
+                                            fillColor: theme.colorScheme.surfaceContainer,
+                                            filled: true,
+                                          ),
+                                          style: theme.textTheme.bodyMedium,
+                                          minLines: 4,
+                                          maxLines: 5,
+                                          onTap: () {
+                                            // 确保当点击输入框时，弹窗展开到最大
+                                            WidgetsBinding.instance
+                                                .addPostFrameCallback((_) {
+                                              if (mounted &&
+                                                  scrollController.hasClients) {
+                                                scrollController.animateTo(
+                                                  0.0, // 滚动到顶部
+                                                  duration:
+                                                      const Duration(milliseconds: 200),
+                                                  curve: Curves.easeOut,
+                                                );
+                                              }
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    if (_errorMessage != null) ...[
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        _errorMessage!,
+                                        style: TextStyle(
+                                          color: theme.colorScheme.error,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // 按钮
+                              TweenAnimationBuilder<double>(
+                                tween: Tween(begin: 0.95, end: 1.0),
+                                duration: const Duration(milliseconds: 500),
+                                curve: Curves.elasticOut,
+                                builder: (context, value, child) {
+                                  return Transform.scale(
+                                    scale: value,
+                                    child: child,
+                                  );
+                                },
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: 46,
+                                  child: ElevatedButton(
+                                    onPressed: _isLoading ? null : _addBookmark,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: theme.colorScheme.primary,
+                                      foregroundColor: theme.colorScheme.onPrimary,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    child: _isLoading
+                                        ? SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.5,
+                                              color: theme.colorScheme.onPrimary,
+                                            ),
+                                          )
+                                        : const Text(
+                                            '添加书签',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                  ),
                                 ),
                               ),
                             ],
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // 按钮
-                        SizedBox(
-                          width: double.infinity,
-                          height: 46,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _addBookmark,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: theme.colorScheme.primary,
-                              foregroundColor: theme.colorScheme.onPrimary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: _isLoading
-                                ? SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: theme.colorScheme.onPrimary,
-                                    ),
-                                  )
-                                : const Text(
-                                    '添加书签',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            );
-          },
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
   }
-}
+} 
