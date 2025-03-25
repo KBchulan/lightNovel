@@ -25,7 +25,12 @@ class HistoryNotifier extends _$HistoryNotifier {
   @override
   AsyncValue<List<ReadHistory>> build() {
     // 返回初始加载状态，然后立即开始获取数据
-    _fetchHistory();
+    _fetchHistory().then((_) {
+      // 获取历史记录后应用默认排序
+      if (state.hasValue) {
+        sortByTime(); // 默认按时间排序
+      }
+    });
     return const AsyncValue.loading();
   }
 
@@ -41,9 +46,9 @@ class HistoryNotifier extends _$HistoryNotifier {
         uniqueHistories[history.novelId] = history;
       }
 
-      // 按最后阅读时间排序
+      // 按最后阅读时间降序排序（最新的记录排在前面）
       final sortedHistories = uniqueHistories.values.toList()
-        ..sort((a, b) => b.lastRead.compareTo(a.lastRead));
+        ..sort((a, b) => b.lastRead.compareTo(a.lastRead)); // 默认降序排序：从新到旧
 
       state = AsyncValue.data(sortedHistories);
     } catch (e) {
@@ -106,8 +111,13 @@ class HistoryNotifier extends _$HistoryNotifier {
   // 按时间排序
   void sortByTime() {
     final currentData = state.valueOrNull ?? [];
+    final isAscending = ref.read(historySortOrderProvider);
+    
     final sortedHistories = List<ReadHistory>.from(currentData)
-      ..sort((a, b) => b.lastRead.compareTo(a.lastRead));
+      ..sort((a, b) => isAscending 
+          ? a.lastRead.compareTo(b.lastRead)  // 升序：从旧到新
+          : b.lastRead.compareTo(a.lastRead)); // 降序：从新到旧
+          
     state = AsyncValue.data(sortedHistories);
     ref.read(historySortTypeProvider.notifier).state = 'time';
   }
@@ -115,6 +125,8 @@ class HistoryNotifier extends _$HistoryNotifier {
   // 按名称排序
   void sortByName() async {
     final currentData = state.valueOrNull ?? [];
+    final isAscending = ref.read(historySortOrderProvider);
+    
     if (currentData.isEmpty) return;
 
     try {
@@ -124,21 +136,45 @@ class HistoryNotifier extends _$HistoryNotifier {
             ref.read(apiClientProvider).getNovelDetail(history.novelId)),
       );
 
-      // 创建历史记录和小说标题的映射
-      final historyWithTitles = List<MapEntry<ReadHistory, String>>.from(
-        currentData.asMap().entries.map(
-              (entry) => MapEntry(entry.value, novels[entry.key].title),
-            ),
-      );
+      // 创建历史记录和小说标题的映射和字典
+      final historyWithTitles = <MapEntry<ReadHistory, String>>[];
+      final titleMap = <String, String>{}; // 用于存储novelId到标题的映射
+      
+      for (int i = 0; i < currentData.length; i++) {
+        final history = currentData[i];
+        final novel = novels[i];
+        historyWithTitles.add(MapEntry(history, novel.title));
+        titleMap[history.novelId] = novel.title;
+      }
 
       // 按标题排序
-      historyWithTitles.sort((a, b) => a.value.compareTo(b.value));
+      historyWithTitles.sort((a, b) => isAscending
+          ? a.value.compareTo(b.value)  // 升序：A到Z
+          : b.value.compareTo(a.value)); // 降序：Z到A
 
       // 更新状态
       state = AsyncValue.data(historyWithTitles.map((e) => e.key).toList());
+      
+      // 保存标题映射到临时存储，供日期组内排序使用
+      ref.read(historyTitleMapProvider.notifier).state = titleMap;
+      
       ref.read(historySortTypeProvider.notifier).state = 'name';
     } catch (e) {
       debugPrint('❌ 按名称排序错误: $e');
+    }
+  }
+  
+  // 切换排序顺序并重新排序
+  void toggleSortOrder() {
+    final currentOrder = ref.read(historySortOrderProvider);
+    ref.read(historySortOrderProvider.notifier).state = !currentOrder;
+    
+    // 根据当前排序类型重新排序
+    final sortType = ref.read(historySortTypeProvider);
+    if (sortType == 'time') {
+      sortByTime();
+    } else {
+      sortByName();
     }
   }
 }
@@ -171,4 +207,11 @@ final historyProgress =
   }
 });
 
+// 排序类型：time 或 name
 final historySortTypeProvider = StateProvider<String>((ref) => 'time');
+
+// 排序顺序：true 为升序，false 为降序
+final historySortOrderProvider = StateProvider<bool>((ref) => false); // 默认降序
+
+// 存储小说ID到标题的映射，用于按名称排序
+final historyTitleMapProvider = StateProvider<Map<String, String>>((ref) => {});

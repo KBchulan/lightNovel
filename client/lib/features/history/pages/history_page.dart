@@ -30,6 +30,7 @@ class HistoryPage extends ConsumerWidget {
     final historyAsync = ref.watch(historyNotifierProvider);
     final theme = Theme.of(context);
     final sortType = ref.watch(historySortTypeProvider);
+    final isAscending = ref.watch(historySortOrderProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -44,6 +45,14 @@ class HistoryPage extends ConsumerWidget {
                 ref.read(historyNotifierProvider.notifier).sortByTime();
               } else if (value == 'sort_name') {
                 ref.read(historyNotifierProvider.notifier).sortByName();
+              } else if (value == 'sort_asc') {
+                if (!isAscending) {
+                  ref.read(historyNotifierProvider.notifier).toggleSortOrder();
+                }
+              } else if (value == 'sort_desc') {
+                if (isAscending) {
+                  ref.read(historyNotifierProvider.notifier).toggleSortOrder();
+                }
               }
             },
             itemBuilder: (context) => [
@@ -93,6 +102,52 @@ class HistoryPage extends ConsumerWidget {
                   ],
                 ),
               ),
+              PopupMenuItem(
+                value: 'sort_asc',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.arrow_upward,
+                      size: 20,
+                      color: isAscending
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '升序',
+                      style: TextStyle(
+                        color: isAscending
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'sort_desc',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.arrow_downward,
+                      size: 20,
+                      color: !isAscending
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '降序',
+                      style: TextStyle(
+                        color: !isAscending
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'clear',
                 child: Row(
@@ -133,9 +188,17 @@ class HistoryPage extends ConsumerWidget {
               groupedHistories[dateKey]!.add(history);
             }
 
-            // 按照日期键的顺序排序
-            final sortedDates = groupedHistories.keys.toList()
-              ..sort((a, b) => b.compareTo(a)); // 最新的日期在前面
+            // 处理日期轴的排序
+            final sortedDates = groupedHistories.keys.toList();
+            if (sortType == 'time') {
+              // 按时间排序时，时间轴的排序也受升降序影响
+              sortedDates.sort((a, b) => isAscending
+                  ? b.compareTo(a)
+                  : a.compareTo(b));
+            } else {
+              // 按名称排序时，时间轴始终保持为今天->以前
+              sortedDates.sort((a, b) => b.compareTo(a));
+            }
 
             return ListView.builder(
               padding: const EdgeInsets.only(top: 8, bottom: 16),
@@ -143,6 +206,29 @@ class HistoryPage extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final dateKey = sortedDates[index];
                 final dateHistories = groupedHistories[dateKey]!;
+                
+                // 处理组内记录的排序
+                if (sortType == 'time') {
+                  // 按时间排序时，组内排序也受升降序影响
+                  dateHistories.sort((a, b) => isAscending
+                      ? a.lastRead.compareTo(b.lastRead)  // 升序：从旧到新
+                      : b.lastRead.compareTo(a.lastRead)); // 降序：从新到旧
+                } else {
+                  // 按名称排序时，尝试获取标题映射进行组内排序
+                  final titleMap = ref.read(historyTitleMapProvider);
+                  if (titleMap.isNotEmpty) {
+                    dateHistories.sort((a, b) {
+                      final titleA = titleMap[a.novelId] ?? '';
+                      final titleB = titleMap[b.novelId] ?? '';
+                      return isAscending
+                          ? titleA.compareTo(titleB)  // 升序：A到Z
+                          : titleB.compareTo(titleA); // 降序：Z到A
+                    });
+                  } else {
+                    // 如果没有标题映射，则按时间降序排列
+                    dateHistories.sort((a, b) => b.lastRead.compareTo(a.lastRead));
+                  }
+                }
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

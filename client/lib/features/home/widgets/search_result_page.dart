@@ -15,6 +15,7 @@ import '../../../shared/widgets/novel_card.dart';
 import '../../../shared/animations/page_transitions.dart';
 import '../../../shared/animations/animation_manager.dart';
 import '../../../features/novel/pages/novel_detail_page.dart';
+import '../../../shared/widgets/network_error.dart';
 import 'search_box.dart';
 
 class SearchResultPage extends ConsumerStatefulWidget {
@@ -31,7 +32,7 @@ class SearchResultPage extends ConsumerStatefulWidget {
 
 class _SearchResultPageState extends ConsumerState<SearchResultPage> {
   bool _shouldShowAnimation = true;
-  
+
   @override
   void initState() {
     super.initState();
@@ -39,7 +40,7 @@ class _SearchResultPageState extends ConsumerState<SearchResultPage> {
     Future.microtask(() {
       ref.read(novelNotifierProvider.notifier).searchNovels(widget.keyword);
     });
-    
+
     // 延迟关闭动画标记，确保动画完整播放一次
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) {
@@ -62,12 +63,13 @@ class _SearchResultPageState extends ConsumerState<SearchResultPage> {
   @override
   Widget build(BuildContext context) {
     final searchResultsAsync = ref.watch(novelNotifierProvider);
-    
+
     final shouldAnimate = AnimationManager.shouldAnimateAfterDataLoad(
-      hasData: searchResultsAsync.hasValue,
-      isLoading: searchResultsAsync.isLoading,
-      hasError: searchResultsAsync.hasError,
-    ) && _shouldShowAnimation;
+          hasData: searchResultsAsync.hasValue,
+          isLoading: searchResultsAsync.isLoading,
+          hasError: searchResultsAsync.hasError,
+        ) &&
+        _shouldShowAnimation;
 
     return PopScope(
       canPop: true,
@@ -108,99 +110,108 @@ class _SearchResultPageState extends ConsumerState<SearchResultPage> {
           ),
           automaticallyImplyLeading: false,
         ),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AnimationManager.buildAnimatedElement(
-              withAnimation: shouldAnimate, 
-              type: AnimationType.slideUp,
-              duration: AnimationManager.shortDuration,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: searchResultsAsync.when(
-                  data: (novels) => Text(
-                    '"${widget.keyword}" 的搜索结果 (${novels.length})',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+        body: RefreshIndicator(
+          onRefresh: () async {
+            setState(() {
+              _shouldShowAnimation = true;
+            });
+            await ref
+                .read(novelNotifierProvider.notifier)
+                .searchNovels(widget.keyword);
+            if (mounted) {
+              Future.delayed(const Duration(milliseconds: 500), () {
+                if (mounted) {
+                  setState(() {
+                    _shouldShowAnimation = false;
+                  });
+                }
+              });
+            }
+          },
+          child: searchResultsAsync.when(
+            data: (novels) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimationManager.buildAnimatedElement(
+                    withAnimation: shouldAnimate,
+                    type: AnimationType.slideUp,
+                    duration: AnimationManager.shortDuration,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        '"${widget.keyword}" 的搜索结果 (${novels.length})',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
-                  loading: () => const Text('搜索中...'),
-                  error: (_, __) => const Text('搜索失败'),
-                ),
-              ),
-            ),
-            Expanded(
-              child: searchResultsAsync.when(
-                data: (novels) => novels.isEmpty
-                    ? Center(
-                        child: AnimationManager.buildAnimatedElement(
-                          withAnimation: shouldAnimate,
-                          type: AnimationType.fade,
-                          child: const Text('没有找到相关小说'),
-                        ),
-                      )
-                    : GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.7,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                        ),
-                        itemCount: novels.length,
-                        itemBuilder: (context, index) {
-                          final novel = novels[index];
-                          
-                          // 基础卡片
-                          final card = NovelCard(
-                            novel: novel,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                NovelDetailPageRoute(
-                                  page: NovelDetailPage(novel: novel),
-                                ),
+                  Expanded(
+                    child: novels.isEmpty
+                        ? Center(
+                            child: AnimationManager.buildAnimatedElement(
+                              withAnimation: shouldAnimate,
+                              type: AnimationType.fade,
+                              child: const Text('没有找到相关小说'),
+                            ),
+                          )
+                        : GridView.builder(
+                            padding: const EdgeInsets.all(16),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.7,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                            ),
+                            itemCount: novels.length,
+                            itemBuilder: (context, index) {
+                              final novel = novels[index];
+
+                              // 基础卡片
+                              final card = NovelCard(
+                                novel: novel,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    NovelDetailPageRoute(
+                                      page: NovelDetailPage(novel: novel),
+                                    ),
+                                  );
+                                },
+                              );
+
+                              // 使用动画管理器包装卡片
+                              return AnimationManager.buildStaggeredListItem(
+                                child: card,
+                                index: index,
+                                withAnimation: shouldAnimate,
+                                type: AnimationType.combined,
                               );
                             },
-                          );
-                          
-                          // 使用动画管理器包装卡片
-                          return AnimationManager.buildStaggeredListItem(
-                            child: card,
-                            index: index,
-                            withAnimation: shouldAnimate,
-                            type: AnimationType.combined,
-                          );
-                        },
-                      ),
-                loading: () => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-                error: (error, stack) => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 48),
-                      const SizedBox(height: 16),
-                      Text('搜索失败: ${error.toString()}'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () {
-                          ref
-                              .read(novelNotifierProvider.notifier)
-                              .searchNovels(widget.keyword);
-                        },
-                        child: const Text('重试'),
-                      ),
-                    ],
+                          ),
                   ),
-                ),
-              ),
+                ],
+              );
+            },
+            loading: () => const Center(
+              child: CircularProgressIndicator(),
             ),
-          ],
+            error: (error, stack) => NetworkError(
+              message: error.toString(),
+              onRetry: () {
+                ref
+                    .read(novelNotifierProvider.notifier)
+                    .searchNovels(widget.keyword);
+              },
+              showPullToRefresh: true,
+              showRetryButton: true,
+            ),
+          ),
         ),
+        bottomNavigationBar: const SizedBox(height: 100),
       ),
     );
   }
