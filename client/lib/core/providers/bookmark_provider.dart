@@ -28,7 +28,7 @@ class BookmarkNotifier extends _$BookmarkNotifier {
       final bookmarks = await apiClient.getBookmarks();
       return bookmarks;
     } catch (e) {
-      // 出错时返回空列表，不影响UI展示
+      // 出错时返回空列表
       return [];
     }
   }
