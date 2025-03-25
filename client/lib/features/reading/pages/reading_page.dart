@@ -46,11 +46,15 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
   late final AnimationController _bottomSheetController;
   late final Animation<double> _controlPanelAnimation;
   bool _isLoading = false;
-  bool _isChapterLoading = false; // 添加章节加载状态
-  DateTime _lastSaveTime = DateTime.now();
-  bool _isScrolling = false;
-  DateTime _lastScrollTime = DateTime.now();
+  bool _isChapterLoading = false;
   bool _isTransitioning = false;
+  
+  // 图片URL缓存，避免滚动时重新获取
+  static final Map<String, List<String>> _imageUrlsCache = {};
+  
+  // 当前章节的图片URL
+  List<String> _chapterImageUrls = [];
+  bool _isLoadingImages = false;
 
   @override
   void initState() {
@@ -69,6 +73,11 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       curve: Curves.easeInOut,
     );
     _loadReadingProgress();
+    
+    // 预加载图片URL
+    if (widget.chapter.hasImages && widget.chapter.imageCount > 0) {
+      _preloadChapterImages();
+    }
 
     _setSystemUIMode(true);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -79,8 +88,8 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       _controlPanelController.value = 0;
     });
 
-    // 添加滚动监听，在阅读过程中定期保存进度
-    _scrollController.addListener(_scrollListener);
+    // 滚动监听
+    // _scrollController.addListener(_scrollListener);
   }
 
   // 控制系统UI的显示和隐藏, true为隐藏, false为显示
@@ -94,10 +103,13 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
 
   @override
   void dispose() {
-    _scrollController.removeListener(_scrollListener);
+    // 移除滚动监听
+    // _scrollController.removeListener(_scrollListener);
+
     _scrollController.dispose();
     _controlPanelController.dispose();
     _bottomSheetController.dispose();
+
     // 恢复系统UI
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([
@@ -142,7 +154,41 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     }
   }
 
-  // 优化滚动监听，使用防抖
+  // 预加载章节图片URL
+  Future<void> _preloadChapterImages() async {
+    final cacheKey = '${widget.chapter.id}_${widget.chapter.novelId}';
+    
+    // 如果缓存中已有数据，直接使用
+    if (_imageUrlsCache.containsKey(cacheKey)) {
+      setState(() {
+        _chapterImageUrls = _imageUrlsCache[cacheKey]!;
+        _isLoadingImages = false;
+      });
+      return;
+    }
+    
+    // 否则加载新数据
+    setState(() => _isLoadingImages = true);
+    try {
+      final urls = await ref.read(apiClientProvider).getChapterImageUrls(widget.chapter);
+      _imageUrlsCache[cacheKey] = urls;
+      
+      if (mounted) {
+        setState(() {
+          _chapterImageUrls = urls;
+          _isLoadingImages = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ 预加载图片URL错误: $e');
+      if (mounted) {
+        setState(() => _isLoadingImages = false);
+      }
+    }
+  }
+
+  // 滚动监听 - 防抖
+  /*
   void _scrollListener() {
     if (_isScrolling) return;
 
@@ -158,37 +204,24 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       });
     }
   }
+  */
 
-  // 优化保存进度，使用防抖
+  // 保存进度，只在退出和章节切换时调用
   Future<void> _saveReadingProgress({int? position}) async {
     if (_isTransitioning) return;
 
     try {
       if (!_scrollController.hasClients && position == null) return;
 
-      final now = DateTime.now();
-      if (now.difference(_lastSaveTime).inMilliseconds < 1000) {
-        await Future.delayed(const Duration(milliseconds: 50));
-      }
-      _lastSaveTime = now;
-
       final savePosition =
           position ?? _scrollController.position.pixels.toInt();
 
-      // 使用 Future.wait 并行处理多个异步操作
-      await Future.wait([
-        ref.read(readingNotifierProvider.notifier).updateReadingProgress(
-              novelId: widget.novelId,
-              volumeNumber: widget.chapter.volumeNumber,
-              chapterNumber: widget.chapter.chapterNumber,
-              position: savePosition,
-            ),
-        ref.read(historyNotifierProvider.notifier).refresh(),
-      ]);
-
-      // 并行刷新状态
-      ref.invalidate(historyNotifierProvider);
-      ref.invalidate(historyProgress(widget.novelId));
+      await ref.read(readingNotifierProvider.notifier).updateReadingProgress(
+            novelId: widget.novelId,
+            volumeNumber: widget.chapter.volumeNumber,
+            chapterNumber: widget.chapter.chapterNumber,
+            position: savePosition,
+          );
     } catch (e) {
       debugPrint('❌ 保存阅读进度错误: $e');
     }
@@ -205,6 +238,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
         setState(() => _isChapterLoading = true);
       }
 
+      // 保存当前章节的阅读进度（设置位置为0，表示从新章节开始处阅读）
       await _saveReadingProgress(position: 0);
 
       final apiClient = ref.read(apiClientProvider);
@@ -423,18 +457,252 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 16),
-            Text(
-              _formatContent(widget.chapter.content),
-              style: TextStyle(
-                fontSize: 16,
-                height: 1.5,
-                color: isDark ? Colors.white : Colors.black87,
+            // 判断章节是否有图片
+            if (widget.chapter.hasImages && widget.chapter.imageCount > 0)
+              _buildChapterImages()
+            else
+              Text(
+                _formatContent(widget.chapter.content),
+                style: TextStyle(
+                  fontSize: 16,
+                  height: 1.5,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
               ),
-            ),
             const SizedBox(height: 16),
           ],
         ),
       ),
+    );
+  }
+
+  // 构建章节图片组件
+  Widget _buildChapterImages() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    if (_isLoadingImages) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 64.0),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                '正在加载插图...',
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface.withAlpha(204),
+                  fontSize: 16,
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
+    if (_chapterImageUrls.isEmpty) {
+      return Text(
+        _formatContent(widget.chapter.content),
+        style: TextStyle(
+          fontSize: 16,
+          height: 1.6,
+          letterSpacing: 0.3,
+          color: theme.colorScheme.onSurface,
+        ),
+      );
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // 如果有文本内容，先显示文本
+        if (widget.chapter.content.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 32.0),
+            child: Text(
+              _formatContent(widget.chapter.content),
+              style: TextStyle(
+                fontSize: 16,
+                height: 1.6,
+                letterSpacing: 0.3,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+        
+        // 显示所有图片 - 美化版本
+        ..._chapterImageUrls.map((imageUrl) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 28.0),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width,
+            ),
+            child: Hero(
+              tag: 'image_$imageUrl',
+              child: Material(
+                color: Colors.transparent,
+                elevation: isDark ? 4 : 2,
+                shadowColor: isDark 
+                    ? Colors.black.withAlpha(180) 
+                    : Colors.black.withAlpha(80),
+                borderRadius: BorderRadius.circular(12.0),
+                child: GestureDetector(
+                  onTap: () {
+                    // 这里可以添加点击图片放大的逻辑
+                  },
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12.0),
+                    child: Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: MediaQuery.of(context).size.width * 1.2,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? theme.colorScheme.surfaceContainerHighest
+                                : theme.colorScheme.surfaceContainer.withAlpha(220),
+                            borderRadius: BorderRadius.circular(12.0),
+                            border: Border.all(
+                              color: theme.colorScheme.outlineVariant.withAlpha(77),
+                              width: 1,
+                            ),
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.image_not_supported_rounded,
+                                  size: 60,
+                                  color: theme.colorScheme.onSurfaceVariant.withAlpha(153),
+                                ),
+                                const SizedBox(height: 20),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.errorContainer.withAlpha(150),
+                                    borderRadius: BorderRadius.circular(24),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: theme.colorScheme.shadow.withAlpha(40),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    '图片加载失败',
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onErrorContainer,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) {
+                          // 图片加载完成，添加淡入效果
+                          return AnimatedOpacity(
+                            opacity: 1.0,
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeInOut,
+                            child: child,
+                          );
+                        }
+                        
+                        final percentLoaded = loadingProgress.expectedTotalBytes != null
+                            ? (loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!)
+                            : null;
+                        
+                        return Container(
+                          height: MediaQuery.of(context).size.width * 1.2,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? theme.colorScheme.surfaceContainerHighest.withAlpha(100)
+                                : theme.colorScheme.surfaceContainerLowest.withAlpha(90),
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 60,
+                                  height: 60,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      // 背景进度圈
+                                      CircularProgressIndicator(
+                                        value: percentLoaded,
+                                        strokeWidth: 4,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          theme.colorScheme.primary,
+                                        ),
+                                        backgroundColor: theme.colorScheme.surfaceContainerHighest.withAlpha(100),
+                                      ),
+                                      // 百分比文字
+                                      if (percentLoaded != null)
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: theme.colorScheme.primary.withAlpha(40),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Text(
+                                            '${(percentLoaded * 100).round()}%',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: theme.colorScheme.primary,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  '图片加载中',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.onSurface.withAlpha(220),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 

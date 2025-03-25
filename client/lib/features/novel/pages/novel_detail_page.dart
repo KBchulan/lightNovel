@@ -555,7 +555,7 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                                 ),
                               ),
                             ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 6),
 
                           // 简介
                           AnimationManager.buildAnimatedElement(
@@ -683,7 +683,7 @@ class _VolumeList extends ConsumerStatefulWidget {
 
 class _VolumeListState extends ConsumerState<_VolumeList> {
   final Set<int> _expandedVolumes = {};
-  bool _initialExpansionDone = false;
+  // bool _initialExpansionDone = false;
 
   @override
   void initState() {
@@ -695,6 +695,8 @@ class _VolumeListState extends ConsumerState<_VolumeList> {
   void didUpdateWidget(_VolumeList oldWidget) {
     super.didUpdateWidget(oldWidget);
     
+    // 自动展开上次阅读卷的功能
+    /*
     final volumesAsync = ref.read(volumeNotifierProvider);
     if (volumesAsync.hasValue && 
         widget.currentReading != null && 
@@ -707,6 +709,7 @@ class _VolumeListState extends ConsumerState<_VolumeList> {
         }
       });
     }
+    */
   }
 
   // 加载章节并展开卷

@@ -781,4 +781,55 @@ class ApiClient {
       rethrow;
     }
   }
+
+  // 拼接小说图片路径
+  Future<String> getNovelImageUrl(
+      String novelId, String imagePath, int imageIndex) async {
+    try {
+      final novel = await getNovelDetail(novelId);
+      final novelTitle = novel.title;
+
+      final formattedIndex = imageIndex.toString().padLeft(3, '0');
+
+      final formattedPath = imagePath.replaceFirst('//', '/$novelTitle/');
+
+      final imageUrl =
+          '${AppConfig.staticUrl}/$formattedPath/$formattedIndex.jpg';
+
+      return imageUrl;
+    } catch (e) {
+      debugPrint('❌ 拼接小说图片路径错误: $e');
+      throw DioException(
+        requestOptions: RequestOptions(path: '/'),
+        error: '拼接小说图片路径错误: $e',
+      );
+    }
+  }
+
+  // 批量获取章节所有图片的URL
+  Future<List<String>> getChapterImageUrls(Chapter chapter) async {
+    if (!chapter.hasImages ||
+        chapter.imagePath == null ||
+        chapter.imageCount <= 0) {
+      return [];
+    }
+
+    try {
+      final novel = await getNovelDetail(chapter.novelId);
+      final novelTitle = novel.title;
+
+      final formattedPath =
+          chapter.imagePath!.replaceFirst('//', '/$novelTitle/');
+
+      final imageUrls = List.generate(chapter.imageCount, (index) {
+        final imageIndex = (index + 1).toString().padLeft(3, '0');
+        return '${AppConfig.staticUrl}/$formattedPath/$imageIndex.jpg';
+      });
+
+      return imageUrls;
+    } catch (e) {
+      debugPrint('❌ 批量获取章节图片URL错误: $e');
+      return [];
+    }
+  }
 }
