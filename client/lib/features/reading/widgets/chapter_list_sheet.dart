@@ -114,7 +114,7 @@ class _ChapterListSheetState extends ConsumerState<ChapterListSheet> {
             children: [
               // 顶部拖动条
               Padding(
-                padding: const EdgeInsets.only(top: 8.0),
+                padding: const EdgeInsets.only(top: 15.0),
                 child: Container(
                   width: 40,
                   height: 4,

@@ -198,7 +198,7 @@ func ExtractChapterTitle(content string) string {
 		}
 		// 找到第一个非空且不是元数据的行
 		if i > startIndex && line != "" && !strings.Contains(line, "转自") {
-			// 如果这行文本长度合适（不太长），就把它当作标题
+			// 如果这行文本长度合适，就把它当作标题
 			if len(line) <= 50 {
 				return line
 			}

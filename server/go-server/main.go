@@ -107,11 +107,11 @@ func main() {
 		// 小说相关路由组
 		novels := api.Group("/novels")
 		{
-			// 需要分页的路由
+			// 分页路由
 			novels.GET("", middleware.ValidatePagination(), novelHandler.GetAllNovels)
 			novels.GET("/search", middleware.ValidatePagination(), novelHandler.SearchNovels)
 
-			// 需要限制数量的路由
+			// 限制数量的路由
 			novels.GET("/latest", middleware.ValidateLimit(10, 100), novelHandler.GetLatestNovels)
 			novels.GET("/popular", middleware.ValidateLimit(10, 100), novelHandler.GetPopularNovels)
 

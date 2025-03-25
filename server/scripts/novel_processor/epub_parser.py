@@ -16,7 +16,7 @@ class EpubParser:
         self.chapters = []
         
     def parse_epub(self, epub_path: str) -> Dict:
-        """解析EPUB文件，提取文本和图片"""
+        """解析EPUB文件, 提取文本和图片"""
         try:
             self.book = epub.read_epub(epub_path)
             self.title = self._get_title()

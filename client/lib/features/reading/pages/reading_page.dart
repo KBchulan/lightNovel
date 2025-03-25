@@ -238,7 +238,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
         setState(() => _isChapterLoading = true);
       }
 
-      // 保存当前章节的阅读进度（设置位置为0，表示从新章节开始处阅读）
+      // 保存当前章节的阅读进度
       await _saveReadingProgress(position: 0);
 
       final apiClient = ref.read(apiClientProvider);
@@ -257,6 +257,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
               chapter: chapter,
             ),
             type: SharedAxisTransitionType.horizontal,
+            reverse: !isNext,
           ),
         );
       }
@@ -796,7 +797,16 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                   _buildFunctionButton(
                     Icons.bookmark_border,
                     foregroundColor,
-                    onTap: () => _showBottomSheet(const BookmarkSheet()),
+                    onTap: () => _showBottomSheet(BookmarkSheet(
+                      novelId: widget.novelId,
+                      chapter: widget.chapter,
+                      currentPosition: _scrollController.hasClients 
+                          ? _scrollController.position.pixels.toInt() 
+                          : 0,
+                      contentLength: _scrollController.hasClients
+                          ? _scrollController.position.maxScrollExtent.toInt()
+                          : 1000,
+                    )),
                   ),
                   _buildFunctionButton(
                     Icons.menu,

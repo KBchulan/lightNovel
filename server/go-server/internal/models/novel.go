@@ -117,3 +117,5 @@ type ReadProgress struct {
 	Position      int                `bson:"position" json:"position"`           // 章节内位置
 	UpdatedAt     time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
+
+// Comment 评论模型

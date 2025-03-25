@@ -121,18 +121,21 @@ class ScalePageRoute<T> extends BasePageRoute<T> {
 /// 共享元素过渡路由
 class SharedAxisPageRoute<T> extends BasePageRoute<T> {
   final SharedAxisTransitionType type;
+  final bool reverse;
 
   SharedAxisPageRoute({
     required super.page,
     this.type = SharedAxisTransitionType.horizontal,
+    this.reverse = false,
   }) : super(
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             Widget transitionChild = child;
 
             switch (type) {
               case SharedAxisTransitionType.horizontal:
+                // 支持反向动画（从左向右）
                 var slideAnimation = Tween(
-                  begin: const Offset(1.0, 0.0),
+                  begin: Offset(reverse ? -1.0 : 1.0, 0.0),
                   end: Offset.zero,
                 )
                     .chain(CurveTween(curve: BasePageRoute.defaultCurve))
