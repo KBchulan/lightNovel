@@ -402,8 +402,9 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
         if (didPop) {
           await _saveReadingProgress();
           if (mounted) {
-            final progressResult = ref.refresh(historyProgress(widget.novelId));
-            debugPrint('退出阅读页面时刷新进度: ${progressResult.hasValue}');
+            await ref.read(historyNotifierProvider.notifier).refresh();
+            ref.invalidate(historyProgress(widget.novelId));
+            debugPrint('退出阅读页面时刷新历史和进度数据');
           }
         }
       },
@@ -736,9 +737,8 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                   GestureDetector(
                     onTap: () async {
                       await _saveReadingProgress();
-                      await ref
-                          .read(historyNotifierProvider.notifier)
-                          .refresh();
+                      await ref.read(historyNotifierProvider.notifier).refresh();
+                      ref.invalidate(historyProgress(widget.novelId));
                       if (mounted && context.mounted) {
                         Navigator.of(context).pop();
                       }

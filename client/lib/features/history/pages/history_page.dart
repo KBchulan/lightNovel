@@ -21,6 +21,7 @@ import '../../novel/pages/novel_detail_page.dart';
 import '../../reading/pages/reading_page.dart';
 import '../widgets/empty_history.dart';
 import '../../../shared/widgets/network_error.dart';
+import '../../../shared/animations/animation_manager.dart';
 
 class HistoryPage extends ConsumerWidget {
   const HistoryPage({super.key});
@@ -31,6 +32,8 @@ class HistoryPage extends ConsumerWidget {
     final theme = Theme.of(context);
     final sortType = ref.watch(historySortTypeProvider);
     final isAscending = ref.watch(historySortOrderProvider);
+    // 监听加载完成状态
+    final isLoadingComplete = ref.watch(historyLoadingCompleteProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -164,125 +167,190 @@ class HistoryPage extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () => ref.read(historyNotifierProvider.notifier).refresh(),
-        child: historyAsync.when(
-          data: (histories) {
-            if (histories.isEmpty) {
-              return const CustomScrollView(
-                physics: AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverPadding(
-                    padding: EdgeInsets.all(16),
-                    sliver: EmptyHistory(),
+        child: Stack(
+          children: [
+            // 加载状态指示器 - 使用AnimatedOpacity控制显示/隐藏
+            AnimatedOpacity(
+              opacity: historyAsync.isLoading ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: Container(
+                width: double.infinity,
+                height: double.infinity,
+                color: theme.scaffoldBackgroundColor,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '加载中...',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface.withAlpha(179),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              );
-            }
-
-            // 按日期对历史记录进行分组
-            final Map<String, List<ReadHistory>> groupedHistories = {};
-            for (var history in histories) {
-              final dateKey = _formatDateForGrouping(history.lastRead);
-              if (!groupedHistories.containsKey(dateKey)) {
-                groupedHistories[dateKey] = [];
-              }
-              groupedHistories[dateKey]!.add(history);
-            }
-
-            // 处理日期轴的排序
-            final sortedDates = groupedHistories.keys.toList();
-            if (sortType == 'time') {
-              // 按时间排序时，时间轴的排序也受升降序影响
-              sortedDates.sort((a, b) => isAscending
-                  ? b.compareTo(a)
-                  : a.compareTo(b));
-            } else {
-              // 按名称排序时，时间轴始终保持为今天->以前
-              sortedDates.sort((a, b) => b.compareTo(a));
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.only(top: 8, bottom: 16),
-              itemCount: sortedDates.length,
-              itemBuilder: (context, index) {
-                final dateKey = sortedDates[index];
-                final dateHistories = groupedHistories[dateKey]!;
-                
-                // 处理组内记录的排序
-                if (sortType == 'time') {
-                  // 按时间排序时，组内排序也受升降序影响
-                  dateHistories.sort((a, b) => isAscending
-                      ? a.lastRead.compareTo(b.lastRead)  // 升序：从旧到新
-                      : b.lastRead.compareTo(a.lastRead)); // 降序：从新到旧
-                } else {
-                  // 按名称排序时，尝试获取标题映射进行组内排序
-                  final titleMap = ref.read(historyTitleMapProvider);
-                  if (titleMap.isNotEmpty) {
-                    dateHistories.sort((a, b) {
-                      final titleA = titleMap[a.novelId] ?? '';
-                      final titleB = titleMap[b.novelId] ?? '';
-                      return isAscending
-                          ? titleA.compareTo(titleB)  // 升序：A到Z
-                          : titleB.compareTo(titleA); // 降序：Z到A
-                    });
-                  } else {
-                    // 如果没有标题映射，则按时间降序排列
-                    dateHistories.sort((a, b) => b.lastRead.compareTo(a.lastRead));
-                  }
-                }
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              _formatDateGroupHeader(dateKey),
-                              style: TextStyle(
-                                color: theme.colorScheme.onPrimary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Divider(
-                              color: theme.colorScheme.outlineVariant,
-                            ),
+                ),
+              ),
+            ),
+            
+            // 内容区域 - 使用AnimatedOpacity控制显示/隐藏
+            AnimatedOpacity(
+              opacity: (historyAsync.hasValue && isLoadingComplete) ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: historyAsync.when(
+                data: (histories) {
+                  if (histories.isEmpty) {
+                    return AnimationManager.buildAnimatedElement(
+                      type: AnimationType.slideUp,
+                      duration: AnimationManager.mediumDuration,
+                      child: const CustomScrollView(
+                        physics: AlwaysScrollableScrollPhysics(),
+                        slivers: [
+                          SliverPadding(
+                            padding: EdgeInsets.all(16),
+                            sliver: EmptyHistory(),
                           ),
                         ],
                       ),
+                    );
+                  }
+
+                  // 按日期对历史记录进行分组
+                  final Map<String, List<ReadHistory>> groupedHistories = {};
+                  for (var history in histories) {
+                    final dateKey = _formatDateForGrouping(history.lastRead);
+                    if (!groupedHistories.containsKey(dateKey)) {
+                      groupedHistories[dateKey] = [];
+                    }
+                    groupedHistories[dateKey]!.add(history);
+                  }
+
+                  // 定义日期优先级顺序，用于排序
+                  final dateOrder = {
+                    'today': 0,
+                    'yesterday': 1,
+                    'thisWeek': 2,
+                    'thisMonth': 3,
+                    'earlier': 4
+                  };
+
+                  // 处理日期轴的排序
+                  final sortedDates = groupedHistories.keys.toList();
+
+                  // 默认情况下，按时间排序，降序
+                  sortedDates.sort((a, b) {
+                    final orderA = dateOrder[a] ?? 999;
+                    final orderB = dateOrder[b] ?? 999;
+
+                    if (sortType == 'time' && isAscending) {
+                      return orderB.compareTo(orderA);
+                    } else {
+                      return orderA.compareTo(orderB);
+                    }
+                  });
+
+                  return AnimationManager.buildAnimatedElement(
+                    type: AnimationType.slideUp,
+                    duration: AnimationManager.mediumDuration,
+                    startOffset: const Offset(0, 50),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(top: 8, bottom: 16),
+                      itemCount: sortedDates.length,
+                      itemBuilder: (context, index) {
+                        final dateKey = sortedDates[index];
+                        final dateHistories = groupedHistories[dateKey]!;
+
+                        // 处理组内记录的排序
+                        if (sortType == 'time') {
+                          dateHistories.sort((a, b) => b.lastRead.compareTo(a.lastRead));
+                        } else {
+                          final titleMap = ref.read(historyTitleMapProvider);
+                          if (titleMap.isNotEmpty) {
+                            dateHistories.sort((a, b) {
+                              final titleA = titleMap[a.novelId] ?? '';
+                              final titleB = titleMap[b.novelId] ?? '';
+                              return isAscending
+                                  ? titleA.compareTo(titleB)
+                                  : titleB.compareTo(titleA);
+                            });
+                          } else {
+                            dateHistories.sort((a, b) => b.lastRead.compareTo(a.lastRead));
+                          }
+                        }
+
+                        return AnimationManager.buildStaggeredListItem(
+                          index: index,
+                          type: AnimationType.slideUp,
+                          duration: AnimationManager.mediumDuration,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.primary,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        _formatDateGroupHeader(dateKey),
+                                        style: TextStyle(
+                                          color: theme.colorScheme.onPrimary,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Divider(
+                                        color: theme.colorScheme.outlineVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              ...dateHistories.asMap().entries.map((entry) {
+                                int itemIndex = entry.key;
+                                ReadHistory itemHistory = entry.value;
+                                return AnimationManager.buildStaggeredListItem(
+                                  index: itemIndex,
+                                  type: AnimationType.slideUp,
+                                  duration: AnimationManager.shortDuration,
+                                  child: _HistoryItem(
+                                    key: ValueKey('history_${itemHistory.id}'),
+                                    history: itemHistory,
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                    ...dateHistories.map((history) => _HistoryItem(
-                          key: ValueKey('history_${history.id}'),
-                          history: history,
-                        )),
-                  ],
-                );
-              },
-            );
-          },
-          loading: () => const Center(
-            child: CircularProgressIndicator(),
-          ),
-          error: (error, stack) => Stack(
-            children: [
-              NetworkError(
-                message: error.toString(),
-                onRetry: () => ref.refresh(historyNotifierProvider),
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (error, stack) => AnimationManager.buildAnimatedElement(
+                  type: AnimationType.slideUp,
+                  duration: AnimationManager.mediumDuration,
+                  child: NetworkError(
+                    message: error.toString(),
+                    onRetry: () => ref.refresh(historyNotifierProvider),
+                  ),
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -307,7 +375,7 @@ class HistoryPage extends ConsumerWidget {
     } else if (dateOnly.year == now.year && dateOnly.month == now.month) {
       return 'thisMonth';
     } else {
-      return '${date.year}-${date.month.toString().padLeft(2, '0')}';
+      return 'earlier'; // 改为"以前"分组，替代之前的年月分组
     }
   }
 
@@ -322,10 +390,10 @@ class HistoryPage extends ConsumerWidget {
         return '本周';
       case 'thisMonth':
         return '本月';
+      case 'earlier':
+        return '以前';
       default:
-        // 格式为 YYYY-MM
-        final parts = dateKey.split('-');
-        return '${parts[0]}年${parts[1]}月';
+        return dateKey;
     }
   }
 
@@ -386,40 +454,44 @@ class _HistoryItem extends ConsumerWidget {
     final novel = novelAsync.valueOrNull;
     final progress = progressAsync.valueOrNull;
 
+    // 使用从底部滑入的加载指示器，替代之前的淡入效果
     if (isLoading) {
-      return Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        elevation: 1,
-        surfaceTintColor: Colors.white,
+      return AnimationManager.buildAnimatedElement(
+        type: AnimationType.slideUp,
+        duration: AnimationManager.shortDuration,
+        startOffset: const Offset(0, 30),
         child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           height: 152,
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 80,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Center(child: CircularProgressIndicator()),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 8),
-                    LinearProgressIndicator(),
-                    SizedBox(height: 8),
-                    LinearProgressIndicator(value: 0.6),
-                    SizedBox(height: 8),
-                    LinearProgressIndicator(value: 0.3),
-                  ],
-                ),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: theme.shadowColor.withAlpha(26),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
             ],
+          ),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  color: theme.colorScheme.primary,
+                  strokeWidth: 2,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '加载中...',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface.withAlpha(179),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -510,9 +582,7 @@ class _HistoryItem extends ConsumerWidget {
             final currentContext = context;
             Navigator.push(
               currentContext,
-              SlideUpPageRoute(
-                page: NovelDetailPage(novel: novel),
-              ),
+              NovelDetailPageRoute(page: NovelDetailPage(novel: novel)),
             ).then((_) {
               final historyResult = ref.refresh(historyNotifierProvider);
               final progressResult =
@@ -725,7 +795,7 @@ class _HistoryItem extends ConsumerWidget {
                       if (currentContext.mounted) {
                         Navigator.push(
                           currentContext,
-                          SlideUpPageRoute(
+                          FadePageRoute(
                             page: ReadingPage(
                               chapter: chapter,
                               novelId: history.novelId,
@@ -888,7 +958,7 @@ class _HistoryItem extends ConsumerWidget {
                     if (currentContext.mounted) {
                       Navigator.push(
                         currentContext,
-                        SlideUpPageRoute(
+                        FadePageRoute(
                           page: ReadingPage(
                             chapter: chapter,
                             novelId: history.novelId,
@@ -920,9 +990,7 @@ class _HistoryItem extends ConsumerWidget {
                   Navigator.pop(context);
                   Navigator.push(
                     currentContext,
-                    SlideUpPageRoute(
-                      page: NovelDetailPage(novel: novel),
-                    ),
+                    NovelDetailPageRoute(page: NovelDetailPage(novel: novel)),
                   ).then((_) {
                     final historyResult = ref.refresh(historyNotifierProvider);
                     final progressResult =

@@ -6,7 +6,7 @@ part of 'bookmark_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$novelBookmarksHash() => r'23ed96c9e63d77f787a512c2e889319b3277d729';
+String _$novelBookmarksHash() => r'5a9a34f30fa0c707c699059d00888c7b7425de3b';
 
 /// Copied from Dart SDK
 class _SystemHash {

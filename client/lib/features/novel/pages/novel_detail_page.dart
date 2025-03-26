@@ -48,7 +48,7 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
     super.initState();
     _shouldShowAnimation = true;
     
-    _loadAllData();
+    Future.microtask(() => _loadAllData());
     
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) {
@@ -66,13 +66,17 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
     });
     
     try {
-      // 并行加载所有数据
-      await Future.wait([
-        ref.read(volumeNotifierProvider.notifier).fetchVolumes(widget.novel.id),
-        _checkFavoriteStatus(),
-        _loadReadingProgress(),
-        ref.read(historyNotifierProvider.notifier).refresh(),
-      ]);
+      await _checkFavoriteStatus();
+      await _loadReadingProgress();
+      
+      await Future.microtask(() async {
+        await ref.read(historyNotifierProvider.notifier).refresh();
+      });
+      
+      // 最后加载卷数据
+      await Future.microtask(() async {
+        await ref.read(volumeNotifierProvider.notifier).fetchVolumes(widget.novel.id);
+      });
       
       // 额外检查卷数据是否确实已加载
       final volumesAsync = ref.read(volumeNotifierProvider);
@@ -235,6 +239,23 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
     final volumesAsync = ref.watch(volumeNotifierProvider);
     final theme = Theme.of(context);
     
+    final historyChange = ref.watch(historyChangeNotifierProvider);
+    final deletedNovelId = historyChange['deletedNovelId'] as String?;
+    
+    if (deletedNovelId == widget.novel.id && _readingProgress != null) {
+      _readingProgress = null;
+    } else if (deletedNovelId == null) {
+      ref.listen(historyProgress(widget.novel.id), (previous, next) {
+        if (next.hasValue && next.value != _readingProgress) {
+          if (mounted) {
+            setState(() {
+              _readingProgress = next.value;
+            });
+          }
+        }
+      });
+    }
+    
     final contentReady = volumesAsync.hasValue && _isDataLoaded && !volumesAsync.isLoading && !_isLoadingProgress;
     
     final shouldAnimate = AnimationManager.shouldAnimateAfterDataLoad(
@@ -255,7 +276,7 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
           await _loadAllData();
         },
         child: AnimatedOpacity(
-          opacity: contentReady ? 1.0 : 0.5, // 使用半透明而不是完全隐藏
+          opacity: contentReady ? 1.0 : 0.5,
           duration: const Duration(milliseconds: 700),
           curve: Curves.easeInOut,
           // 主内容
