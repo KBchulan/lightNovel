@@ -25,7 +25,7 @@ import '../../reading/pages/reading_page.dart';
 import '../widgets/empty_bookshelf.dart';
 import '../../../shared/widgets/network_error.dart';
 
-// 定义一个自定义通知类
+// 自定义通知类，用于切换到首页
 class SwitchToHomeNotification extends Notification {}
 
 // 视图模式状态提供者 (网格/列表)
@@ -52,6 +52,10 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
   late final AnimationController _controller;
   bool _shouldShowAnimation = true;
   bool _isContentReady = false;
+  
+  // 动画延迟时间常量
+  static const _animationDelayMs = 800;
+  static const _modeChangeAnimationDelayMs = 600;
 
   @override
   void initState() {
@@ -66,46 +70,49 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
       _controller.forward();
     }
 
-    // 预先加载所有数据，避免切换时数据不存在
+    // 预先加载所有数据
     _loadInitialData();
   }
   
-  // 分离数据加载逻辑，提高可维护性
+  // 延迟关闭动画标记
+  void _delayCloseAnimation(int delayMs) {
+    if (!mounted) return;
+    
+    Future.delayed(Duration(milliseconds: delayMs), () {
+      if (mounted) {
+        setState(() => _shouldShowAnimation = false);
+      }
+    });
+  }
+  
+  // 分离数据加载逻辑
   Future<void> _loadInitialData() async {
     final deviceService = ref.read(deviceServiceProvider);
     await deviceService.getDeviceId();
     
     if (!mounted) return;
     
-    // 同时加载收藏和书签数据
     try {
-      final favoritesFuture = ref.read(favoriteNotifierProvider.notifier).fetchFavorites();
-      final bookmarksFuture = ref.read(bookmarkNotifierProvider.notifier).refresh();
-      
-      await Future.wait([favoritesFuture, bookmarksFuture]);
+      // 同时加载收藏和书签数据
+      await _refreshAllData();
       
       if (mounted) {
-        setState(() {
-          _isContentReady = true;
-        });
-        
-        // 数据加载完成后延迟关闭动画标记
-        Future.delayed(const Duration(milliseconds: 800), () {
-          if (mounted) {
-            setState(() {
-              _shouldShowAnimation = false;
-            });
-          }
-        });
+        setState(() => _isContentReady = true);
+        _delayCloseAnimation(_animationDelayMs);
       }
     } catch (e) {
-      // 错误处理
       if (mounted) {
-        setState(() {
-          _isContentReady = true; // 即使出错也标记为ready，以便显示错误状态
-        });
+        setState(() => _isContentReady = true); // 即使出错也标记为ready
       }
     }
+  }
+
+  // 同时刷新收藏和书签数据
+  Future<void> _refreshAllData() async {
+    final favoritesFuture = ref.read(favoriteNotifierProvider.notifier).fetchFavorites();
+    final bookmarksFuture = ref.read(bookmarkNotifierProvider.notifier).refresh();
+    
+    await Future.wait([favoritesFuture, bookmarksFuture]);
   }
 
   @override
@@ -116,29 +123,56 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
 
   // 刷新书架内容
   Future<void> _refreshContent() async {
-    setState(() {
-      _shouldShowAnimation = true;
-    });
+    setState(() => _shouldShowAnimation = true);
     
-    // 同时刷新两种数据，而不考虑当前模式
-    final favoritesFuture = ref.read(favoriteNotifierProvider.notifier).fetchFavorites();
-    final bookmarksFuture = ref.read(bookmarkNotifierProvider.notifier).refresh();
-    
-    await Future.wait([favoritesFuture, bookmarksFuture]);
-    
-    if (mounted) {
-      setState(() {
-        _isContentReady = true;
-      });
+    try {
+      // 同时刷新两种数据
+      await _refreshAllData();
       
-      // 刷新后重新开始动画
-      Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted) {
-          setState(() {
-            _shouldShowAnimation = false;
-          });
-        }
-      });
+      if (mounted) {
+        setState(() => _isContentReady = true);
+        _delayCloseAnimation(_animationDelayMs);
+      }
+    } catch (e) {
+      // 错误已在UI中处理
+    }
+  }
+
+  // 切换内容模式（收藏/书签）
+  Future<void> _switchContentMode(BookshelfContentMode newMode) async {
+    final currentMode = ref.read(bookshelfContentModeProvider);
+    
+    // 判断是否需要切换模式
+    if (newMode == currentMode) return;
+    
+    setState(() => _isContentReady = false);
+    
+    try {
+      // 预加载要切换的模式数据
+      if (newMode == BookshelfContentMode.favorite) {
+        await ref.read(favoriteNotifierProvider.notifier).fetchFavorites();
+      } else {
+        await ref.read(bookmarkNotifierProvider.notifier).refresh();
+      }
+      
+      // 切换模式
+      ref.read(bookshelfContentModeProvider.notifier).state = newMode;
+      
+      if (mounted) {
+        setState(() {
+          _isContentReady = true;
+          _shouldShowAnimation = true;
+        });
+        
+        _delayCloseAnimation(_modeChangeAnimationDelayMs);
+      }
+    } catch (e) {
+      // 即使出错也切换模式
+      ref.read(bookshelfContentModeProvider.notifier).state = newMode;
+      
+      if (mounted) {
+        setState(() => _isContentReady = true);
+      }
     }
   }
 
@@ -148,369 +182,298 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
     final isGridView = ref.watch(bookshelfViewModeProvider);
     final theme = Theme.of(context);
     
-    // 根据内容模式选择不同的数据源
+    // 根据内容模式选择数据源
     final contentAsync = contentMode == BookshelfContentMode.favorite
         ? ref.watch(favoriteNotifierProvider)
         : ref.watch(bookmarkNotifierProvider);
     
-    // 判断内容是否准备就绪
     final contentReady = _isContentReady && contentAsync.hasValue;
-
-    // 动画标志
     final shouldAnimate = AnimationManager.shouldAnimateAfterDataLoad(
       hasData: contentAsync.hasValue,
       isLoading: contentAsync.isLoading,
       hasError: contentAsync.hasError,
     ) && _shouldShowAnimation;
 
-    // 使用RepaintBoundary隔离渲染，减少不必要的重绘
-    return RepaintBoundary(
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(contentMode == BookshelfContentMode.favorite ? '收藏' : '书签'),
-          actions: [
-            // 添加收藏/书签切换菜单
-            PopupMenuButton<BookshelfContentMode>(
-              icon: Icon(
-                contentMode == BookshelfContentMode.favorite
-                    ? Icons.book_rounded
-                    : Icons.bookmark_rounded,
-                color: theme.colorScheme.primary,
-              ),
-              onSelected: (BookshelfContentMode value) async {
-                // 判断是否需要切换模式
-                if (value != contentMode) {
-                  setState(() {
-                    _isContentReady = false;
-                  });
-                  
-                  // 强制预加载当前要切换模式的数据
-                  try {
-                    if (value == BookshelfContentMode.favorite) {
-                      await ref.read(favoriteNotifierProvider.notifier).fetchFavorites();
-                    } else {
-                      await ref.read(bookmarkNotifierProvider.notifier).refresh();
-                    }
-                    
-                    // 加载完成后再切换模式
-                    ref.read(bookshelfContentModeProvider.notifier).state = value;
-                    
-                    // 确保UI更新
-                    if (mounted) {
-                      setState(() {
-                        _isContentReady = true;
-                        _shouldShowAnimation = true;
-                      });
-                      
-                      // 延迟关闭动画标志
-                      Future.delayed(const Duration(milliseconds: 600), () {
-                        if (mounted) {
-                          setState(() {
-                            _shouldShowAnimation = false;
-                          });
-                        }
-                      });
-                    }
-                  } catch (e) {
-                    // 错误处理：仍然切换模式，但可能显示错误状态
-                    ref.read(bookshelfContentModeProvider.notifier).state = value;
-                    
-                    if (mounted) {
-                      setState(() {
-                        _isContentReady = true;
-                      });
-                    }
-                  }
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: BookshelfContentMode.favorite,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.book_rounded,
-                        color: contentMode == BookshelfContentMode.favorite
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurface,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        '我的收藏',
-                        style: TextStyle(
-                          color: contentMode == BookshelfContentMode.favorite
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurface,
-                          fontWeight: contentMode == BookshelfContentMode.favorite
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: BookshelfContentMode.bookmark,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.bookmark_rounded,
-                        color: contentMode == BookshelfContentMode.bookmark
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurface,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        '我的书签',
-                        style: TextStyle(
-                          color: contentMode == BookshelfContentMode.bookmark
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurface,
-                          fontWeight: contentMode == BookshelfContentMode.bookmark
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            // 视图切换按钮
-            if (contentMode == BookshelfContentMode.favorite)
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: IconButton(
-                  key: ValueKey(isGridView),
-                  icon: AnimatedIcon(
-                    icon: AnimatedIcons.view_list,
-                    progress: _controller,
-                    color: theme.colorScheme.primary,
-                  ),
-                  onPressed: () {
-                    final notifier =
-                        ref.read(bookshelfViewModeProvider.notifier);
-                    notifier.state = !notifier.state;
-                    if (notifier.state) {
-                      _controller.reverse();
-                    } else {
-                      _controller.forward();
-                    }
-                  },
-                ),
-              ),
-          ],
-        ),
-        body: AnimatedOpacity(
-          opacity: contentReady ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOut,
-          child: RefreshIndicator(
-            onRefresh: _refreshContent,
-            child: NotificationListener<OverscrollIndicatorNotification>(
-              onNotification: (OverscrollIndicatorNotification notification) {
-                // 优化滚动模式，使用更省性能的滚动指示器
-                notification.disallowIndicator();
-                return true;
-              },
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return Stack(
-                    children: [
-                      if (!contentReady)
-                        Container(
-                          color: theme.scaffoldBackgroundColor,
-                        ),
-                      contentAsync.when(
-                        data: (content) {
-                          // 判断当前显示模式并构建相应的视图
-                          if (contentMode == BookshelfContentMode.favorite) {
-                            return _buildFavoritesView(content as List<Novel>, isGridView, shouldAnimate);
-                          } else {
-                            return _buildBookmarksView(content as List<Bookmark>, shouldAnimate);
-                          }
-                        },
-                        loading: () => contentReady 
-                          ? const SizedBox.shrink() 
-                          : const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                        error: (error, stack) => Stack(
-                          children: [
-                            NetworkError(
-                              message: error.toString(),
-                              onRetry: _refreshContent,
-                              showPullToRefresh: true,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
+    return Scaffold(
+      appBar: _buildAppBar(contentMode, isGridView, theme),
+      body: AnimatedOpacity(
+        opacity: contentReady ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+        child: RefreshIndicator(
+          onRefresh: _refreshContent,
+          child: NotificationListener<OverscrollIndicatorNotification>(
+            onNotification: (notification) {
+              notification.disallowIndicator();
+              return true;
+            },
+            child: _buildContent(contentAsync, contentMode, isGridView, contentReady, shouldAnimate, theme),
           ),
         ),
       ),
+    );
+  }
+  
+  // 构建AppBar
+  PreferredSizeWidget _buildAppBar(BookshelfContentMode contentMode, bool isGridView, ThemeData theme) {
+    return AppBar(
+      title: Text(contentMode == BookshelfContentMode.favorite ? '收藏' : '书签'),
+      actions: [
+        // 内容模式切换菜单
+        PopupMenuButton<BookshelfContentMode>(
+          icon: Icon(
+            contentMode == BookshelfContentMode.favorite
+                ? Icons.book_rounded
+                : Icons.bookmark_rounded,
+            color: theme.colorScheme.primary,
+          ),
+          onSelected: _switchContentMode,
+          itemBuilder: (context) => [
+            _buildModeMenuItem(
+              mode: BookshelfContentMode.favorite, 
+              currentMode: contentMode,
+              icon: Icons.book_rounded,
+              label: '我的收藏',
+              theme: theme,
+            ),
+            _buildModeMenuItem(
+              mode: BookshelfContentMode.bookmark, 
+              currentMode: contentMode,
+              icon: Icons.bookmark_rounded,
+              label: '我的书签',
+              theme: theme,
+            ),
+          ],
+        ),
+        
+        // 视图切换按钮
+        if (contentMode == BookshelfContentMode.favorite)
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: IconButton(
+              key: ValueKey(isGridView),
+              icon: AnimatedIcon(
+                icon: AnimatedIcons.view_list,
+                progress: _controller,
+                color: theme.colorScheme.primary,
+              ),
+              onPressed: _toggleViewMode,
+            ),
+          ),
+      ],
+    );
+  }
+  
+  // 构建模式菜单项
+  PopupMenuItem<BookshelfContentMode> _buildModeMenuItem({
+    required BookshelfContentMode mode,
+    required BookshelfContentMode currentMode,
+    required IconData icon,
+    required String label,
+    required ThemeData theme,
+  }) {
+    final isSelected = mode == currentMode;
+    
+    return PopupMenuItem(
+      value: mode,
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: isSelected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface,
+              fontWeight: isSelected
+                  ? FontWeight.bold
+                  : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // 切换视图模式
+  void _toggleViewMode() {
+    final notifier = ref.read(bookshelfViewModeProvider.notifier);
+    notifier.state = !notifier.state;
+    
+    if (notifier.state) {
+      _controller.reverse();
+    } else {
+      _controller.forward();
+    }
+  }
+  
+  // 构建主内容
+  Widget _buildContent(
+    AsyncValue contentAsync,
+    BookshelfContentMode contentMode,
+    bool isGridView,
+    bool contentReady,
+    bool shouldAnimate,
+    ThemeData theme,
+  ) {
+    return Stack(
+      children: [
+        if (!contentReady)
+          Container(color: theme.scaffoldBackgroundColor),
+        contentAsync.when(
+          data: (content) {
+            if (contentMode == BookshelfContentMode.favorite) {
+              final sortedFavorites = (content as List<Novel>)
+                ..sort((a, b) => a.id.compareTo(b.id));
+              return _buildFavoritesView(sortedFavorites, isGridView, shouldAnimate);
+            } else {
+              final sortedBookmarks = (content as List<Bookmark>)
+                ..sort((a, b) => a.id.compareTo(b.id));
+              return _buildBookmarksView(sortedBookmarks, shouldAnimate);
+            }
+          },
+          loading: () => contentReady 
+            ? const SizedBox.shrink() 
+            : const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => NetworkError(
+            message: error.toString(),
+            onRetry: _refreshContent,
+            showPullToRefresh: true,
+          ),
+        ),
+      ],
     );
   }
 
   // 构建收藏视图
   Widget _buildFavoritesView(List<Novel> favorites, bool isGridView, bool shouldAnimate) {
     if (favorites.isEmpty) {
-      return CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: EmptyBookshelf(
-              onExplore: () {
-                SwitchToHomeNotification().dispatch(context);
-              },
-            ),
-          ),
-        ],
-      );
+      return _buildEmptyFavoritesView();
     }
 
-    // 使用缓存键值确保不会不必要地重建
+    // 缓存键
     final cacheKey = '${favorites.length}_${isGridView ? 'grid' : 'list'}_$shouldAnimate';
     
     if (isGridView) {
-      return CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        key: ValueKey(cacheKey),
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: SliverGrid(
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.7,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final novel = favorites[index];
-                  
-                  return AnimationManager.buildStaggeredListItem(
-                    index: index,
-                    withAnimation: shouldAnimate,
-                    type: AnimationType.fade,
-                    duration: AnimationManager.normalDuration,
-                    child: Hero(
-                      tag: 'novel_${novel.id}',
-                      flightShuttleBuilder: (
-                        BuildContext flightContext,
-                        Animation<double> animation,
-                        HeroFlightDirection flightDirection,
-                        BuildContext fromHeroContext,
-                        BuildContext toHeroContext,
-                      ) {
-                        // 自定义Hero飞行动画，减少性能问题
-                        return Material(
-                          type: MaterialType.transparency,
-                          child: toHeroContext.widget,
-                        );
-                      },
-                      child: Material(
+      return _buildGridView(favorites, cacheKey, shouldAnimate);
+    } else {
+      return _buildListView(favorites, cacheKey, shouldAnimate);
+    }
+  }
+  
+  // 构建空收藏视图
+  Widget _buildEmptyFavoritesView() {
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.all(16),
+          sliver: EmptyBookshelf(
+            onExplore: () => SwitchToHomeNotification().dispatch(context),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  // 构建网格视图
+  Widget _buildGridView(List<Novel> novels, String cacheKey, bool shouldAnimate) {
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      key: ValueKey(cacheKey),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.all(16),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 0.7,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final novel = novels[index];
+                
+                return AnimationManager.buildStaggeredListItem(
+                  index: index,
+                  withAnimation: shouldAnimate,
+                  type: AnimationType.combined,
+                  duration: AnimationManager.normalDuration,
+                  child: Hero(
+                    tag: 'novel_${novel.id}',
+                    flightShuttleBuilder: (_, animation, direction, fromContext, toContext) {
+                      return Material(
                         type: MaterialType.transparency,
-                        child: NovelCard(
-                          novel: novel,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              FadePageRoute(
-                                page: NovelDetailPage(novel: novel),
-                              ),
-                            );
-                          },
-                        ),
+                        child: toContext.widget,
+                      );
+                    },
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: NovelCard(
+                        novel: novel,
+                        onTap: () => _navigateToNovelDetail(novel),
                       ),
                     ),
-                  );
-                },
-                childCount: favorites.length,
-              ),
+                  ),
+                );
+              },
+              childCount: novels.length,
             ),
           ),
-        ],
-      );
-    } else {
-      return ListView.builder(
-        padding: const EdgeInsets.all(16),
-        key: ValueKey(cacheKey),
-        physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: favorites.length,
-        itemBuilder: (context, index) {
-          final novel = favorites[index];
-          
-          return AnimationManager.buildStaggeredListItem(
-            index: index,
-            withAnimation: shouldAnimate,
-            type: AnimationType.fade,
-            duration: AnimationManager.normalDuration,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: _ListViewNovelCard(novel: novel),
-            ),
-          );
-        },
-      );
-    }
+        ),
+      ],
+    );
+  }
+  
+  // 构建列表视图
+  Widget _buildListView(List<Novel> novels, String cacheKey, bool shouldAnimate) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      key: ValueKey(cacheKey),
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: novels.length,
+      itemBuilder: (context, index) {
+        final novel = novels[index];
+        
+        return AnimationManager.buildStaggeredListItem(
+          index: index,
+          withAnimation: shouldAnimate,
+          type: AnimationType.combined,
+          duration: AnimationManager.normalDuration,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _ListViewNovelCard(novel: novel),
+          ),
+        );
+      },
+    );
+  }
+  
+  // 导航到小说详情页
+  void _navigateToNovelDetail(Novel novel) {
+    Navigator.push(
+      context,
+      FadePageRoute(
+        page: NovelDetailPage(novel: novel),
+      ),
+    );
   }
 
   // 构建书签视图
   Widget _buildBookmarksView(List<Bookmark> bookmarks, bool shouldAnimate) {
     if (bookmarks.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.bookmark_border_rounded,
-              size: 80,
-              color: Theme.of(context).colorScheme.primary.withAlpha(150),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              '暂无书签',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '阅读小说时点击底部书签按钮添加',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withAlpha(170),
-              ),
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: () {
-                SwitchToHomeNotification().dispatch(context);
-              },
-              icon: const Icon(Icons.explore),
-              label: const Text('浏览小说'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
+      return _buildEmptyBookmarksView();
     }
 
-    // 使用缓存键
+    // 缓存键
     final cacheKey = '${bookmarks.length}_bookmark_$shouldAnimate';
     
     return RepaintBoundary(
@@ -519,24 +482,67 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
         physics: const AlwaysScrollableScrollPhysics(),
         key: ValueKey(cacheKey),
         itemCount: bookmarks.length,
-        // 使用缓存构建器，避免不必要的重建
         itemBuilder: (context, index) {
           final bookmark = bookmarks[index];
           
           return AnimationManager.buildStaggeredListItem(
             index: index,
             withAnimation: shouldAnimate,
-            type: AnimationType.fade,
+            type: AnimationType.combined,
             duration: AnimationManager.normalDuration,
             child: KeyedSubtree(
               key: ValueKey('bookmark_${bookmark.id}'),
               child: _BookmarkCard(
                 bookmark: bookmark,
-                onUpdated: () => _refreshContent(),
+                onUpdated: _refreshContent,
               ),
             ),
           );
         },
+      ),
+    );
+  }
+  
+  // 构建空书签视图
+  Widget _buildEmptyBookmarksView() {
+    final theme = Theme.of(context);
+    
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.bookmark_border_rounded,
+            size: 80,
+            color: theme.colorScheme.primary.withAlpha(150),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            '暂无书签',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '阅读小说时点击底部书签按钮添加',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withAlpha(170),
+            ),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: () => SwitchToHomeNotification().dispatch(context),
+            icon: const Icon(Icons.explore),
+            label: const Text('浏览小说'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -695,42 +701,16 @@ class _BookmarkCardState extends ConsumerState<_BookmarkCard> {
             _isExpanded = false;
           });
           widget.onUpdated();
-          // 显示成功提示
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('书签更新成功'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
+          _showSnackBar('书签更新成功', isError: false);
         } else {
-          // 显示错误提示
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('书签更新失败，请稍后重试'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
+          _showSnackBar('书签更新失败，请稍后重试', isError: true);
           setState(() => _isEditing = false);
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isEditing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('更新失败: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        _showSnackBar('更新失败: ${e.toString()}', isError: true);
       }
     }
   }
@@ -746,44 +726,34 @@ class _BookmarkCardState extends ConsumerState<_BookmarkCard> {
       if (mounted) {
         if (success) {
           widget.onUpdated();
-          // 显示成功提示
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('书签已删除'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
+          _showSnackBar('书签已删除', isError: false);
         } else {
-          // 显示错误提示
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('书签删除失败，请稍后重试'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
+          _showSnackBar('书签删除失败，请稍后重试', isError: true);
         }
         setState(() => _isDeleting = false);
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isDeleting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('删除失败: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        _showSnackBar('删除失败: ${e.toString()}', isError: true);
       }
     }
+  }
+  
+  // 显示Snackbar消息
+  void _showSnackBar(String message, {required bool isError}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError 
+            ? Theme.of(context).colorScheme.error
+            : Theme.of(context).colorScheme.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
   }
 
   // 显示删除确认对话框
@@ -837,13 +807,7 @@ class _BookmarkCardState extends ConsumerState<_BookmarkCard> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('加载章节失败: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        _showSnackBar('加载章节失败: ${e.toString()}', isError: true);
       }
     }
   }
@@ -955,7 +919,7 @@ class _BookmarkCardState extends ConsumerState<_BookmarkCard> {
                 ),
               ),
               
-              // 展开区域 - 编辑备注 (使用更轻量级的动画方式)
+              // 展开区域 - 编辑备注
               AnimatedSize(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
