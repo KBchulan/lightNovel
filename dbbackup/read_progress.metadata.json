@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"deviceId":{"$numberInt":"1"},"novelId":{"$numberInt":"1"}},"name":"device_novel_progress","unique":true}],"uuid":"334bb4e3b3ac434db52dd1251b516896","collectionName":"read_progress","type":"collection"}
