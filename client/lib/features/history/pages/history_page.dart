@@ -584,11 +584,13 @@ class _HistoryItem extends ConsumerWidget {
               currentContext,
               NovelDetailPageRoute(page: NovelDetailPage(novel: novel)),
             ).then((_) {
-              final historyResult = ref.refresh(historyNotifierProvider);
-              final progressResult =
-                  ref.refresh(historyProgress(history.novelId));
-              debugPrint(
-                  '刷新历史: ${historyResult.hasValue}, 进度: ${progressResult.hasValue}');
+              if (currentContext.mounted) {
+                final historyResult = ref.refresh(historyNotifierProvider);
+                final progressResult =
+                    ref.refresh(historyProgress(history.novelId));
+                debugPrint(
+                    '刷新历史: ${historyResult.hasValue}, 进度: ${progressResult.hasValue}');
+              }
             });
           },
           onLongPress: () => _showOperationMenu(context, ref, novel),

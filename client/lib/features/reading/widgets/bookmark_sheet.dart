@@ -516,7 +516,7 @@ class _BookmarkSheetState extends ConsumerState<BookmarkSheet> {
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
-                                      '第${widget.chapter.volumeNumber}卷 第${widget.chapter.chapterNumber}章',
+                                      '第${widget.chapter.volumeNumber}卷 第${widget.chapter.chapterNumber}话',
                                       style:
                                           theme.textTheme.bodySmall?.copyWith(
                                         fontWeight: FontWeight.w500,

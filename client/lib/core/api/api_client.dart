@@ -397,42 +397,40 @@ class ApiClient {
 
       final data = response.data;
       if (data == null) {
-        debugPrint('📚 API: 收藏列表响应为空');
         return [];
       }
 
       if (data['data'] == null) {
-        debugPrint('📚 API: 收藏列表为空');
         return [];
       }
 
       final favoritesList = data['data'] as List;
       final novels = <Novel>[];
+      final futures = <Future<void>>[];
 
-      // 获取每个收藏小说的详情
+      // 并行获取每个收藏小说的详情，提高效率
       for (final favorite in favoritesList) {
         final favoriteData = favorite as Map<String, dynamic>;
         final novelId = favoriteData['novelId'] as String;
 
-        try {
-          final novel = await getNovelDetail(novelId);
+        final future = getNovelDetail(novelId).then((novel) {
           novels.add(novel);
-        } catch (e) {
-          debugPrint('⚠️ 获取小说详情失败: $e');
-          // 继续获取下一个小说，不中断整个过程
-          continue;
-        }
+        }).catchError((e) {
+          debugPrint('获取收藏小说详情出现异常: $e');
+        });
+
+        futures.add(future);
       }
 
-      debugPrint('📚 API: 获取到 ${novels.length} 本收藏小说');
+      // 等待所有异步获取操作完成
+      await Future.wait(futures);
+
       return novels;
     } catch (e) {
-      debugPrint('⚠️ API: 获取收藏列表出现异常: $e');
-      // 如果是网络连接错误，直接抛出异常
+      debugPrint('获取收藏列表出现异常: $e');
       if (e is DioException) {
         rethrow;
       }
-      // 如果是空响应导致的错误，返回空列表
       if (e.toString().contains('null')) {
         return [];
       }
@@ -496,10 +494,8 @@ class ApiClient {
 
       final data = response.data;
       if (data == null || data['data'] == null) {
-        throw DioException(
-          requestOptions: response.requestOptions,
-          error: '响应数据格式错误',
-        );
+        debugPrint('📚 API: 书签列表为空');
+        return [];
       }
 
       final bookmarksList = data['data'] as List;

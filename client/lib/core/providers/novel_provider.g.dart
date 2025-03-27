@@ -22,12 +22,12 @@ final novelNotifierProvider =
 );
 
 typedef _$NovelNotifier = AutoDisposeAsyncNotifier<List<Novel>>;
-String _$favoriteNotifierHash() => r'b92b812bab7a364c9a63ecc76d42dd4605cff04b';
+String _$favoriteNotifierHash() => r'45e7c8828f78376f905f936f7dc4ad71a03fcf58';
 
 /// See also [FavoriteNotifier].
 @ProviderFor(FavoriteNotifier)
 final favoriteNotifierProvider =
-    AutoDisposeAsyncNotifierProvider<FavoriteNotifier, List<Novel>>.internal(
+    AsyncNotifierProvider<FavoriteNotifier, List<Novel>>.internal(
   FavoriteNotifier.new,
   name: r'favoriteNotifierProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -37,6 +37,6 @@ final favoriteNotifierProvider =
   allTransitiveDependencies: null,
 );
 
-typedef _$FavoriteNotifier = AutoDisposeAsyncNotifier<List<Novel>>;
+typedef _$FavoriteNotifier = AsyncNotifier<List<Novel>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
