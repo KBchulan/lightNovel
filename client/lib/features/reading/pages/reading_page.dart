@@ -28,11 +28,15 @@ import '../widgets/settings_sheet.dart';
 class ReadingPage extends ConsumerStatefulWidget {
   final Chapter chapter;
   final String novelId;
+  final int? initialPosition;
+  final bool isFromBookmark;
 
   const ReadingPage({
     super.key,
     required this.chapter,
     required this.novelId,
+    this.initialPosition,
+    this.isFromBookmark = false,
   });
 
   @override
@@ -72,7 +76,17 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       parent: _controlPanelController,
       curve: Curves.easeInOut,
     );
-    _loadReadingProgress();
+    
+    // 如果有传入初始位置，则直接跳转
+    if (widget.initialPosition != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _scrollController.hasClients) {
+          _scrollController.jumpTo(widget.initialPosition!.toDouble());
+        }
+      });
+    } else {
+      _loadReadingProgress();
+    }
     
     // 预加载图片URL
     if (widget.chapter.hasImages && widget.chapter.imageCount > 0) {
@@ -209,6 +223,12 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
   // 保存进度，只在退出和章节切换时调用
   Future<void> _saveReadingProgress({int? position}) async {
     if (_isTransitioning) return;
+    
+    // 如果是从书签进入的，不保存阅读进度
+    if (widget.isFromBookmark) {
+      debugPrint('从书签进入，不保存阅读进度');
+      return;
+    }
 
     try {
       if (!_scrollController.hasClients && position == null) return;
@@ -255,6 +275,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
             page: ReadingPage(
               novelId: widget.novelId,
               chapter: chapter,
+              isFromBookmark: widget.isFromBookmark,
             ),
             type: SharedAxisTransitionType.horizontal,
             reverse: !isNext,
@@ -400,7 +421,13 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       canPop: true,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) {
-          await _saveReadingProgress();
+          // 如果是从书签进入的，不保存阅读进度
+          if (!widget.isFromBookmark) {
+            await _saveReadingProgress();
+          } else {
+            debugPrint('从书签退出，不保存阅读进度');
+          }
+          
           if (mounted) {
             await ref.read(historyNotifierProvider.notifier).refresh();
             ref.invalidate(historyProgress(widget.novelId));

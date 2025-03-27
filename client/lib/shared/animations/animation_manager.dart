@@ -21,7 +21,6 @@ enum AnimationType {
 }
 
 /// 统一动画管理器
-/// 提供全局一致的动画效果，取代散落在各个页面的动画逻辑
 class AnimationManager {
   // 动画曲线
   static const Curve defaultCurve = Curves.easeOutCubic;
@@ -37,6 +36,38 @@ class AnimationManager {
   // 最大延迟时间，确保动画不会过长
   static const int maxStaggerDelay = 50;
 
+  // 动画限制相关
+  static final _activeAnimations = <String, DateTime>{};
+  static const int maxConcurrentAnimations = 15; // 最大同时动画数
+  static const Duration animationTimeout = Duration(seconds: 3); // 动画超时时间
+
+  /// 检查是否可以执行新动画
+  static bool canStartNewAnimation(String animationId) {
+    _cleanupExpiredAnimations();
+    return _activeAnimations.length < maxConcurrentAnimations;
+  }
+
+  /// 注册新动画
+  static void registerAnimation(String animationId) {
+    _activeAnimations[animationId] = DateTime.now();
+  }
+
+  /// 注销动画
+  static void unregisterAnimation(String animationId) {
+    _activeAnimations.remove(animationId);
+  }
+
+  /// 清理过期的动画
+  static void _cleanupExpiredAnimations() {
+    final now = DateTime.now();
+    _activeAnimations.removeWhere((id, timestamp) {
+      return now.difference(timestamp) > animationTimeout;
+    });
+  }
+
+  /// 获取当前活跃动画数量
+  static int get activeAnimationCount => _activeAnimations.length;
+
   /// 构建列表项的交错动画
   static Widget buildStaggeredListItem({
     required Widget child,
@@ -45,8 +76,16 @@ class AnimationManager {
     AnimationType type = AnimationType.combined,
     Curve? curve,
     Duration? duration,
+    String? animationId,
   }) {
     if (!withAnimation) return child;
+
+    final actualAnimationId = animationId ?? 'staggered_$index';
+    if (!canStartNewAnimation(actualAnimationId)) {
+      return child;
+    }
+
+    registerAnimation(actualAnimationId);
 
     final actualDuration = Duration(
         milliseconds: (duration ?? normalDuration).inMilliseconds +
@@ -57,6 +96,7 @@ class AnimationManager {
       duration: actualDuration,
       curve:
           curve ?? (type == AnimationType.scale ? bouncyCurve : defaultCurve),
+      onEnd: () => unregisterAnimation(actualAnimationId),
       builder: (context, value, _) {
         switch (type) {
           case AnimationType.fade:
@@ -124,13 +164,22 @@ class AnimationManager {
     double? endScale,
     Offset? startOffset,
     Offset? endOffset = Offset.zero,
+    String? animationId,
   }) {
     if (!withAnimation) return child;
+
+    final actualAnimationId = animationId ?? 'element_${DateTime.now().millisecondsSinceEpoch}';
+    if (!canStartNewAnimation(actualAnimationId)) {
+      return child;
+    }
+
+    registerAnimation(actualAnimationId);
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: duration ?? normalDuration,
       curve: curve ?? defaultCurve,
+      onEnd: () => unregisterAnimation(actualAnimationId),
       builder: (context, value, _) {
         switch (type) {
           case AnimationType.fade:
@@ -228,7 +277,18 @@ class AnimationManager {
     Curve? iconCurve,
     Curve? textCurve,
     Curve? buttonCurve,
+    String? animationId,
   }) {
+    final actualAnimationId = animationId ?? 'empty_state_${DateTime.now().millisecondsSinceEpoch}';
+    if (!canStartNewAnimation(actualAnimationId)) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [icon, const SizedBox(height: 24), title, const SizedBox(height: 10), subtitle, const SizedBox(height: 28), button],
+      );
+    }
+
+    registerAnimation(actualAnimationId);
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -238,6 +298,7 @@ class AnimationManager {
           type: iconAnimationType,
           curve: iconCurve ?? bouncyCurve,
           duration: iconDuration ?? mediumDuration,
+          animationId: '${actualAnimationId}_icon',
         ),
 
         const SizedBox(height: 24),
@@ -248,6 +309,7 @@ class AnimationManager {
           type: textAnimationType,
           curve: textCurve ?? defaultCurve,
           duration: textDuration ?? normalDuration,
+          animationId: '${actualAnimationId}_title',
         ),
 
         const SizedBox(height: 10),
@@ -258,6 +320,7 @@ class AnimationManager {
           type: textAnimationType,
           curve: textCurve ?? defaultCurve,
           duration: textDuration ?? normalDuration,
+          animationId: '${actualAnimationId}_subtitle',
         ),
 
         const SizedBox(height: 28),
@@ -268,6 +331,7 @@ class AnimationManager {
           type: buttonAnimationType,
           curve: buttonCurve ?? bouncyCurve,
           duration: buttonDuration ?? normalDuration,
+          animationId: '${actualAnimationId}_button',
         ),
       ],
     );
