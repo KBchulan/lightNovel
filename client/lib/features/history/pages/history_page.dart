@@ -203,6 +203,9 @@ class HistoryPage extends ConsumerWidget {
               duration: const Duration(milliseconds: 300),
               child: historyAsync.when(
                 data: (histories) {
+                  // 添加调试信息，帮助排查问题
+                  debugPrint('📚 历史记录数量: ${histories.length}, 加载完成: $isLoadingComplete');
+                  
                   if (histories.isEmpty) {
                     return AnimationManager.buildAnimatedElement(
                       type: AnimationType.slideUp,

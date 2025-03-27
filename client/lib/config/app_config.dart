@@ -20,7 +20,7 @@ class AppConfig {
     if (isDebug) {
       return 'http://localhost:8080/api/v1'; // 本地服务器
     }
-    return 'https://120.27.201.149:8080/api/v1'; // 阿里云服务器
+    return 'http://120.27.201.149:8080/api/v1'; // 阿里云服务器
   }
 
   // 静态资源路径
@@ -28,14 +28,14 @@ class AppConfig {
     if (isDebug) {
       return 'http://localhost:8080'; // 本地服务器
     }
-    return 'https://120.27.201.149:8080'; // 阿里云服务器
+    return 'http://120.27.201.149:8080'; // 阿里云服务器
   }
 
   static String get wsBaseUrl {
     if (isDebug) {
       return 'ws://localhost:8080/api/v1/ws'; // 本地服务器
     }
-    return 'wss://120.27.201.149:8080/api/v1/ws'; // 阿里云服务器
+    return 'ws://120.27.201.149:8080/api/v1/ws'; // 阿里云服务器
   }
 
   // 缓存配置

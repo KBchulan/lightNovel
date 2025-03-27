@@ -517,43 +517,177 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
   // 构建空书签视图
   Widget _buildEmptyBookmarksView() {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final primaryColor = colorScheme.primary;
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.bookmark_border_rounded,
-            size: 80,
-            color: theme.colorScheme.primary.withAlpha(150),
+    // 创建图标组件
+    final iconWidget = Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withAlpha(20),
+        borderRadius: BorderRadius.circular(60),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withAlpha(10),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
           ),
-          const SizedBox(height: 24),
-          Text(
-            '暂无书签',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
+        ],
+      ),
+      child: Center(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // 背景装饰
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withAlpha(40),
+                borderRadius: BorderRadius.circular(50),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withAlpha(20),
+                    blurRadius: 15,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '阅读小说时点击底部书签按钮添加',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withAlpha(170),
+
+            // 图标设计
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(40),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withAlpha(40),
+                    blurRadius: 15,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+                border: Border.all(
+                  color: primaryColor.withAlpha(40),
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                Icons.bookmark_border_rounded,
+                size: 36,
+                color: primaryColor,
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () => SwitchToHomeNotification().dispatch(context),
-            icon: const Icon(Icons.explore),
-            label: const Text('浏览小说'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 12,
+          ],
+        ),
+      ),
+    );
+
+    // 创建标题文字组件
+    final titleWidget = Text(
+      '暂无书签',
+      style: TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.w600,
+        color: primaryColor,
+        letterSpacing: 0.5,
+      ),
+      textAlign: TextAlign.center,
+    );
+
+    // 创建副标题文字组件
+    final subtitleWidget = Text(
+      '阅读小说时点击底部书签按钮添加',
+      style: TextStyle(
+        fontSize: 15,
+        color: colorScheme.outline,
+        height: 1.4,
+        letterSpacing: 0.3,
+      ),
+      textAlign: TextAlign.center,
+    );
+
+    // 创建按钮组件
+    final buttonWidget = FilledButton.icon(
+      onPressed: () => SwitchToHomeNotification().dispatch(context),
+      icon: const Icon(Icons.explore_outlined),
+      label: const Text('浏览小说'),
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 28, vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 2,
+      ),
+    );
+
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.65,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // 使用动画管理器创建所有动画元素
+                      AnimationManager.buildEmptyStateAnimation(
+                        context: context,
+                        icon: iconWidget,
+                        title: titleWidget,
+                        subtitle: subtitleWidget,
+                        button: buttonWidget,
+                        iconAnimationType: AnimationType.scale,
+                        textAnimationType: AnimationType.slideUp,
+                        buttonAnimationType: AnimationType.scale,
+                        iconDuration: AnimationManager.mediumDuration,
+                        textDuration: AnimationManager.normalDuration,
+                        buttonDuration: AnimationManager.normalDuration,
+                        iconCurve: AnimationManager.bouncyCurve,
+                      ),
+
+                      const SizedBox(height: 36),
+
+                      // 底部装饰元素
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildDecorativeElement(5, primaryColor.withAlpha(100)),
+                          const SizedBox(width: 10),
+                          _buildDecorativeElement(6, primaryColor.withAlpha(120)),
+                          const SizedBox(width: 10),
+                          _buildDecorativeElement(5, primaryColor.withAlpha(100)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  // 装饰元素
+  Widget _buildDecorativeElement(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
       ),
     );
   }

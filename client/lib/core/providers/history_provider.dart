@@ -24,11 +24,17 @@ part 'history_provider.g.dart';
 class HistoryNotifier extends _$HistoryNotifier {
   @override
   AsyncValue<List<ReadHistory>> build() {
+    // 初始化时确保加载完成标志为 false
+    ref.read(historyLoadingCompleteProvider.notifier).state = false;
+    
     _fetchHistory().then((_) {
       if (state.hasValue) {
         ref.read(historySortTypeProvider.notifier).state = 'time';
         ref.read(historySortOrderProvider.notifier).state = false;
         sortByTime(); // 默认按时间排序
+        
+        // 无论是否有数据，都要确保加载完成标志被设置为 true
+        ref.read(historyLoadingCompleteProvider.notifier).state = true;
       }
     });
     return const AsyncValue.loading();
@@ -56,6 +62,11 @@ class HistoryNotifier extends _$HistoryNotifier {
       
       // 设置加载完成标志
       ref.read(historyLoadingCompleteProvider.notifier).state = true;
+      
+      // 确保即使列表为空也设置加载完成标志
+      if (sortedHistories.isEmpty) {
+        debugPrint('✅ 历史记录为空，设置加载完成标志');
+      }
     } catch (e) {
       debugPrint('❌ 获取历史记录错误: $e');
       if (e is DioException && e.error.toString().contains('响应数据格式错误')) {
