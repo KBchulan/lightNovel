@@ -39,8 +39,15 @@ class _ChapterListSheetState extends ConsumerState<ChapterListSheet> {
   @override
   void initState() {
     super.initState();
-    // 预加载当前卷的内容
-    Future.microtask(() {
+    // 确保卷数据已加载
+    Future.microtask(() async {
+      // 检查卷数据是否已加载
+      final volumesAsync = ref.read(volumeNotifierProvider);
+      if (!volumesAsync.hasValue || volumesAsync.asData?.value.isEmpty == true) {
+        await ref.read(volumeNotifierProvider.notifier).fetchVolumes(widget.novelId);
+      }
+      
+      // 预加载当前卷的内容
       final currentVolumeNumber = widget.currentChapter.volumeNumber;
       _toggleVolume(currentVolumeNumber, autoExpand: true);
     });
@@ -148,7 +155,21 @@ class _ChapterListSheetState extends ConsumerState<ChapterListSheet> {
                 child: volumesAsync.when(
                   data: (volumes) {
                     if (volumes.isEmpty) {
-                      return const Center(child: Text('暂无数据'));
+                      // 尝试重新加载卷数据
+                      Future.microtask(() {
+                        ref.read(volumeNotifierProvider.notifier).fetchVolumes(widget.novelId);
+                      });
+                      
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 16),
+                            Text('正在加载目录数据...', style: theme.textTheme.bodyMedium),
+                          ],
+                        ),
+                      );
                     }
 
                     return ListView.builder(

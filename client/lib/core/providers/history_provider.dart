@@ -24,19 +24,19 @@ part 'history_provider.g.dart';
 class HistoryNotifier extends _$HistoryNotifier {
   @override
   AsyncValue<List<ReadHistory>> build() {
-    // 初始化时确保加载完成标志为 false
-    ref.read(historyLoadingCompleteProvider.notifier).state = false;
-    
-    _fetchHistory().then((_) {
-      if (state.hasValue) {
-        ref.read(historySortTypeProvider.notifier).state = 'time';
-        ref.read(historySortOrderProvider.notifier).state = false;
-        sortByTime(); // 默认按时间排序
-        
-        // 无论是否有数据，都要确保加载完成标志被设置为 true
-        ref.read(historyLoadingCompleteProvider.notifier).state = true;
-      }
+    Future.microtask(() {
+      ref.read(historyLoadingCompleteProvider.notifier).state = false;
+      _fetchHistory().then((_) {
+        if (state.hasValue) {
+          ref.read(historySortTypeProvider.notifier).state = 'time';
+          ref.read(historySortOrderProvider.notifier).state = false;
+          sortByTime(); // 默认按时间排序
+
+          ref.read(historyLoadingCompleteProvider.notifier).state = true;
+        }
+      });
     });
+
     return const AsyncValue.loading();
   }
 
@@ -59,10 +59,10 @@ class HistoryNotifier extends _$HistoryNotifier {
       state = AsyncValue.data(sortedHistories);
       ref.read(historySortTypeProvider.notifier).state = 'time';
       ref.read(historySortOrderProvider.notifier).state = false;
-      
+
       // 设置加载完成标志
       ref.read(historyLoadingCompleteProvider.notifier).state = true;
-      
+
       // 确保即使列表为空也设置加载完成标志
       if (sortedHistories.isEmpty) {
         debugPrint('✅ 历史记录为空，设置加载完成标志');
@@ -74,7 +74,7 @@ class HistoryNotifier extends _$HistoryNotifier {
       } else {
         state = AsyncValue.error(e, StackTrace.current);
       }
-      
+
       // 即使出错也设置加载完成标志
       ref.read(historyLoadingCompleteProvider.notifier).state = true;
     }
@@ -84,7 +84,7 @@ class HistoryNotifier extends _$HistoryNotifier {
   Future<void> refresh() async {
     // 重置加载完成标志
     ref.read(historyLoadingCompleteProvider.notifier).state = false;
-    
+
     state = const AsyncValue.loading();
     await _fetchHistory();
 
@@ -105,12 +105,12 @@ class HistoryNotifier extends _$HistoryNotifier {
 
       // 清空成功后设置加载完成标志
       ref.read(historyLoadingCompleteProvider.notifier).state = true;
-      
+
       debugPrint('✅ 清空历史记录成功');
     } catch (e) {
       debugPrint('❌ 清空阅读历史错误: $e');
       state = AsyncValue.error(e, StackTrace.current);
-      
+
       // 即使出错也设置加载完成标志
       ref.read(historyLoadingCompleteProvider.notifier).state = true;
     }
@@ -226,7 +226,6 @@ class HistoryNotifier extends _$HistoryNotifier {
 // 使用手动创建Provider的方式，避免使用自动生成的代码
 final historyNovelProvider =
     FutureProvider.family<Novel?, String>((ref, novelId) async {
-  
   try {
     final apiClient = ref.read(apiClientProvider);
     final novel = await apiClient.getNovelDetail(novelId);

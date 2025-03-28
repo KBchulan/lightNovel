@@ -10,20 +10,23 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 import '../../../core/providers/novel_provider.dart';
 import '../../../core/services/device_service.dart';
 import '../../../core/models/novel.dart';
 import '../../../core/models/bookmark.dart';
 import '../../../core/providers/bookmark_provider.dart';
 import '../../../core/providers/api_provider.dart';
+import '../../../core/providers/volume_provider.dart';
 import '../../../shared/widgets/novel_card.dart';
 import '../../../shared/animations/page_transitions.dart';
 import '../../../shared/props/novel_props.dart';
 import '../../../shared/animations/animation_manager.dart';
+import '../../../shared/widgets/snack_message.dart';
 import '../../novel/pages/novel_detail_page.dart';
 import '../../reading/pages/reading_page.dart';
-import '../widgets/empty_bookshelf.dart';
 import '../../../shared/widgets/network_error.dart';
+import '../widgets/empty_bookshelf.dart';
 
 // 自定义通知类，用于切换到首页
 class SwitchToHomeNotification extends Notification {}
@@ -78,11 +81,11 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
     if (!mounted) return;
 
     // 移除对动画状态的更新，避免闪烁
-    // Future.delayed(Duration(milliseconds: delayMs), () {
-    //   if (mounted) {
-    //     setState(() => _shouldShowAnimation = false);
-    //   }
-    // });
+    Future.delayed(Duration(milliseconds: delayMs), () {
+      if (mounted) {
+        setState(() => _shouldShowAnimation = false);
+      }
+    });
   }
 
   // 分离数据加载逻辑
@@ -95,49 +98,51 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
     try {
       // 同时加载收藏和书签数据
       await _refreshAllData();
-
+      
+      // 设置内容已准备好标志
       if (mounted) {
-        setState(() => _isContentReady = true);
+        setState(() {
+          _isContentReady = true;
+        });
+        
+        // 延迟关闭动画标记
         _delayCloseAnimation(_animationDelayMs);
       }
     } catch (e) {
+      // 处理错误
       if (mounted) {
-        setState(() => _isContentReady = true); // 即使出错也标记为ready
+        setState(() {
+          _isContentReady = true;
+        });
       }
     }
   }
-
-  // 同时刷新收藏和书签数据
+  
+  // 刷新所有数据
   Future<void> _refreshAllData() async {
-    final favoritesFuture =
-        ref.read(favoriteNotifierProvider.notifier).fetchFavorites();
-    final bookmarksFuture =
-        ref.read(bookmarkNotifierProvider.notifier).refresh();
-
-    await Future.wait([favoritesFuture, bookmarksFuture]);
+    await Future.wait([
+      ref.read(favoriteNotifierProvider.notifier).fetchFavorites(),
+      ref.read(bookmarkNotifierProvider.notifier).refresh(),
+    ]);
+  }
+  
+  // 处理刷新内容操作
+  Future<void> _refreshContent() async {
+    // 设置动画状态为true，触发动画效果
+    setState(() {
+      _shouldShowAnimation = true;
+    });
+    
+    await _refreshAllData();
+    
+    // 延迟关闭动画标记
+    _delayCloseAnimation(_animationDelayMs);
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
-  }
-
-  // 刷新书架内容
-  Future<void> _refreshContent() async {
-    setState(() => _shouldShowAnimation = true);
-
-    try {
-      // 同时刷新两种数据
-      await _refreshAllData();
-
-      if (mounted) {
-        setState(() => _isContentReady = true);
-        _delayCloseAnimation(_animationDelayMs);
-      }
-    } catch (e) {
-      // 错误已在UI中处理
-    }
   }
 
   // 切换内容模式（收藏/书签）
@@ -176,6 +181,27 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
         setState(() => _isContentReady = true);
       }
     }
+  }
+
+  // 处理视图模式变化
+  void _handleViewModeChange() {
+    // 设置动画状态为true，触发动画效果
+    setState(() {
+      _shouldShowAnimation = true;
+    });
+    
+    final isGridView = ref.read(bookshelfViewModeProvider);
+    ref.read(bookshelfViewModeProvider.notifier).state = !isGridView;
+    
+    // 根据当前是否为网格视图决定动画方向
+    if (isGridView) {
+      _controller.forward();
+    } else {
+      _controller.reverse();
+    }
+    
+    // 切换模式后延迟关闭动画
+    _delayCloseAnimation(_modeChangeAnimationDelayMs);
   }
 
   @override
@@ -262,7 +288,7 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
                 progress: _controller,
                 color: theme.colorScheme.primary,
               ),
-              onPressed: _toggleViewMode,
+              onPressed: _handleViewModeChange,
             ),
           ),
       ],
@@ -305,18 +331,6 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
     );
   }
 
-  // 切换视图模式
-  void _toggleViewMode() {
-    final notifier = ref.read(bookshelfViewModeProvider.notifier);
-    notifier.state = !notifier.state;
-
-    if (notifier.state) {
-      _controller.reverse();
-    } else {
-      _controller.forward();
-    }
-  }
-
   // 构建主内容
   Widget _buildContent(
     AsyncValue contentAsync,
@@ -332,12 +346,12 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
         contentAsync.when(
           data: (content) {
             if (contentMode == BookshelfContentMode.favorite) {
-              final sortedFavorites = (content as List<Novel>)
+              final sortedFavorites = List<Novel>.from(content as List<Novel>)
                 ..sort((a, b) => a.id.compareTo(b.id));
               return _buildFavoritesView(
                   sortedFavorites, isGridView, shouldAnimate);
             } else {
-              final sortedBookmarks = (content as List<Bookmark>)
+              final sortedBookmarks = List<Bookmark>.from(content as List<Bookmark>)
                 ..sort((a, b) => a.id.compareTo(b.id));
               return _buildBookmarksView(sortedBookmarks, shouldAnimate);
             }
@@ -485,31 +499,11 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage>
     final cacheKey = '${bookmarks.length}_bookmark_$shouldAnimate';
 
     return RepaintBoundary(
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        physics: const AlwaysScrollableScrollPhysics(),
-        key: ValueKey(cacheKey),
-        itemCount: bookmarks.length,
-        itemBuilder: (context, index) {
-          final bookmark = bookmarks[index];
-
-          // 只有初次加载时显示动画，后续操作不使用动画
-          final useAnimation = shouldAnimate && index < 15;
-
-          return AnimationManager.buildStaggeredListItem(
-            index: index,
-            withAnimation: useAnimation,
-            type: AnimationType.combined,
-            duration: AnimationManager.normalDuration,
-            child: KeyedSubtree(
-              key: ValueKey('bookmark_${bookmark.id}'),
-              child: _BookmarkCard(
-                bookmark: bookmark,
-                onUpdated: _refreshContent,
-              ),
-            ),
-          );
-        },
+      child: _BookmarkListView(
+        bookmarks: bookmarks,
+        shouldAnimate: shouldAnimate,
+        cacheKey: cacheKey,
+        onUpdated: _refreshContent,
       ),
     );
   }
@@ -798,14 +792,139 @@ class _ListViewNovelCard extends StatelessWidget {
   }
 }
 
+// 书签列表视图组件
+class _BookmarkListView extends ConsumerStatefulWidget {
+  final List<Bookmark> bookmarks;
+  final bool shouldAnimate;
+  final String cacheKey;
+  final VoidCallback onUpdated;
+
+  const _BookmarkListView({
+    required this.bookmarks,
+    required this.shouldAnimate,
+    required this.cacheKey,
+    required this.onUpdated,
+  });
+
+  @override
+  ConsumerState<_BookmarkListView> createState() => _BookmarkListViewState();
+}
+
+class _BookmarkListViewState extends ConsumerState<_BookmarkListView> {
+  bool _isLoading = true;
+  Map<String, Novel> _novelsMap = {};
+  
+  @override
+  void initState() {
+    super.initState();
+    // 批量加载所有书签相关的小说信息
+    _batchLoadNovelInfo();
+  }
+  
+  // 批量加载小说信息
+  Future<void> _batchLoadNovelInfo() async {
+    if (widget.bookmarks.isEmpty) {
+      setState(() => _isLoading = false);
+      return;
+    }
+    
+    setState(() => _isLoading = true);
+    
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final Map<String, Novel> novelsMap = {};
+      
+      // 使用Set去重小说ID
+      final Set<String> uniqueNovelIds = widget.bookmarks
+          .map((bookmark) => bookmark.novelId)
+          .toSet();
+      
+      // 并行加载所有小说信息
+      final futures = uniqueNovelIds.map((novelId) async {
+        try {
+          final novel = await apiClient.getNovelDetail(novelId);
+          return MapEntry(novelId, novel);
+        } catch (e) {
+          debugPrint('加载小说信息失败: $e');
+          return null;
+        }
+      });
+      
+      // 等待所有请求完成
+      final results = await Future.wait(futures);
+      
+      // 过滤掉失败的请求并构建映射
+      for (final result in results) {
+        if (result != null) {
+          novelsMap[result.key] = result.value;
+        }
+      }
+      
+      if (mounted) {
+        setState(() {
+          _novelsMap = novelsMap;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('批量加载小说信息失败: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    // 如果正在加载，显示加载指示器
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+    
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      physics: const AlwaysScrollableScrollPhysics(),
+      key: ValueKey(widget.cacheKey),
+      itemCount: widget.bookmarks.length,
+      itemBuilder: (context, index) {
+        final bookmark = widget.bookmarks[index];
+        // 获取预加载的小说信息
+        final preloadedNovel = _novelsMap[bookmark.novelId];
+        
+        // 只有初次加载时显示动画，后续操作不使用动画
+        final useAnimation = widget.shouldAnimate && index < 15;
+
+        return AnimationManager.buildStaggeredListItem(
+          index: index,
+          withAnimation: useAnimation,
+          type: AnimationType.combined, 
+          duration: AnimationManager.normalDuration,
+          child: KeyedSubtree(
+            key: ValueKey('bookmark_${bookmark.id}'),
+            child: _BookmarkCard(
+              bookmark: bookmark,
+              onUpdated: widget.onUpdated,
+              preloadedNovel: preloadedNovel,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 // 书签卡片组件
 class _BookmarkCard extends ConsumerStatefulWidget {
   final Bookmark bookmark;
   final VoidCallback onUpdated;
+  final Novel? preloadedNovel; // 添加预加载的小说信息参数
 
   const _BookmarkCard({
     required this.bookmark,
     required this.onUpdated,
+    this.preloadedNovel, // 可选的预加载小说信息
   });
 
   @override
@@ -823,7 +942,14 @@ class _BookmarkCardState extends ConsumerState<_BookmarkCard> {
   void initState() {
     super.initState();
     _noteController.text = widget.bookmark.note;
-    _loadNovelInfo();
+    
+    // 使用预加载的小说信息或加载小说信息
+    if (widget.preloadedNovel != null) {
+      _novel = widget.preloadedNovel;
+      _isLoading = false;
+    } else {
+      _loadNovelInfo();
+    }
   }
 
   // 加载小说信息
@@ -952,30 +1078,40 @@ class _BookmarkCardState extends ConsumerState<_BookmarkCard> {
 
   // 继续阅读
   Future<void> _continueReading() async {
+    final currentContext = context;
     try {
-      final apiClient = ref.read(apiClientProvider);
-      final chapter = await apiClient.getChapterContent(
-        widget.bookmark.novelId,
-        widget.bookmark.volumeNumber,
-        widget.bookmark.chapterNumber,
-      );
+      // 先预加载卷列表数据
+      final volumesAsync = ref.read(volumeNotifierProvider);
+      if (!volumesAsync.hasValue || volumesAsync.asData?.value.isEmpty == true) {
+        // 如果卷数据未加载，先加载卷数据
+        await ref.read(volumeNotifierProvider.notifier).fetchVolumes(widget.bookmark.novelId);
+      }
+      
+      // 获取章节内容
+      final chapter = await ref
+          .read(apiClientProvider)
+          .getChapterContent(
+              widget.bookmark.novelId, widget.bookmark.volumeNumber, widget.bookmark.chapterNumber);
 
-      if (mounted) {
+      if (currentContext.mounted) {
         Navigator.push(
-          context,
+          currentContext,
           FadePageRoute(
             page: ReadingPage(
-              novelId: widget.bookmark.novelId,
               chapter: chapter,
-              initialPosition: widget.bookmark.position,
-              isFromBookmark: true,
+              novelId: widget.bookmark.novelId,
             ),
           ),
-        );
+        ).then((_) {
+          // 刷新书架
+          ref.invalidate(favoriteNotifierProvider);
+          ref.invalidate(bookmarkNotifierProvider);
+        });
       }
     } catch (e) {
-      if (mounted) {
-        _showSnackBar('加载章节失败: ${e.toString()}', isError: true);
+      if (currentContext.mounted) {
+        SnackMessage.show(currentContext, '获取章节失败: $e',
+            isError: true);
       }
     }
   }

@@ -30,21 +30,21 @@ android {
         versionName = flutter.versionName
     }
 
-    // signingConfigs {
-    //     create("release") {
-    //         keyAlias = "androiddebugkey"
-    //         keyPassword = "android"
-    //         storeFile = file("../lightnovel.jks")
-    //         storePassword = "android"
-    //     }
-    // }
+    signingConfigs {
+        create("release") {
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+            storeFile = file("../lightnovel.jks")
+            storePassword = "android"
+        }
+    }
 
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")        // 调试用
-            // signingConfig = signingConfigs.getByName("release")       // 发布用
+            // signingConfig = signingConfigs.getByName("debug")        // 调试用
+            signingConfig = signingConfigs.getByName("release")       // 发布用
         }
     }
 }

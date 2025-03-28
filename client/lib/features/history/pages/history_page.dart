@@ -14,6 +14,7 @@ import '../../../core/models/novel.dart';
 import '../../../core/models/read_history.dart';
 import '../../../core/providers/history_provider.dart';
 import '../../../core/providers/api_provider.dart';
+import '../../../core/providers/volume_provider.dart';
 import '../../../shared/animations/page_transitions.dart';
 import '../../../shared/widgets/snack_message.dart';
 import '../../../shared/props/novel_props.dart';
@@ -199,7 +200,7 @@ class HistoryPage extends ConsumerWidget {
             
             // 内容区域 - 使用AnimatedOpacity控制显示/隐藏
             AnimatedOpacity(
-              opacity: (historyAsync.hasValue && isLoadingComplete) ? 1.0 : 0.0,
+              opacity: (historyAsync.hasValue && isLoadingComplete) || historyAsync.hasError ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 300),
               child: historyAsync.when(
                 data: (histories) {
@@ -790,6 +791,14 @@ class _HistoryItem extends ConsumerWidget {
                   onTap: () async {
                     final currentContext = context;
                     try {
+                      // 先预加载卷列表数据
+                      final volumesAsync = ref.read(volumeNotifierProvider);
+                      if (!volumesAsync.hasValue || volumesAsync.asData?.value.isEmpty == true) {
+                        // 如果卷数据未加载，先加载卷数据
+                        await ref.read(volumeNotifierProvider.notifier).fetchVolumes(history.novelId);
+                      }
+                      
+                      // 获取章节内容
                       final chapter =
                           await ref.read(apiClientProvider).getChapterContent(
                                 history.novelId,

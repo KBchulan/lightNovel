@@ -15,6 +15,8 @@ import '../../../core/models/chapter.dart';
 import '../../../core/providers/reading_provider.dart';
 import '../../../core/providers/api_provider.dart';
 import '../../../core/providers/history_provider.dart';
+import '../../../core/providers/volume_provider.dart';
+import '../../../core/providers/chapter_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/animations/slide_animation.dart';
 import '../../../shared/animations/animation_manager.dart';
@@ -87,6 +89,9 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     } else {
       _loadReadingProgress();
     }
+    
+    // 预加载小说卷和章节数据，确保目录可用
+    _preloadNovelData();
     
     // 预加载图片URL
     if (widget.chapter.hasImages && widget.chapter.imageCount > 0) {
@@ -198,6 +203,28 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       if (mounted) {
         setState(() => _isLoadingImages = false);
       }
+    }
+  }
+
+  // 预加载小说卷和章节数据，确保目录显示正常
+  Future<void> _preloadNovelData() async {
+    try {
+      // 预加载小说的卷数据
+      final volumesAsync = ref.read(volumeNotifierProvider);
+      if (!volumesAsync.hasValue || volumesAsync.asData?.value.isEmpty == true) {
+        // 如果卷数据未加载，先加载卷数据
+        await ref.read(volumeNotifierProvider.notifier).fetchVolumes(widget.novelId);
+      }
+      
+      // 预加载当前章节所在卷的章节列表
+      if (!ref.read(chapterNotifierProvider.notifier).isCached(widget.novelId, widget.chapter.volumeNumber)) {
+        await ref.read(chapterNotifierProvider.notifier).fetchChapters(
+          widget.novelId,
+          widget.chapter.volumeNumber,
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ 预加载小说数据失败: $e');
     }
   }
 

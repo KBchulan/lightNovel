@@ -13,29 +13,32 @@ class AppConfig {
   static const String appVersion = '1.0.0';
 
   // API配置
-  static const bool isDebug = true; // 打开调试模式
+  static const bool isDebug = true; // 调试模式
 
   // 在调试模式下使用本地服务器，否则使用生产服务器
   static String get apiBaseUrl {
     if (isDebug) {
-      return 'http://localhost:8080/api/v1'; // 本地服务器
+      // return 'http://localhost:8080/api/v1'; // 本机服务器
+      return 'http://120.27.201.149:8080/api/v1'; // 阿里云服务器
     }
-    return 'http://120.27.201.149:8080/api/v1'; // 阿里云服务器
+    return 'https://chulan.xin/api/v1'; // 阿里云服务器 (https)
   }
 
   // 静态资源路径
   static String get staticUrl {
     if (isDebug) {
-      return 'http://localhost:8080'; // 本地服务器
+      // return 'http://localhost:8080'; // 本机服务器
+      return 'http://120.27.201.149:8080'; // 阿里云服务器
     }
-    return 'http://120.27.201.149:8080'; // 阿里云服务器
+    return 'https://chulan.xin'; // 阿里云服务器(https)
   }
 
   static String get wsBaseUrl {
     if (isDebug) {
-      return 'ws://localhost:8080/api/v1/ws'; // 本地服务器
+      // return 'ws://localhost:8080/api/v1/ws'; // 本机服务器
+      return 'ws://120.27.201.149:8080/api/v1/ws'; // 阿里云服务器
     }
-    return 'ws://120.27.201.149:8080/api/v1/ws'; // 阿里云服务器
+    return 'wss://chulan.xin/api/v1/ws'; // 阿里云服务器(https)
   }
 
   // 缓存配置
