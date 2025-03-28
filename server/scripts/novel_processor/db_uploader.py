@@ -36,6 +36,8 @@ class DbUploader:
         
         novel_info = {
             'title': novel_data['title'],
+            'author': novel_data['author'],
+            'description': novel_data['description'],
             'volumeCount': len(novel_data['volumes']),
             'createdAt': datetime.utcnow(),
             'updatedAt': datetime.utcnow()
@@ -60,6 +62,7 @@ class DbUploader:
         volume_info = {
             'novelId': novel_id,
             'volumeNumber': volume_data['volume_number'],
+            'volumeTitle': volume_data.get('volume_title', f"第{volume_data['volume_number']}卷"),
             'chapterCount': len(volume_data['chapters']),
             'createdAt': datetime.utcnow(),
             'updatedAt': datetime.utcnow()
@@ -91,7 +94,7 @@ class DbUploader:
         image_count = 0
         
         if has_images:
-            image_path = f"novels/{chapter_data['title']}/volume_{volume_number}/chapter_{chapter_data['chapter_number']}"
+            image_path = f"novels//volume_{volume_number}/chapter_{chapter_data['chapter_number']}"
             image_count = len(chapter_data['images'])
             
         chapter_info = {

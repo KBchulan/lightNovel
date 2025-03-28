@@ -158,7 +158,7 @@ class _NovelBookmarksProviderElement
   String get novelId => (origin as NovelBookmarksProvider).novelId;
 }
 
-String _$bookmarkNotifierHash() => r'308abd94cc814797c4ea16c491eacc8b35419330';
+String _$bookmarkNotifierHash() => r'e5d27303ad6964e17f1fa000a80f14d83062e64e';
 
 /// See also [BookmarkNotifier].
 @ProviderFor(BookmarkNotifier)

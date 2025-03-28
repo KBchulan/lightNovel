@@ -896,7 +896,7 @@ class _VolumeListState extends ConsumerState<_VolumeList> {
                           children: [
                             Expanded(
                               child: Text(
-                                '第 ${chapterInfo.chapterNumber} 话：${chapterInfo.title}',
+                                chapterInfo.title,
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: isCurrentChapter ? FontWeight.bold : FontWeight.normal,

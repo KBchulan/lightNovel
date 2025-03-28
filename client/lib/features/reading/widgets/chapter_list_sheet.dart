@@ -235,7 +235,7 @@ class _ChapterListSheetState extends ConsumerState<ChapterListSheet> {
                                     ],
                                   ),
                                   subtitle: volume.chapterCount > 0
-                                      ? Text('共 ${volume.chapterCount} 章')
+                                      ? Text('共 ${volume.chapterCount} 话')
                                       : null,
                                   onTap: () =>
                                       _toggleVolume(volume.volumeNumber),
@@ -306,7 +306,7 @@ class _ChapterListItem extends ConsumerWidget {
     return ListTile(
       contentPadding: const EdgeInsets.only(left: 20.0, right: 16.0),
       title: Text(
-        '第 ${chapter.chapterNumber} 章: ${chapter.title}',
+        chapter.title,
         style: theme.textTheme.bodyMedium?.copyWith(
           fontWeight: isCurrentChapter ? FontWeight.bold : null,
           color: isCurrentChapter

@@ -29,7 +29,7 @@ class BookmarkNotifier extends _$BookmarkNotifier {
       return bookmarks;
     } catch (e) {
       // 出错时返回空列表
-      return [];
+      rethrow;
     }
   }
 
