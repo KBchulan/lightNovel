@@ -125,6 +125,11 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     // 移除滚动监听
     // _scrollController.removeListener(_scrollListener);
 
+    // 保存阅读进度
+    if (!widget.isFromBookmark && _scrollController.hasClients) {
+      _saveReadingProgress();
+    }
+
     _scrollController.dispose();
     _controlPanelController.dispose();
     _bottomSheetController.dispose();

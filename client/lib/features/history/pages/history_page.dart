@@ -813,6 +813,7 @@ class _HistoryItem extends ConsumerWidget {
                             page: ReadingPage(
                               chapter: chapter,
                               novelId: history.novelId,
+                              initialPosition: progress.position,
                             ),
                           ),
                         ).then((_) {
@@ -976,6 +977,7 @@ class _HistoryItem extends ConsumerWidget {
                           page: ReadingPage(
                             chapter: chapter,
                             novelId: history.novelId,
+                            initialPosition: progress.position,
                           ),
                         ),
                       ).then((_) {

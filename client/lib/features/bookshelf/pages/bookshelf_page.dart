@@ -1100,6 +1100,8 @@ class _BookmarkCardState extends ConsumerState<_BookmarkCard> {
             page: ReadingPage(
               chapter: chapter,
               novelId: widget.bookmark.novelId,
+              initialPosition: widget.bookmark.position,
+              isFromBookmark: true,
             ),
           ),
         ).then((_) {
