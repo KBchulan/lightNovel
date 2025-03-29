@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/chapter.dart';
 import '../../../core/providers/bookmark_provider.dart';
 import '../../../shared/animations/animation_manager.dart';
+import '../../../core/providers/volume_provider.dart';
 
 class BookmarkSheet extends ConsumerStatefulWidget {
   final String novelId;
@@ -515,13 +516,28 @@ class _BookmarkSheetState extends ConsumerState<BookmarkSheet> {
                                       ],
                                     ),
                                     const SizedBox(height: 6),
-                                    Text(
-                                      '第${widget.chapter.volumeNumber}卷 第${widget.chapter.chapterNumber}话',
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 13,
-                                      ),
+                                    Consumer(
+                                      builder: (context, ref, child) {
+                                        final params = ChapterTitleParams(
+                                          novelId: widget.novelId,
+                                          volumeNumber: widget.chapter.volumeNumber,
+                                          chapterNumber: widget.chapter.chapterNumber,
+                                        );
+                                        
+                                        final titleAsync = ref.watch(chapterTitleProvider(params));
+                                        
+                                        return Text(
+                                          titleAsync.when(
+                                            data: (title) => '第${widget.chapter.volumeNumber}卷 $title',
+                                            loading: () => '第${widget.chapter.volumeNumber}卷 第${widget.chapter.chapterNumber}话',
+                                            error: (_, __) => '第${widget.chapter.volumeNumber}卷 第${widget.chapter.chapterNumber}话',
+                                          ),
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 13,
+                                          ),
+                                        );
+                                      },
                                     ),
                                     if (firstSentence.isNotEmpty) ...[
                                       const SizedBox(height: 8),

@@ -6,7 +6,7 @@ part of 'volume_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$volumeNotifierHash() => r'a40117d0d6599213c1028c60143644072b6395cf';
+String _$volumeNotifierHash() => r'255ef75d14b21b90f21389b627cb7ad69c3a82af';
 
 /// See also [VolumeNotifier].
 @ProviderFor(VolumeNotifier)

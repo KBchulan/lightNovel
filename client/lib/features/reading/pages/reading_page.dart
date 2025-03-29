@@ -810,13 +810,29 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Text(
-                      '第${widget.chapter.volumeNumber}卷，第${widget.chapter.chapterNumber}话',
-                      style: TextStyle(
-                        color: foregroundColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    child: Consumer(
+                      builder: (context, ref, child) {
+                        final params = ChapterTitleParams(
+                          novelId: widget.novelId,
+                          volumeNumber: widget.chapter.volumeNumber,
+                          chapterNumber: widget.chapter.chapterNumber,
+                        );
+                        
+                        final titleAsync = ref.watch(chapterTitleProvider(params));
+                        
+                        return Text(
+                          titleAsync.when(
+                            data: (title) => '第${widget.chapter.volumeNumber}卷 $title',
+                            loading: () => '第${widget.chapter.volumeNumber}卷，第${widget.chapter.chapterNumber}话',
+                            error: (_, __) => '第${widget.chapter.volumeNumber}卷，第${widget.chapter.chapterNumber}话',
+                          ),
+                          style: TextStyle(
+                            color: foregroundColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],

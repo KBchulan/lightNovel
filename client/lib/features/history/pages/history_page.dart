@@ -713,13 +713,29 @@ class _HistoryItem extends ConsumerWidget {
                               color: theme.colorScheme.primary.withAlpha(31),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Text(
-                              '第${progress.volumeNumber}卷 第${progress.chapterNumber}话',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
+                            child: Consumer(
+                              builder: (context, ref, child) {
+                                final params = ChapterTitleParams(
+                                  novelId: history.novelId,
+                                  volumeNumber: progress.volumeNumber,
+                                  chapterNumber: progress.chapterNumber,
+                                );
+                                
+                                final titleAsync = ref.watch(chapterTitleProvider(params));
+                                
+                                return Text(
+                                  titleAsync.when(
+                                    data: (title) => '第${progress.volumeNumber}卷 $title',
+                                    loading: () => '第${progress.volumeNumber}卷 第${progress.chapterNumber}话',
+                                    error: (_, __) => '第${progress.volumeNumber}卷 第${progress.chapterNumber}话',
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(height: 8),

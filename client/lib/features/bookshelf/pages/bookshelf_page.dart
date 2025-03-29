@@ -1248,11 +1248,27 @@ class _BookmarkCardState extends ConsumerState<_BookmarkCard> {
                               const SizedBox(height: 6),
 
                               // 章节信息
-                              Text(
-                                '第${bookmark.volumeNumber}卷 第${bookmark.chapterNumber}话',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.primary,
-                                ),
+                              Consumer(
+                                builder: (context, ref, child) {
+                                  final params = ChapterTitleParams(
+                                    novelId: bookmark.novelId,
+                                    volumeNumber: bookmark.volumeNumber,
+                                    chapterNumber: bookmark.chapterNumber,
+                                  );
+                                  
+                                  final titleAsync = ref.watch(chapterTitleProvider(params));
+                                  
+                                  return Text(
+                                    titleAsync.when(
+                                      data: (title) => '第${bookmark.volumeNumber}卷 $title',
+                                      loading: () => '第${bookmark.volumeNumber}卷 第${bookmark.chapterNumber}话',
+                                      error: (_, __) => '第${bookmark.volumeNumber}卷 第${bookmark.chapterNumber}话',
+                                    ),
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  );
+                                },
                               ),
 
                               const SizedBox(height: 4),

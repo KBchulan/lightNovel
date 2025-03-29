@@ -565,12 +565,28 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
                                       color: theme.colorScheme.primary,
                                     ),
                                     const SizedBox(width: 4),
-                                    Text(
-                                      '上次读到：第${_readingProgress!.volumeNumber}卷 第${_readingProgress!.chapterNumber}话',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: theme.colorScheme.primary,
-                                      ),
+                                    Consumer(
+                                      builder: (context, ref, child) {
+                                        final params = ChapterTitleParams(
+                                          novelId: widget.novel.id,
+                                          volumeNumber: _readingProgress!.volumeNumber,
+                                          chapterNumber: _readingProgress!.chapterNumber,
+                                        );
+                                        
+                                        final titleAsync = ref.watch(chapterTitleProvider(params));
+                                        
+                                        return Text(
+                                          titleAsync.when(
+                                            data: (title) => '上次读到：第${_readingProgress!.volumeNumber}卷 $title',
+                                            loading: () => '上次读到：第${_readingProgress!.volumeNumber}卷 第${_readingProgress!.chapterNumber}话',
+                                            error: (_, __) => '上次读到：第${_readingProgress!.volumeNumber}卷 第${_readingProgress!.chapterNumber}话',
+                                          ),
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),
