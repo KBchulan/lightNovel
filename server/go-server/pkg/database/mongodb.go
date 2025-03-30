@@ -173,6 +173,34 @@ func (db *MongoDB) CreateIndexes(ctx context.Context) error {
 		},
 	}
 
+	// 用户集合索引
+	userIndexes := []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "lastActiveAt", Value: -1}},
+			Options: options.Index().SetName("last_active"),
+		},
+	}
+
+	// 评论集合索引
+	commentIndexes := []mongo.IndexModel{
+		{
+			Keys: bson.D{
+				{Key: "novelId", Value: 1},
+				{Key: "volumeNumber", Value: 1},
+				{Key: "chapterNumber", Value: 1},
+			},
+			Options: options.Index().SetName("chapter_comments"),
+		},
+		{
+			Keys:    bson.D{{Key: "createdAt", Value: -1}},
+			Options: options.Index().SetName("comment_time"),
+		},
+		{
+			Keys:    bson.D{{Key: "deviceId", Value: 1}},
+			Options: options.Index().SetName("user_comments"),
+		},
+	}
+
 	// 创建索引
 	collections := map[string][]mongo.IndexModel{
 		"novels":        novelIndexes,
@@ -183,6 +211,8 @@ func (db *MongoDB) CreateIndexes(ctx context.Context) error {
 		"favorites":     favoriteIndexes,
 		"read_history":  readHistoryIndexes,
 		"read_progress": readProgressIndexes,
+		"users":         userIndexes,
+		"comments":      commentIndexes,
 	}
 
 	for collection, indexes := range collections {

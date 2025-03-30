@@ -62,6 +62,8 @@ type CacheConfig struct {
 	ReadRecord    time.Duration `yaml:"read_record"`
 	ReadChapter   time.Duration `yaml:"read_chapter"`
 	ReadingStat   time.Duration `yaml:"reading_stat"`
+	User          time.Duration `yaml:"user"`
+	Comment       time.Duration `yaml:"comment"`
 }
 
 type RateConfig struct {
@@ -141,6 +143,12 @@ func setDefaultConfig(config *Config) {
 	}
 	if config.Cache.ReadingStat == 0 {
 		config.Cache.ReadingStat = 30 * time.Minute
+	}
+	if config.Cache.User == 0 {
+		config.Cache.User = 24 * time.Hour
+	}
+	if config.Cache.Comment == 0 {
+		config.Cache.Comment = 30 * time.Minute
 	}
 
 	// 设置默认限流配置

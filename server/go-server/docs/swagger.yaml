@@ -63,6 +63,46 @@ definitions:
       volumeNumber:
         type: integer
     type: object
+  models.Comment:
+    properties:
+      chapterNumber:
+        type: integer
+      content:
+        type: string
+      createdAt:
+        type: string
+      deviceId:
+        type: string
+      id:
+        type: string
+      novelId:
+        type: string
+      updatedAt:
+        type: string
+      volumeNumber:
+        type: integer
+    type: object
+  models.CommentResponse:
+    properties:
+      chapterNumber:
+        type: integer
+      content:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      novelId:
+        type: string
+      userAvatar:
+        type: string
+      userId:
+        type: string
+      userName:
+        type: string
+      volumeNumber:
+        type: integer
+    type: object
   models.Novel:
     properties:
       author:
@@ -76,10 +116,8 @@ definitions:
       id:
         type: string
       readCount:
-        description: 阅读量
         type: integer
       status:
-        description: 连载中、已完结
         type: string
       tags:
         items:
@@ -107,7 +145,6 @@ definitions:
   models.ReadProgress:
     properties:
       chapterNumber:
-        description: 当前章节号
         type: integer
       deviceId:
         type: string
@@ -116,13 +153,26 @@ definitions:
       novelId:
         type: string
       position:
-        description: 章节内位置
         type: integer
       updatedAt:
         type: string
       volumeNumber:
-        description: 当前卷号
         type: integer
+    type: object
+  models.User:
+    properties:
+      avatar:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      lastActiveAt:
+        type: string
+      name:
+        type: string
+      updatedAt:
+        type: string
     type: object
   models.Volume:
     properties:
@@ -176,6 +226,15 @@ definitions:
     - novelId
     - volumeNumber
     type: object
+  v1.CreateCommentRequest:
+    properties:
+      content:
+        maxLength: 500
+        minLength: 1
+        type: string
+    required:
+    - content
+    type: object
   v1.HealthResponse:
     properties:
       status:
@@ -222,6 +281,13 @@ definitions:
     required:
     - chapterNumber
     - volumeNumber
+    type: object
+  v1.UpdateUserRequest:
+    properties:
+      avatar:
+        type: string
+      name:
+        type: string
     type: object
   v1.UpsertHistoryRequest:
     properties:
@@ -326,6 +392,41 @@ paths:
       summary: 获取WebSocket状态
       tags:
       - websocket
+  /comments/{comment_id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除自己发表的评论
+      parameters:
+      - description: 评论ID
+        in: path
+        name: comment_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 评论不存在或不属于当前用户
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 删除评论
+      tags:
+      - comment
   /novels:
     get:
       consumes:
@@ -523,6 +624,120 @@ paths:
       summary: 获取章节内容
       tags:
       - novels
+  /novels/{id}/volumes/{volume}/chapters/{chapter}/comments:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定章节的评论列表
+      parameters:
+      - description: 小说ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 卷号
+        in: path
+        name: volume
+        required: true
+        type: integer
+      - description: 章节号
+        in: path
+        name: chapter
+        required: true
+        type: integer
+      - description: 页码，默认1
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量，默认20
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/definitions/models.CommentResponse'
+                        type: array
+                    type: object
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取章节评论
+      tags:
+      - comment
+    post:
+      consumes:
+      - application/json
+      description: 在指定章节发表评论
+      parameters:
+      - description: 小说ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 卷号
+        in: path
+        name: volume
+        required: true
+        type: integer
+      - description: 章节号
+        in: path
+        name: chapter
+        required: true
+        type: integer
+      - description: 评论内容
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/v1.CreateCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Comment'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 章节不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 发表评论
+      tags:
+      - comment
   /novels/latest:
     get:
       consumes:
@@ -939,6 +1154,68 @@ paths:
       summary: 检查是否已收藏
       tags:
       - favorites
+  /user/profile:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前设备用户的资料信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.User'
+              type: object
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取用户资料
+      tags:
+      - user
+    put:
+      consumes:
+      - application/json
+      description: 更新当前设备用户的昵称或头像
+      parameters:
+      - description: 用户资料
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/v1.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.User'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 更新用户资料
+      tags:
+      - user
   /user/reading/history:
     delete:
       consumes:
@@ -1200,4 +1477,45 @@ paths:
       summary: 更新阅读进度
       tags:
       - reading
+  /user/upload/avatar:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传用户头像图片文件
+      parameters:
+      - description: 头像图片文件(jpg,png,jpeg)
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: 设备ID
+        in: header
+        name: X-Device-ID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功，返回头像URL
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  additionalProperties:
+                    type: string
+                  type: object
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 上传用户头像
+      tags:
+      - user
 swagger: "2.0"

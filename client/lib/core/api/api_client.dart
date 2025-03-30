@@ -11,15 +11,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import '../models/novel.dart';
-import '../models/volume.dart';
-import '../models/chapter.dart';
-import '../models/chapter_info.dart';
-import '../models/bookmark.dart';
-import '../models/reading_progress.dart';
-import '../models/read_history.dart';
+import '../models/models.dart';
 import '../services/device_service.dart';
 import '../../config/app_config.dart';
+import 'dart:io';
+import 'package:http_parser/http_parser.dart';
 
 class ApiClient {
   final Dio _dio;
@@ -779,8 +775,7 @@ class ApiClient {
   }
 
   // 拼接小说图片路径
-  Future<String> getNovelImageUrl(
-      String novelId, String imagePath, int imageIndex) async {
+  Future<String> getNovelImageUrl(String novelId, String imagePath, int imageIndex) async {
     try {
       final novel = await getNovelDetail(novelId);
       final novelTitle = novel.title;
@@ -826,6 +821,273 @@ class ApiClient {
     } catch (e) {
       debugPrint('❌ 批量获取章节图片URL错误: $e');
       return [];
+    }
+  }
+
+  // 获取用户资料
+  Future<User> getUserProfile() async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/user/profile',
+      );
+
+      final data = response.data;
+      if (data == null || data['data'] == null) {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          error: '响应数据格式错误',
+        );
+      }
+
+      return User.fromJson(data['data'] as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('❌ 获取用户资料错误: $e');
+      rethrow;
+    }
+  }
+
+  // 更新用户资料
+  Future<User> updateUserProfile({
+    String? name,
+    String? avatar,
+  }) async {
+    try {
+      final response = await _dio.put<Map<String, dynamic>>(
+        '/user/profile',
+        data: {
+          if (name != null) 'name': name,
+          if (avatar != null) 'avatar': avatar,
+        },
+      );
+
+      final data = response.data;
+      if (data == null || data['data'] == null) {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          error: '响应数据格式错误',
+        );
+      }
+
+      return User.fromJson(data['data'] as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('❌ 更新用户资料错误: $e');
+      rethrow;
+    }
+  }
+
+  // 获取章节评论
+  Future<List<CommentResponse>> getChapterComments({
+    required String novelId,
+    required int volumeNumber,
+    required int chapterNumber,
+    int page = 1,
+    int size = 20,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/novels/$novelId/volumes/$volumeNumber/chapters/$chapterNumber/comments',
+        queryParameters: {
+          'page': page,
+          'size': size,
+        },
+      );
+
+      final data = response.data;
+      if (data == null || data['data'] == null) {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          error: '响应数据格式错误',
+        );
+      }
+
+      final pageData = data['data'] as Map<String, dynamic>;
+      if (pageData['data'] == null) {
+        return [];
+      }
+
+      final commentsList = pageData['data'] as List;
+      return commentsList
+          .map((json) => CommentResponse.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ 获取章节评论错误: $e');
+      rethrow;
+    }
+  }
+
+  // 发表评论
+  Future<Comment> createComment({
+    required String novelId,
+    required int volumeNumber,
+    required int chapterNumber,
+    required String content,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/novels/$novelId/volumes/$volumeNumber/chapters/$chapterNumber/comments',
+        data: {
+          'content': content,
+        },
+      );
+
+      final data = response.data;
+      if (data == null || data['data'] == null) {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          error: '响应数据格式错误',
+        );
+      }
+
+      return Comment.fromJson(data['data'] as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('❌ 发表评论错误: $e');
+      rethrow;
+    }
+  }
+
+  // 删除评论
+  Future<void> deleteComment(String commentId) async {
+    try {
+      await _dio.delete<Map<String, dynamic>>(
+        '/comments/$commentId',
+      );
+    } catch (e) {
+      debugPrint('❌ 删除评论错误: $e');
+      rethrow;
+    }
+  }
+
+  // 上传用户头像
+  Future<String> uploadAvatar(List<int> imageBytes, String fileName) async {
+    try {
+      // 检查文件类型
+      final fileExt = fileName.split('.').last.toLowerCase();
+      final mimeType = _getMimeTypeFromExtension(fileExt);
+      
+      if (mimeType == null) {
+        throw DioException(
+          requestOptions: RequestOptions(path: '/user/upload/avatar'),
+          error: '不支持的文件类型, 仅支持JPG和PNG格式',
+        );
+      }
+      
+      if (imageBytes.length > 10 * 1024 * 1024) {
+        throw DioException(
+          requestOptions: RequestOptions(path: '/user/upload/avatar'),
+          error: '文件大小超过限制(10MB)',
+        );
+      }
+      
+      final multipartFile = MultipartFile.fromBytes(
+        imageBytes,
+        filename: 'avatar.$fileExt',
+        contentType: MediaType.parse(mimeType),
+      );
+      
+      final formData = FormData.fromMap({
+        'file': multipartFile,
+      });
+      
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/user/upload/avatar',
+        data: formData,
+      );
+      
+      final data = response.data;
+      if (data == null || data['data'] == null) {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          error: '响应数据格式错误',
+        );
+      }
+      
+      return data['data']['url'] as String;
+    } catch (e) {
+      debugPrint('❌ 上传头像错误: $e');
+      rethrow;
+    }
+  }
+
+  // 从文件上传用户头像
+  Future<String> uploadAvatarFile(File file) async {
+    try {
+      // 检查文件类型
+      final fileExt = file.path.split('.').last.toLowerCase();
+      final mimeType = _getMimeTypeFromExtension(fileExt);
+      
+      if (mimeType == null) {
+        throw DioException(
+          requestOptions: RequestOptions(path: '/user/upload/avatar'),
+          error: '不支持的文件类型, 仅支持JPG和PNG格式',
+        );
+      }
+      
+      final fileSize = await file.length();
+      if (fileSize > 10 * 1024 * 1024) {
+        throw DioException(
+          requestOptions: RequestOptions(path: '/user/upload/avatar'),
+          error: '文件大小超过限制(10MB)',
+        );
+      }
+      
+      final fileBytes = await file.readAsBytes();
+      final multipartFile = MultipartFile.fromBytes(
+        fileBytes,
+        filename: 'avatar.$fileExt',
+        contentType: MediaType.parse(mimeType),
+      );
+      
+      final formData = FormData.fromMap({
+        'file': multipartFile,
+      });
+      
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/user/upload/avatar',
+        data: formData,
+      );
+      
+      final data = response.data;
+      if (data == null || data['data'] == null) {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          error: '响应数据格式错误',
+        );
+      }
+      
+      return data['data']['url'] as String;
+    } catch (e) {
+      debugPrint('❌ 上传头像文件错误: $e');
+      rethrow;
+    }
+  }
+  
+  // 获取文件的MIME类型
+  String? _getMimeTypeFromExtension(String extension) {
+    switch (extension.toLowerCase()) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      default:
+        return null;
+    }
+  }
+
+  // 上传头像并更新用户资料
+  Future<User> uploadAvatarAndUpdateProfile(File avatarFile, {String? name}) async {
+    try {
+      // 上传头像
+      final avatarUrl = await uploadAvatarFile(avatarFile);
+      
+      // 更新用户资料
+      return await updateUserProfile(
+        avatar: avatarUrl,
+        name: name,
+      );
+    } catch (e) {
+      debugPrint('❌ 上传头像并更新用户资料错误: $e');
+      rethrow;
     }
   }
 }

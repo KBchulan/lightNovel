@@ -1122,3 +1122,271 @@ func (s *NovelService) IsFavorite(ctx context.Context, deviceID string, novelID 
 	}
 	return false, err
 }
+
+// GetUserProfile 获取用户资料
+func (s *NovelService) GetUserProfile(ctx context.Context, deviceID string) (*models.User, error) {
+	cacheKey := cache.UserKey + deviceID
+
+	// 尝试从缓存获取
+	var user models.User
+	err := s.cache.Get(ctx, cacheKey, &user)
+	if err == nil && user.ID != "" {
+		return &user, nil
+	}
+
+	// 缓存未命中，从数据库获取
+	collection := s.db.GetCollection("users")
+	err = collection.FindOne(ctx, bson.M{"_id": deviceID}).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			// 用户不存在，创建默认用户
+			now := time.Now()
+			user = models.User{
+				ID:           deviceID,
+				Name:         "用户" + deviceID[0:6],
+				Avatar:       "/static/avatars/default.png",
+				CreatedAt:    now,
+				UpdatedAt:    now,
+				LastActiveAt: now,
+			}
+
+			_, err = collection.InsertOne(ctx, user)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	// 添加到缓存
+	s.cache.Set(ctx, cacheKey, user, s.cfg.Cache.User)
+
+	return &user, nil
+}
+
+// UpdateUserProfile 更新用户资料
+func (s *NovelService) UpdateUserProfile(ctx context.Context, deviceID string, name string, avatar string) (*models.User, error) {
+	collection := s.db.GetCollection("users")
+
+	update := bson.M{
+		"$set": bson.M{
+			"updatedAt":    time.Now(),
+			"lastActiveAt": time.Now(),
+		},
+	}
+
+	if name != "" {
+		update["$set"].(bson.M)["name"] = name
+	}
+
+	if avatar != "" {
+		update["$set"].(bson.M)["avatar"] = avatar
+	}
+
+	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
+	var updatedUser models.User
+
+	err := collection.FindOneAndUpdate(
+		ctx,
+		bson.M{"_id": deviceID},
+		update,
+		opts,
+	).Decode(&updatedUser)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 更新缓存
+	cacheKey := cache.UserKey + deviceID
+	s.cache.Set(ctx, cacheKey, updatedUser, s.cfg.Cache.User)
+
+	return &updatedUser, nil
+}
+
+// GetComments 获取章节评论
+func (s *NovelService) GetComments(ctx context.Context, novelID string, volumeNumber, chapterNumber, page, size int) ([]models.CommentResponse, int64, error) {
+	cacheKey := fmt.Sprintf("%s%s:%d:%d:%d:%d", cache.CommentListKey, novelID, volumeNumber, chapterNumber, page, size)
+
+	var commentResponses []models.CommentResponse
+	err := s.cache.Get(ctx, cacheKey, &commentResponses)
+	if err == nil && len(commentResponses) > 0 {
+		// 从缓存获取总数
+		var total int64
+		totalKey := fmt.Sprintf("%s%s:%d:%d:total", cache.CommentListKey, novelID, volumeNumber, chapterNumber)
+		s.cache.Get(ctx, totalKey, &total)
+		return commentResponses, total, nil
+	}
+
+	// 缓存未命中，查询数据库
+	collection := s.db.GetCollection("comments")
+
+	// 查询条件
+	filter := bson.M{
+		"novelId":       novelID,
+		"volumeNumber":  volumeNumber,
+		"chapterNumber": chapterNumber,
+	}
+
+	// 查询总数
+	total, err := collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 查询评论列表
+	opts := options.Find().
+		SetSort(bson.M{"createdAt": -1}).
+		SetSkip(int64((page - 1) * size)).
+		SetLimit(int64(size))
+
+	cursor, err := collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(ctx)
+
+	var comments []models.Comment
+	if err = cursor.All(ctx, &comments); err != nil {
+		return nil, 0, err
+	}
+
+	// 获取用户信息
+	userCollection := s.db.GetCollection("users")
+	commentResponses = make([]models.CommentResponse, 0, len(comments))
+
+	for _, comment := range comments {
+		var user models.User
+		err := userCollection.FindOne(ctx, bson.M{"_id": comment.DeviceID}).Decode(&user)
+		if err != nil {
+			user.Name = "已删除用户"
+			user.Avatar = "/static/avatars/default.png"
+		}
+
+		commentResponse := models.CommentResponse{
+			ID:            comment.ID,
+			UserID:        comment.DeviceID,
+			UserName:      user.Name,
+			UserAvatar:    user.Avatar,
+			NovelID:       comment.NovelID,
+			VolumeNumber:  comment.VolumeNumber,
+			ChapterNumber: comment.ChapterNumber,
+			Content:       comment.Content,
+			CreatedAt:     comment.CreatedAt,
+		}
+
+		commentResponses = append(commentResponses, commentResponse)
+	}
+
+	// 存入缓存
+	s.cache.Set(ctx, cacheKey, commentResponses, s.cfg.Cache.Comment)
+	totalKey := fmt.Sprintf("%s%s:%d:%d:total", cache.CommentListKey, novelID, volumeNumber, chapterNumber)
+	s.cache.Set(ctx, totalKey, total, s.cfg.Cache.Comment)
+
+	return commentResponses, total, nil
+}
+
+// CreateComment 创建评论
+func (s *NovelService) CreateComment(ctx context.Context, deviceID, novelID string, volumeNumber, chapterNumber int, content string) (*models.Comment, error) {
+	// 验证小说和章节是否存在
+	chapter, err := s.GetChapterByNumber(ctx, novelID, volumeNumber, chapterNumber)
+	if err != nil {
+		return nil, errors.NewError(errors.ErrChapterNotFound)
+	}
+
+	if chapter == nil {
+		return nil, errors.NewError(errors.ErrChapterNotFound)
+	}
+
+	// 创建评论
+	now := time.Now()
+	comment := models.Comment{
+		ID:            primitive.NewObjectID(),
+		DeviceID:      deviceID,
+		NovelID:       novelID,
+		VolumeNumber:  volumeNumber,
+		ChapterNumber: chapterNumber,
+		Content:       content,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+
+	// 插入数据库
+	collection := s.db.GetCollection("comments")
+	_, err = collection.InsertOne(ctx, comment)
+	if err != nil {
+		return nil, err
+	}
+
+	// 清除相关缓存
+	pattern := fmt.Sprintf("%s%s:%d:%d:*", cache.CommentListKey, novelID, volumeNumber, chapterNumber)
+	s.cache.DeleteByPattern(ctx, pattern)
+
+	// 更新用户最后活跃时间
+	s.updateUserLastActive(ctx, deviceID)
+
+	return &comment, nil
+}
+
+// DeleteComment 删除评论
+func (s *NovelService) DeleteComment(ctx context.Context, deviceID, commentID string) error {
+	id, err := primitive.ObjectIDFromHex(commentID)
+	if err != nil {
+		return errors.NewError(errors.ErrInvalidParameter)
+	}
+
+	// 查询评论
+	collection := s.db.GetCollection("comments")
+	var comment models.Comment
+
+	err = collection.FindOne(ctx, bson.M{
+		"_id":      id,
+		"deviceId": deviceID, // 确保只能删除自己的评论
+	}).Decode(&comment)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return errors.NewError(errors.ErrNotFound)
+		}
+		return err
+	}
+
+	// 删除评论
+	_, err = collection.DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		return err
+	}
+
+	// 清除相关缓存
+	pattern := fmt.Sprintf("%s%s:%d:%d:*", cache.CommentListKey, comment.NovelID, comment.VolumeNumber, comment.ChapterNumber)
+	s.cache.DeleteByPattern(ctx, pattern)
+
+	return nil
+}
+
+// 辅助方法
+
+// updateUserLastActive 更新用户最后活跃时间
+func (s *NovelService) updateUserLastActive(ctx context.Context, deviceID string) {
+	collection := s.db.GetCollection("users")
+
+	_, err := collection.UpdateOne(
+		ctx,
+		bson.M{"_id": deviceID},
+		bson.M{
+			"$set": bson.M{
+				"lastActiveAt": time.Now(),
+			},
+		},
+	)
+
+	if err != nil {
+		// 记录错误但不返回
+		log.Printf("Failed to update user last active time: %v", err)
+	}
+
+	// 更新缓存
+	cacheKey := cache.UserKey + deviceID
+	s.cache.Delete(ctx, cacheKey)
+}

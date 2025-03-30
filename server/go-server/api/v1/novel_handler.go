@@ -12,9 +12,11 @@ package v1
 
 import (
 	"context"
+	"fmt"
 	"lightnovel/internal/service"
 	"lightnovel/pkg/errors"
 	"lightnovel/pkg/response"
+	"lightnovel/pkg/utils"
 	"log"
 	"strconv"
 	"time"
@@ -786,4 +788,245 @@ func (h *NovelHandler) UpsertReadHistory(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{"message": "更新成功"})
+}
+
+// 用户相关请求结构
+
+// UpdateUserRequest 更新用户请求
+type UpdateUserRequest struct {
+	Name   string `json:"name"`
+	Avatar string `json:"avatar"`
+}
+
+// 评论相关请求结构
+
+// CreateCommentRequest 创建评论请求
+type CreateCommentRequest struct {
+	Content string `json:"content" binding:"required,min=1,max=500"`
+}
+
+// GetUserProfile 获取用户资料
+// @Summary 获取用户资料
+// @Description 获取当前设备用户的资料信息
+// @Tags user
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=models.User} "成功"
+// @Failure 500 {object} response.Response "服务器错误"
+// @Router /user/profile [get]
+func (h *NovelHandler) GetUserProfile(c *gin.Context) {
+	deviceID := c.GetString("deviceID")
+
+	user, err := h.novelService.GetUserProfile(c.Request.Context(), deviceID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, user)
+}
+
+// UpdateUserProfile 更新用户资料
+// @Summary 更新用户资料
+// @Description 更新当前设备用户的昵称或头像
+// @Tags user
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param body body UpdateUserRequest true "用户资料"
+// @Success 200 {object} response.Response{data=models.User} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 500 {object} response.Response "服务器错误"
+// @Router /user/profile [put]
+func (h *NovelHandler) UpdateUserProfile(c *gin.Context) {
+	deviceID := c.GetString("deviceID")
+
+	var req UpdateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, errors.NewError(errors.ErrBadRequest))
+		return
+	}
+
+	user, err := h.novelService.UpdateUserProfile(c.Request.Context(), deviceID, req.Name, req.Avatar)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, user)
+}
+
+// GetComments 获取章节评论
+// @Summary 获取章节评论
+// @Description 获取指定章节的评论列表
+// @Tags comment
+// @Accept json
+// @Produce json
+// @Param id path string true "小说ID"
+// @Param volume path int true "卷号"
+// @Param chapter path int true "章节号"
+// @Param page query int false "页码，默认1"
+// @Param size query int false "每页数量，默认20"
+// @Success 200 {object} response.Response{data=response.PageResponse{data=[]models.CommentResponse}} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 500 {object} response.Response "服务器错误"
+// @Router /novels/{id}/volumes/{volume}/chapters/{chapter}/comments [get]
+func (h *NovelHandler) GetComments(c *gin.Context) {
+	novelID := c.Param("id")
+	volumeNumber, err := strconv.Atoi(c.Param("volume"))
+	if err != nil {
+		response.Error(c, errors.NewError(errors.ErrBadRequest))
+		return
+	}
+
+	chapterNumber, err := strconv.Atoi(c.Param("chapter"))
+	if err != nil {
+		response.Error(c, errors.NewError(errors.ErrBadRequest))
+		return
+	}
+
+	page := utils.GetIntQuery(c, "page", 1)
+	size := utils.GetIntQuery(c, "size", 20)
+
+	comments, total, err := h.novelService.GetComments(c.Request.Context(), novelID, volumeNumber, chapterNumber, page, size)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.SuccessWithPage(c, total, page, size, comments)
+}
+
+// CreateComment 发表评论
+// @Summary 发表评论
+// @Description 在指定章节发表评论
+// @Tags comment
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "小说ID"
+// @Param volume path int true "卷号"
+// @Param chapter path int true "章节号"
+// @Param body body CreateCommentRequest true "评论内容"
+// @Success 200 {object} response.Response{data=models.Comment} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 404 {object} response.Response "章节不存在"
+// @Failure 500 {object} response.Response "服务器错误"
+// @Router /novels/{id}/volumes/{volume}/chapters/{chapter}/comments [post]
+func (h *NovelHandler) CreateComment(c *gin.Context) {
+	deviceID := c.GetString("deviceID")
+	novelID := c.Param("id")
+	volumeNumber, err := strconv.Atoi(c.Param("volume"))
+	if err != nil {
+		response.Error(c, errors.NewError(errors.ErrBadRequest))
+		return
+	}
+
+	chapterNumber, err := strconv.Atoi(c.Param("chapter"))
+	if err != nil {
+		response.Error(c, errors.NewError(errors.ErrBadRequest))
+		return
+	}
+
+	var req CreateCommentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, errors.NewError(errors.ErrBadRequest))
+		return
+	}
+
+	comment, err := h.novelService.CreateComment(c.Request.Context(), deviceID, novelID, volumeNumber, chapterNumber, req.Content)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, comment)
+}
+
+// DeleteComment 删除评论
+// @Summary 删除评论
+// @Description 删除自己发表的评论
+// @Tags comment
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param comment_id path string true "评论ID"
+// @Success 200 {object} response.Response "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 404 {object} response.Response "评论不存在或不属于当前用户"
+// @Failure 500 {object} response.Response "服务器错误"
+// @Router /comments/{comment_id} [delete]
+func (h *NovelHandler) DeleteComment(c *gin.Context) {
+	deviceID := c.GetString("deviceID")
+	commentID := c.Param("comment_id")
+
+	err := h.novelService.DeleteComment(c.Request.Context(), deviceID, commentID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, nil)
+}
+
+// @Summary 上传用户头像
+// @Description 上传用户头像图片文件
+// @Tags user
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "头像图片文件(jpg,png,jpeg)"
+// @Param X-Device-ID header string true "设备ID"
+// @Success 200 {object} response.Response{data=map[string]string} "成功，返回头像URL"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /user/upload/avatar [post]
+func (h *NovelHandler) UploadAvatar(c *gin.Context) {
+	// 获取设备ID
+	deviceID := c.GetHeader("X-Device-ID")
+	if deviceID == "" {
+		response.Error(c, errors.NewErrorWithMessage(errors.ErrInvalidParameter, "缺少设备ID"))
+		return
+	}
+
+	// 接收文件
+	file, err := c.FormFile("file")
+	if err != nil {
+		response.Error(c, errors.NewErrorWithMessage(errors.ErrInvalidParameter, "上传文件错误: "+err.Error()))
+		return
+	}
+
+	// 验证文件类型
+	contentType := file.Header.Get("Content-Type")
+	if contentType != "image/jpeg" && contentType != "image/png" && contentType != "image/jpg" {
+		response.Error(c, errors.NewErrorWithMessage(errors.ErrInvalidParameter, "不支持的文件类型"))
+		return
+	}
+
+	// 验证文件大小（限制为10MB）
+	if file.Size > 10*1024*1024 {
+		response.Error(c, errors.NewErrorWithMessage(errors.ErrInvalidParameter, "文件大小超过限制(10MB)"))
+		return
+	}
+
+	// 生成文件名：设备ID_时间戳.扩展名
+	fileExt := ".jpg"
+	if contentType == "image/png" {
+		fileExt = ".png"
+	}
+	fileName := fmt.Sprintf("%s_%d%s", deviceID, time.Now().Unix(), fileExt)
+	filePath := "./static/avatars/" + fileName
+
+	// 保存文件
+	if err := c.SaveUploadedFile(file, filePath); err != nil {
+		response.Error(c, errors.NewErrorWithMessage(errors.ErrInternalServer, "保存文件失败: "+err.Error()))
+		return
+	}
+
+	// 返回文件的URL路径
+	avatarURL := "/static/avatars/" + fileName
+
+	response.Success(c, map[string]string{
+		"url": avatarURL,
+	})
 }

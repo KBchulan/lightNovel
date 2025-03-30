@@ -34,6 +34,8 @@ cache:
   favorite: 1h
   readHistory: 1h
   readProgress: 1h
+  user: 24h
+  comment: 30m
 
 rate:
   limit: 1000000

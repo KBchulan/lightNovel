@@ -76,7 +76,7 @@ func main() {
 	r.Use(middleware.Logger())
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.CORS())
-	r.Use(middleware.DeviceMiddleware(novelService)) // 添加设备中间件到全局
+	r.Use(middleware.DeviceMiddleware(novelService))
 
 	// 创建限流器
 	rateLimiter := middleware.NewRateLimiter(
@@ -89,6 +89,7 @@ func main() {
 
 	// 静态文件服务
 	r.Static("/novels", "../novels")
+	r.Static("/static/avatars", "./static/avatars")
 
 	// API文档
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -120,6 +121,10 @@ func main() {
 			novels.GET("/:id/volumes", novelHandler.GetVolumesByNovelID)
 			novels.GET("/:id/volumes/:volume/chapters", novelHandler.GetChaptersByVolumeID)
 			novels.GET("/:id/volumes/:volume/chapters/:chapter", novelHandler.GetChapterByNumber)
+
+			// 章节评论路由
+			novels.GET("/:id/volumes/:volume/chapters/:chapter/comments", novelHandler.GetComments)
+			novels.POST("/:id/volumes/:volume/chapters/:chapter/comments", novelHandler.CreateComment)
 		}
 
 		// 用户相关路由组
@@ -151,6 +156,18 @@ func main() {
 				reading.PUT("/progress/:novel_id", novelHandler.UpdateReadProgress)
 				reading.DELETE("/progress/:novel_id", novelHandler.DeleteReadProgress)
 			}
+
+			// 用户资料路由
+			user.GET("/profile", novelHandler.GetUserProfile)
+			user.PUT("/profile", novelHandler.UpdateUserProfile)
+
+			user.POST("/upload/avatar", novelHandler.UploadAvatar)
+		}
+
+		// 评论相关路由
+		comments := api.Group("/comments")
+		{
+			comments.DELETE("/:comment_id", novelHandler.DeleteComment)
 		}
 	}
 

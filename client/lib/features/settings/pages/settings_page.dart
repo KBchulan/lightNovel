@@ -11,8 +11,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+
 import '../../../core/theme/app_theme.dart';
 import '../../../config/app_config.dart';
+import '../../../core/providers/api_provider.dart';
+import '../../../core/models/models.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -26,6 +31,104 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _isThemeExpanded = false;
   bool _isAboutExpanded = false;
   bool _isAppExpanded = false;
+  bool _isUserExpanded = false;
+  
+  // 用户信息
+  User? _user;
+  bool _isLoading = true;
+  
+  @override
+  void initState() {
+    super.initState();
+    // 加载用户资料
+    _loadUserProfile();
+  }
+  
+  // 加载用户资料
+  Future<void> _loadUserProfile() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final user = await apiClient.getUserProfile();
+      setState(() {
+        _user = user;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('加载用户资料失败: $e')),
+        );
+      }
+    }
+  }
+  
+  // 选择并上传头像
+  Future<void> _pickAndUploadAvatar() async {
+    final ImagePicker picker = ImagePicker();
+    // 打开图片选择器
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800, // 限制图片宽度
+      maxHeight: 800, // 限制图片高度
+      imageQuality: 85, // 压缩质量
+    );
+    
+    if (image != null && mounted) {
+      try {
+        // 显示加载对话框
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return const AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('正在上传头像...')
+                ],
+              ),
+            );
+          },
+        );
+        
+        final apiClient = ref.read(apiClientProvider);
+        final updatedUser = await apiClient.uploadAvatarAndUpdateProfile(
+          File(image.path),
+        );
+        
+        if (mounted) {
+          // 关闭对话框
+          Navigator.of(context).pop();
+          
+          setState(() {
+            _user = updatedUser;
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('头像更新成功')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          // 关闭对话框
+          Navigator.of(context).pop();
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('头像更新失败: $e')),
+          );
+        }
+      }
+    }
+  }
 
   // 打开URL链接
   Future<void> _launchUrl(String url) async {
@@ -105,6 +208,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       body: ListView(
         children: [
           const SizedBox(height: 8),
+          
+          // 用户信息
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            elevation: 2,
+            shadowColor: theme.colorScheme.shadow.withAlpha(26),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: _buildUserSection(theme),
+          ),
+          
           // 主题设置
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -163,6 +278,127 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ],
       ),
     );
+  }
+  
+  // 用户信息区域
+  Widget _buildUserSection(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          theme,
+          icon: Icons.account_circle,
+          title: '个人资料',
+          isExpanded: _isUserExpanded,
+          onTap: () {
+            setState(() {
+              _isUserExpanded = !_isUserExpanded;
+            });
+          },
+        ),
+        if (_isUserExpanded) ...[
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.all(20.0),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_user != null)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  // 头像
+                  GestureDetector(
+                    onTap: _pickAndUploadAvatar,
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundImage: NetworkImage(
+                            _user!.avatar.startsWith('http') 
+                            ? _user!.avatar 
+                            : '${AppConfig.staticUrl}${_user!.avatar}',
+                          ),
+                          backgroundColor: theme.colorScheme.primary.withAlpha(26),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.edit,
+                            size: 16,
+                            color: theme.colorScheme.onPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // 用户名
+                  Text(
+                    _user!.name,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // 加入时间
+                  Text(
+                    '加入时间: ${_formatDate(_user!.createdAt)}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withAlpha(153),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  
+                  // 最后活跃时间
+                  Text(
+                    '最后活跃: ${_formatDate(_user!.lastActiveAt)}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withAlpha(153),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // 修改用户名按钮
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      // TODO: 实现修改用户名功能
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('修改用户名功能开发中')),
+                      );
+                    },
+                    icon: const Icon(Icons.edit),
+                    label: const Text('修改用户名'),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            const Padding(
+              padding: EdgeInsets.all(20.0),
+              child: Center(child: Text('获取用户资料失败')),
+            ),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+  
+  // 格式化日期
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   // 主题设置区域

@@ -33,6 +33,8 @@ const (
 	FavoriteKey      = "user:favorite:"  // 用户收藏
 	ReadHistoryKey   = "read:history:"   // 阅读历史
 	ReadProgressKey  = "read:progress:"  // 阅读进度
+	UserKey          = "user:info:"      // 用户信息
+	CommentListKey   = "comment:list:"   // 评论列表
 )
 
 // RedisCache Redis缓存服务

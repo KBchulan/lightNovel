@@ -112,12 +112,43 @@ type ReadProgress struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	DeviceID      string             `bson:"deviceId" json:"deviceId"`
 	NovelID       string             `bson:"novelId" json:"novelId"`
-	VolumeNumber  int                `bson:"volumeNumber" json:"volumeNumber"`   // 当前卷号
-	ChapterNumber int                `bson:"chapterNumber" json:"chapterNumber"` // 当前章节号
-	Position      int                `bson:"position" json:"position"`           // 章节内位置
+	VolumeNumber  int                `bson:"volumeNumber" json:"volumeNumber"`
+	ChapterNumber int                `bson:"chapterNumber" json:"chapterNumber"`
+	Position      int                `bson:"position" json:"position"`
 	UpdatedAt     time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
 
 // User 用户模型
+type User struct {
+	ID           string    `bson:"_id" json:"id"`
+	Name         string    `bson:"name" json:"name"`
+	Avatar       string    `bson:"avatar" json:"avatar"`
+	CreatedAt    time.Time `bson:"createdAt" json:"createdAt"`
+	UpdatedAt    time.Time `bson:"updatedAt" json:"updatedAt"`
+	LastActiveAt time.Time `bson:"lastActiveAt" json:"lastActiveAt"`
+}
 
 // Comment 评论模型
+type Comment struct {
+	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	DeviceID      string             `bson:"deviceId" json:"deviceId"`
+	NovelID       string             `bson:"novelId" json:"novelId"`
+	VolumeNumber  int                `bson:"volumeNumber" json:"volumeNumber"`
+	ChapterNumber int                `bson:"chapterNumber" json:"chapterNumber"`
+	Content       string             `bson:"content" json:"content"`
+	CreatedAt     time.Time          `bson:"createdAt" json:"createdAt"`
+	UpdatedAt     time.Time          `bson:"updatedAt" json:"updatedAt"`
+}
+
+// CommentResponse 评论响应类型(包含用户信息)
+type CommentResponse struct {
+	ID            primitive.ObjectID `json:"id"`
+	UserID        string             `json:"userId"`
+	UserName      string             `json:"userName"`
+	UserAvatar    string             `json:"userAvatar"`
+	NovelID       string             `json:"novelId"`
+	VolumeNumber  int                `json:"volumeNumber"`
+	ChapterNumber int                `json:"chapterNumber"`
+	Content       string             `json:"content"`
+	CreatedAt     time.Time          `json:"createdAt"`
+}
