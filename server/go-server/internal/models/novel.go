@@ -25,8 +25,8 @@ type Novel struct {
 	Cover       string             `bson:"cover" json:"cover"`
 	VolumeCount int                `bson:"volumeCount" json:"volumeCount"`
 	Tags        []string           `bson:"tags" json:"tags"`
-	Status      string             `bson:"status" json:"status"`       // 连载中、已完结
-	ReadCount   int64              `bson:"readCount" json:"readCount"` // 阅读量
+	Status      string             `bson:"status" json:"status"`
+	ReadCount   int64              `bson:"readCount" json:"readCount"`
 	CreatedAt   time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt   time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
@@ -117,5 +117,7 @@ type ReadProgress struct {
 	Position      int                `bson:"position" json:"position"`           // 章节内位置
 	UpdatedAt     time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
+
+// User 用户模型
 
 // Comment 评论模型

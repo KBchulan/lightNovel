@@ -105,6 +105,13 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     }
 
     _setSystemUIMode(true);
+    
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _setSystemUIMode(true);
+      }
+    });
+    
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
     // 确保初始状态下控制面板不显示
@@ -316,6 +323,9 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       );
 
       if (mounted) {
+        // 跳转前确保系统UI保持隐藏状态
+        _setSystemUIMode(true);
+        
         Navigator.pushReplacement(
           context,
           SharedAxisPageRoute(
@@ -422,6 +432,12 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     ).whenComplete(() {
       if (!ref.read(readingNotifierProvider).showControls) {
         _setSystemUIMode(true);
+        
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted && !ref.read(readingNotifierProvider).showControls) {
+            _setSystemUIMode(true);
+          }
+        });
       }
     });
   }
@@ -435,6 +451,12 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       _controlPanelController.reverse().whenComplete(() {
         if (mounted) {
           _setSystemUIMode(true);
+          
+          Future.delayed(const Duration(milliseconds: 200), () {
+            if (mounted && !ref.read(readingNotifierProvider).showControls) {
+              _setSystemUIMode(true);
+            }
+          });
         }
       });
     }
@@ -464,6 +486,12 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
 
     // 获取背景色
     final backgroundColor = readingState.appearanceSettings.backgroundColor;
+
+    // 确保系统UI保持隐藏状态，除非控制面板正在显示
+    if (!readingState.showControls) {
+      // 使用Future.microtask确保在UI绘制完成后调用
+      Future.microtask(() => _setSystemUIMode(true));
+    }
 
     return PopScope(
       canPop: true,
@@ -596,14 +624,13 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
   // 构建底部状态栏
   Widget _buildStatusBar(ReadingState state, Color backgroundColor, Color textColor) {
     final displaySettings = state.displaySettings;
+    
+    // 使用与主文本相同的颜色，但透明度为70%
+    final statusTextColor = textColor.withAlpha(178);
+    
     final textStyle = TextStyle(
       fontSize: 12,
-      color: Color.fromARGB(
-        (textColor.a * 0.7 * 255).round(),
-        textColor.r.toInt() * 255,
-        textColor.g.toInt() * 255,
-        textColor.b.toInt() * 255,
-      ),
+      color: statusTextColor,
     );
     
     return Container(
@@ -648,7 +675,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
               : const SizedBox(),
           ),
           
-          // 右侧 - 电池和时间
+          // 右侧
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -658,12 +685,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                     Icon(
                       _getBatteryIcon(),
                       size: 14,
-                      color: Color.fromARGB(
-                        (textColor.a * 0.7 * 255).round(),
-                        textColor.r.toInt() * 255,
-                        textColor.g.toInt() * 255,
-                        textColor.b.toInt() * 255,
-                      ),
+                      color: statusTextColor,
                     ),
                     const SizedBox(width: 4),
                     Text(

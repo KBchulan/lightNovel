@@ -35,7 +35,7 @@ class DisplaySettings {
   const DisplaySettings({
     this.showBattery = true,
     this.showTime = true,
-    this.showChapterTitle = true,
+    this.showChapterTitle = false,
   });
 
   DisplaySettings copyWith({
@@ -62,7 +62,7 @@ class DisplaySettings {
     return DisplaySettings(
       showBattery: json['showBattery'] ?? true,
       showTime: json['showTime'] ?? true,
-      showChapterTitle: json['showChapterTitle'] ?? true,
+      showChapterTitle: json['showChapterTitle'] ?? false,
     );
   }
 
