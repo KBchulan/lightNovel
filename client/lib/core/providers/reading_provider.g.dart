@@ -6,7 +6,7 @@ part of 'reading_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$readingNotifierHash() => r'c8335b79716a61a806fc05167e5958e16f22e452';
+String _$readingNotifierHash() => r'6699e7c60333ae6094dba6174971bffefc4938b2';
 
 /// See also [ReadingNotifier].
 @ProviderFor(ReadingNotifier)

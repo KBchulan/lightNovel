@@ -11,6 +11,7 @@
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../providers/reading_provider.dart';
 
 part 'app_theme.g.dart';
 
@@ -21,10 +22,20 @@ class ThemeNotifier extends _$ThemeNotifier {
 
   void setThemeMode(ThemeMode mode) {
     state = mode;
+
+    // 通知阅读提供程序主题已更改
+    Future.microtask(() {
+      if (ref.exists(readingNotifierProvider)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(readingNotifierProvider.notifier).reloadSettings();
+        });
+      }
+    });
   }
 
   void toggleThemeMode() {
-    state = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    final newMode = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    setThemeMode(newMode);
   }
 }
 

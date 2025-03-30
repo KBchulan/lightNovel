@@ -13,6 +13,7 @@ class NovelTags {
   static const yuri = '百合';
   static const youth = '青春';
   static const campus = '校园';
+  static const travel = '旅行';
   static const romance = '恋爱';
   static const femaleView = '女性视角';
 
@@ -21,6 +22,7 @@ class NovelTags {
     yuri,
     youth,
     campus,
+    travel,
     romance,
     femaleView,
   ];

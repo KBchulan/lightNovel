@@ -26,6 +26,7 @@ import '../widgets/chapter_list_sheet.dart';
 import '../widgets/bookmark_sheet.dart';
 import '../widgets/comment_sheet.dart';
 import '../widgets/settings_sheet.dart';
+import 'package:battery_plus/battery_plus.dart';
 
 class ReadingPage extends ConsumerStatefulWidget {
   final Chapter chapter;
@@ -61,6 +62,11 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
   // 当前章节的图片URL
   List<String> _chapterImageUrls = [];
   bool _isLoadingImages = false;
+  
+  // 电池相关
+  final Battery _battery = Battery();
+  int _batteryLevel = 100;
+  BatteryState _batteryState = BatteryState.full;
 
   @override
   void initState() {
@@ -106,6 +112,9 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       ref.read(readingNotifierProvider.notifier).setShowControls(false);
       _controlPanelController.value = 0;
     });
+
+    // 电池状态初始化
+    _initBattery();
 
     // 滚动监听
     // _scrollController.addListener(_scrollListener);
@@ -400,7 +409,6 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
 
   // 显示底部弹窗的通用方法
   void _showBottomSheet(Widget sheet) {
-    // 先显示系统UI
     _setSystemUIMode(false);
 
     showModalBottomSheet(
@@ -412,7 +420,6 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       transitionAnimationController: _bottomSheetController,
       builder: (context) => sheet,
     ).whenComplete(() {
-      // 如果控制面板已经隐藏，则恢复隐藏系统UI
       if (!ref.read(readingNotifierProvider).showControls) {
         _setSystemUIMode(true);
       }
@@ -455,11 +462,13 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
         (themeMode == ThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
 
+    // 获取背景色
+    final backgroundColor = readingState.appearanceSettings.backgroundColor;
+
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) {
-          // 如果是从书签进入的，不保存阅读进度
           if (!widget.isFromBookmark) {
             await _saveReadingProgress();
           } else {
@@ -474,7 +483,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
         }
       },
       child: Scaffold(
-        backgroundColor: isDark ? Colors.black : Colors.white,
+        backgroundColor: backgroundColor,
         body: Stack(
           children: [
             // 阅读内容
@@ -515,30 +524,171 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       return const Center(child: CircularProgressIndicator());
     }
 
+    // 获取设置
+    final layoutSettings = state.layoutSettings;
+    final appearanceSettings = state.appearanceSettings;
+    
+    // 确定背景和文本颜色
+    final backgroundColor = appearanceSettings.backgroundColor;
+    final textColor = appearanceSettings.textColor;
+
     return GestureDetector(
       onTap: () => _toggleControls(!state.showControls),
-      child: SingleChildScrollView(
-        controller: _scrollController,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        color: backgroundColor,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 16),
-            // 判断章节是否有图片
-            if (widget.chapter.hasImages && widget.chapter.imageCount > 0)
-              _buildChapterImages()
-            else
-              Text(
-                _formatContent(widget.chapter.content),
-                style: TextStyle(
-                  fontSize: 16,
-                  height: 1.5,
-                  color: isDark ? Colors.white : Colors.black87,
+            Expanded(
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                padding: EdgeInsets.symmetric(
+                  horizontal: layoutSettings.leftRightPadding,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: layoutSettings.topBottomPadding),
+                    // 判断章节是否有图片
+                    if (widget.chapter.hasImages && widget.chapter.imageCount > 0)
+                      _buildChapterImages()
+                    else
+                      Text(
+                        _formatContent(widget.chapter.content),
+                        style: TextStyle(
+                          fontSize: layoutSettings.fontSize,
+                          height: layoutSettings.lineHeight,
+                          fontWeight: layoutSettings.fontWeight,
+                          color: textColor,
+                        ),
+                      ),
+                    SizedBox(height: layoutSettings.topBottomPadding),
+                  ],
                 ),
               ),
-            const SizedBox(height: 16),
+            ),
+            
+            // 底部状态栏
+            if (state.displaySettings.showBattery || 
+                state.displaySettings.showTime || 
+                state.displaySettings.showChapterTitle)
+              _buildStatusBar(state, backgroundColor, textColor),
           ],
         ),
+      ),
+    );
+  }
+  
+  // 获取电池图标
+  IconData _getBatteryIcon() {
+    if (_batteryState == BatteryState.charging) {
+      return Icons.battery_charging_full;
+    }
+    
+    if (_batteryLevel >= 95) return Icons.battery_full;
+    if (_batteryLevel >= 80) return Icons.battery_6_bar;
+    if (_batteryLevel >= 60) return Icons.battery_5_bar;
+    if (_batteryLevel >= 40) return Icons.battery_4_bar;
+    if (_batteryLevel >= 20) return Icons.battery_3_bar;
+    if (_batteryLevel >= 10) return Icons.battery_2_bar;
+    return Icons.battery_1_bar;
+  }
+
+  // 构建底部状态栏
+  Widget _buildStatusBar(ReadingState state, Color backgroundColor, Color textColor) {
+    final displaySettings = state.displaySettings;
+    final textStyle = TextStyle(
+      fontSize: 12,
+      color: Color.fromARGB(
+        (textColor.a * 0.7 * 255).round(),
+        textColor.r.toInt() * 255,
+        textColor.g.toInt() * 255,
+        textColor.b.toInt() * 255,
+      ),
+    );
+    
+    return Container(
+      height: 24,
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      color: backgroundColor,
+      child: Row(
+        children: [
+          // 章节名称
+          Expanded(
+            child: displaySettings.showChapterTitle 
+              ? Consumer(
+                  builder: (context, ref, _) {
+                    final params = ChapterTitleParams(
+                      novelId: widget.novelId,
+                      volumeNumber: widget.chapter.volumeNumber,
+                      chapterNumber: widget.chapter.chapterNumber,
+                    );
+                    
+                    final titleAsync = ref.watch(chapterTitleProvider(params));
+                    
+                    return titleAsync.when(
+                      data: (title) => Text(
+                        '第${widget.chapter.volumeNumber}卷 $title',
+                        style: textStyle.copyWith(fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      loading: () => Text(
+                        '第${widget.chapter.volumeNumber}卷 第${widget.chapter.chapterNumber}话',
+                        style: textStyle.copyWith(fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      error: (_, __) => Text(
+                        '第${widget.chapter.volumeNumber}卷 第${widget.chapter.chapterNumber}话',
+                        style: textStyle.copyWith(fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  },
+                )
+              : const SizedBox(),
+          ),
+          
+          // 右侧 - 电池和时间
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (displaySettings.showBattery) ...[
+                Row(
+                  children: [
+                    Icon(
+                      _getBatteryIcon(),
+                      size: 14,
+                      color: Color.fromARGB(
+                        (textColor.a * 0.7 * 255).round(),
+                        textColor.r.toInt() * 255,
+                        textColor.g.toInt() * 255,
+                        textColor.b.toInt() * 255,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$_batteryLevel%',
+                      style: textStyle,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ),
+              ],
+              
+              if (displaySettings.showTime)
+                StreamBuilder(
+                  stream: Stream.periodic(const Duration(seconds: 1)),
+                  builder: (context, snapshot) {
+                    final now = DateTime.now();
+                    return Text(
+                      '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
+                      style: textStyle,
+                    );
+                  },
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -547,6 +697,16 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
   Widget _buildChapterImages() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final readingState = ref.read(readingNotifierProvider);
+    
+    // 获取设置
+    final layoutSettings = readingState.layoutSettings;
+    final appearanceSettings = readingState.appearanceSettings;
+    
+    // 确定文本颜色
+    final textColor = appearanceSettings.useCustomColors
+        ? appearanceSettings.textColor
+        : isDark ? Colors.white : Colors.black87;
 
     if (_isLoadingImages) {
       return Container(
@@ -582,10 +742,11 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       return Text(
         _formatContent(widget.chapter.content),
         style: TextStyle(
-          fontSize: 16,
-          height: 1.6,
+          fontSize: layoutSettings.fontSize,
+          height: layoutSettings.lineHeight,
           letterSpacing: 0.3,
-          color: theme.colorScheme.onSurface,
+          fontWeight: layoutSettings.fontWeight,
+          color: textColor,
         ),
       );
     }
@@ -600,15 +761,16 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
             child: Text(
               _formatContent(widget.chapter.content),
               style: TextStyle(
-                fontSize: 16,
-                height: 1.6,
+                fontSize: layoutSettings.fontSize,
+                height: layoutSettings.lineHeight,
                 letterSpacing: 0.3,
-                color: theme.colorScheme.onSurface,
+                fontWeight: layoutSettings.fontWeight,
+                color: textColor,
               ),
             ),
           ),
 
-        // 显示所有图片 - 美化版本
+        // 显示所有图片
         ..._chapterImageUrls.map((imageUrl) {
           return Container(
             margin: const EdgeInsets.only(bottom: 28.0),
@@ -959,5 +1121,55 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
         ),
       ),
     );
+  }
+
+  // 初始化电池
+  Future<void> _initBattery() async {
+    try {
+      // 获取初始电量
+      final batteryLevel = await _battery.batteryLevel;
+      final batteryState = await _battery.batteryState;
+      
+      if (mounted) {
+        setState(() {
+          _batteryLevel = batteryLevel;
+          _batteryState = batteryState;
+        });
+      }
+      
+      // 监听电池状态变化
+      _battery.onBatteryStateChanged.listen((state) {
+        if (mounted) {
+          setState(() {
+            _batteryState = state;
+          });
+          // 电池状态变化时重新获取电量
+          _updateBatteryLevel();
+        }
+      });
+      
+      // 每分钟更新一次电量
+      Future.delayed(const Duration(minutes: 1), () {
+        if (mounted) {
+          _updateBatteryLevel();
+        }
+      });
+    } catch (e) {
+      debugPrint('获取电池信息失败: $e');
+    }
+  }
+  
+  // 更新电池电量
+  Future<void> _updateBatteryLevel() async {
+    try {
+      final batteryLevel = await _battery.batteryLevel;
+      if (mounted) {
+        setState(() {
+          _batteryLevel = batteryLevel;
+        });
+      }
+    } catch (e) {
+      debugPrint('更新电池电量失败: $e');
+    }
   }
 }

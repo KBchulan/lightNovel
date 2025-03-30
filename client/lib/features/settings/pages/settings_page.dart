@@ -249,7 +249,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   onTap: () {
                     // 显示检查更新的提示
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('当前已是最新版本')),
+                      SnackBar(
+                        content: const Text('当前已是最新版本', style: TextStyle(fontSize: 15)),
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: theme.colorScheme.primary,
+                        elevation: 6,
+                        margin: const EdgeInsets.all(12),
+                        action: SnackBarAction(
+                          label: '确定',
+                          textColor: Colors.black,
+                          onPressed: () {},
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -273,7 +286,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             onPressed: () {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('缓存已清除')),
+                                SnackBar(
+                                  content: const Text('缓存已清除', style: TextStyle(fontSize: 15)),
+                                  duration: const Duration(seconds: 1),
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  backgroundColor: theme.colorScheme.primary,
+                                  elevation: 6,
+                                  margin: const EdgeInsets.all(12),
+                                  action: SnackBarAction(
+                                    label: '确定',
+                                    textColor: Colors.black,
+                                    onPressed: () {},
+                                  ),
+                                ),
                               );
                             },
                             child: const Text('确认'),
