@@ -54,10 +54,10 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
   bool _isLoading = false;
   bool _isChapterLoading = false;
   bool _isTransitioning = false;
-  
+
   // 图片URL缓存，避免滚动时重新获取
   static final Map<String, List<String>> _imageUrlsCache = {};
-  
+
   // 当前章节的图片URL
   List<String> _chapterImageUrls = [];
   bool _isLoadingImages = false;
@@ -78,7 +78,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       parent: _controlPanelController,
       curve: Curves.easeInOut,
     );
-    
+
     // 如果有传入初始位置，则直接跳转
     if (widget.initialPosition != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -89,10 +89,10 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     } else {
       _loadReadingProgress();
     }
-    
+
     // 预加载小说卷和章节数据，确保目录可用
     _preloadNovelData();
-    
+
     // 预加载图片URL
     if (widget.chapter.hasImages && widget.chapter.imageCount > 0) {
       _preloadChapterImages();
@@ -181,7 +181,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
   // 预加载章节图片URL
   Future<void> _preloadChapterImages() async {
     final cacheKey = '${widget.chapter.id}_${widget.chapter.novelId}';
-    
+
     // 如果缓存中已有数据，直接使用
     if (_imageUrlsCache.containsKey(cacheKey)) {
       setState(() {
@@ -190,13 +190,14 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       });
       return;
     }
-    
+
     // 否则加载新数据
     setState(() => _isLoadingImages = true);
     try {
-      final urls = await ref.read(apiClientProvider).getChapterImageUrls(widget.chapter);
+      final urls =
+          await ref.read(apiClientProvider).getChapterImageUrls(widget.chapter);
       _imageUrlsCache[cacheKey] = urls;
-      
+
       if (mounted) {
         setState(() {
           _chapterImageUrls = urls;
@@ -216,17 +217,22 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     try {
       // 预加载小说的卷数据
       final volumesAsync = ref.read(volumeNotifierProvider);
-      if (!volumesAsync.hasValue || volumesAsync.asData?.value.isEmpty == true) {
+      if (!volumesAsync.hasValue ||
+          volumesAsync.asData?.value.isEmpty == true) {
         // 如果卷数据未加载，先加载卷数据
-        await ref.read(volumeNotifierProvider.notifier).fetchVolumes(widget.novelId);
+        await ref
+            .read(volumeNotifierProvider.notifier)
+            .fetchVolumes(widget.novelId);
       }
-      
+
       // 预加载当前章节所在卷的章节列表
-      if (!ref.read(chapterNotifierProvider.notifier).isCached(widget.novelId, widget.chapter.volumeNumber)) {
+      if (!ref
+          .read(chapterNotifierProvider.notifier)
+          .isCached(widget.novelId, widget.chapter.volumeNumber)) {
         await ref.read(chapterNotifierProvider.notifier).fetchChapters(
-          widget.novelId,
-          widget.chapter.volumeNumber,
-        );
+              widget.novelId,
+              widget.chapter.volumeNumber,
+            );
       }
     } catch (e) {
       debugPrint('❌ 预加载小说数据失败: $e');
@@ -255,7 +261,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
   // 保存进度，只在退出和章节切换时调用
   Future<void> _saveReadingProgress({int? position}) async {
     if (_isTransitioning) return;
-    
+
     // 如果是从书签进入的，不保存阅读进度
     if (widget.isFromBookmark) {
       debugPrint('从书签进入，不保存阅读进度');
@@ -459,7 +465,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
           } else {
             debugPrint('从书签退出，不保存阅读进度');
           }
-          
+
           if (mounted) {
             await ref.read(historyNotifierProvider.notifier).refresh();
             ref.invalidate(historyProgress(widget.novelId));
@@ -541,7 +547,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
   Widget _buildChapterImages() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     if (_isLoadingImages) {
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 64.0),
@@ -571,7 +577,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
         ),
       );
     }
-    
+
     if (_chapterImageUrls.isEmpty) {
       return Text(
         _formatContent(widget.chapter.content),
@@ -583,7 +589,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
         ),
       );
     }
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -601,7 +607,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
               ),
             ),
           ),
-        
+
         // 显示所有图片 - 美化版本
         ..._chapterImageUrls.map((imageUrl) {
           return Container(
@@ -614,8 +620,8 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
               child: Material(
                 color: Colors.transparent,
                 elevation: isDark ? 4 : 2,
-                shadowColor: isDark 
-                    ? Colors.black.withAlpha(180) 
+                shadowColor: isDark
+                    ? Colors.black.withAlpha(180)
                     : Colors.black.withAlpha(80),
                 borderRadius: BorderRadius.circular(12.0),
                 child: GestureDetector(
@@ -634,10 +640,12 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                           decoration: BoxDecoration(
                             color: isDark
                                 ? theme.colorScheme.surfaceContainerHighest
-                                : theme.colorScheme.surfaceContainer.withAlpha(220),
+                                : theme.colorScheme.surfaceContainer
+                                    .withAlpha(220),
                             borderRadius: BorderRadius.circular(12.0),
                             border: Border.all(
-                              color: theme.colorScheme.outlineVariant.withAlpha(77),
+                              color: theme.colorScheme.outlineVariant
+                                  .withAlpha(77),
                               width: 1,
                             ),
                           ),
@@ -648,17 +656,21 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                                 Icon(
                                   Icons.image_not_supported_rounded,
                                   size: 60,
-                                  color: theme.colorScheme.onSurfaceVariant.withAlpha(153),
+                                  color: theme.colorScheme.onSurfaceVariant
+                                      .withAlpha(153),
                                 ),
                                 const SizedBox(height: 20),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 10),
                                   decoration: BoxDecoration(
-                                    color: theme.colorScheme.errorContainer.withAlpha(150),
+                                    color: theme.colorScheme.errorContainer
+                                        .withAlpha(150),
                                     borderRadius: BorderRadius.circular(24),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: theme.colorScheme.shadow.withAlpha(40),
+                                        color: theme.colorScheme.shadow
+                                            .withAlpha(40),
                                         blurRadius: 8,
                                         offset: const Offset(0, 2),
                                       ),
@@ -689,17 +701,21 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                             child: child,
                           );
                         }
-                        
-                        final percentLoaded = loadingProgress.expectedTotalBytes != null
-                            ? (loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!)
-                            : null;
-                        
+
+                        final percentLoaded =
+                            loadingProgress.expectedTotalBytes != null
+                                ? (loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!)
+                                : null;
+
                         return Container(
                           height: MediaQuery.of(context).size.width * 1.2,
                           decoration: BoxDecoration(
                             color: isDark
-                                ? theme.colorScheme.surfaceContainerHighest.withAlpha(100)
-                                : theme.colorScheme.surfaceContainerLowest.withAlpha(90),
+                                ? theme.colorScheme.surfaceContainerHighest
+                                    .withAlpha(100)
+                                : theme.colorScheme.surfaceContainerLowest
+                                    .withAlpha(90),
                             borderRadius: BorderRadius.circular(12.0),
                           ),
                           child: Center(
@@ -716,17 +732,21 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                                       CircularProgressIndicator(
                                         value: percentLoaded,
                                         strokeWidth: 4,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
                                           theme.colorScheme.primary,
                                         ),
-                                        backgroundColor: theme.colorScheme.surfaceContainerHighest.withAlpha(100),
+                                        backgroundColor: theme
+                                            .colorScheme.surfaceContainerHighest
+                                            .withAlpha(100),
                                       ),
                                       // 百分比文字
                                       if (percentLoaded != null)
                                         Container(
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
-                                            color: theme.colorScheme.primary.withAlpha(40),
+                                            color: theme.colorScheme.primary
+                                                .withAlpha(40),
                                             shape: BoxShape.circle,
                                           ),
                                           child: Text(
@@ -745,7 +765,8 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                                 Text(
                                   '图片加载中',
                                   style: TextStyle(
-                                    color: theme.colorScheme.onSurface.withAlpha(220),
+                                    color: theme.colorScheme.onSurface
+                                        .withAlpha(220),
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
                                     letterSpacing: 0.5,
@@ -796,7 +817,9 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                   GestureDetector(
                     onTap: () async {
                       await _saveReadingProgress();
-                      await ref.read(historyNotifierProvider.notifier).refresh();
+                      await ref
+                          .read(historyNotifierProvider.notifier)
+                          .refresh();
                       ref.invalidate(historyProgress(widget.novelId));
                       if (mounted && context.mounted) {
                         Navigator.of(context).pop();
@@ -817,14 +840,18 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                           volumeNumber: widget.chapter.volumeNumber,
                           chapterNumber: widget.chapter.chapterNumber,
                         );
-                        
-                        final titleAsync = ref.watch(chapterTitleProvider(params));
-                        
+
+                        final titleAsync =
+                            ref.watch(chapterTitleProvider(params));
+
                         return Text(
                           titleAsync.when(
-                            data: (title) => '第${widget.chapter.volumeNumber}卷 $title',
-                            loading: () => '第${widget.chapter.volumeNumber}卷，第${widget.chapter.chapterNumber}话',
-                            error: (_, __) => '第${widget.chapter.volumeNumber}卷，第${widget.chapter.chapterNumber}话',
+                            data: (title) =>
+                                '第${widget.chapter.volumeNumber}卷 $title',
+                            loading: () =>
+                                '第${widget.chapter.volumeNumber}卷，第${widget.chapter.chapterNumber}话',
+                            error: (_, __) =>
+                                '第${widget.chapter.volumeNumber}卷，第${widget.chapter.chapterNumber}话',
                           ),
                           style: TextStyle(
                             color: foregroundColor,
@@ -855,7 +882,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
             direction: SlideDirection.fromBottom,
             child: Container(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.paddingOf(context).bottom + 24,
+                bottom: MediaQuery.paddingOf(context).bottom + 14,
                 top: 24,
               ),
               decoration: BoxDecoration(
@@ -875,8 +902,8 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                     onTap: () => _showBottomSheet(BookmarkSheet(
                       novelId: widget.novelId,
                       chapter: widget.chapter,
-                      currentPosition: _scrollController.hasClients 
-                          ? _scrollController.position.pixels.toInt() 
+                      currentPosition: _scrollController.hasClients
+                          ? _scrollController.position.pixels.toInt()
                           : 0,
                       contentLength: _scrollController.hasClients
                           ? _scrollController.position.maxScrollExtent.toInt()

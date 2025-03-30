@@ -197,16 +197,16 @@ class HistoryPage extends ConsumerWidget {
                 ),
               ),
             ),
-            
+
             // 内容区域 - 使用AnimatedOpacity控制显示/隐藏
             AnimatedOpacity(
-              opacity: (historyAsync.hasValue && isLoadingComplete) || historyAsync.hasError ? 1.0 : 0.0,
+              opacity: (historyAsync.hasValue && isLoadingComplete) ||
+                      historyAsync.hasError
+                  ? 1.0
+                  : 0.0,
               duration: const Duration(milliseconds: 300),
               child: historyAsync.when(
                 data: (histories) {
-                  // 添加调试信息，帮助排查问题
-                  debugPrint('📚 历史记录数量: ${histories.length}, 加载完成: $isLoadingComplete');
-                  
                   if (histories.isEmpty) {
                     return AnimationManager.buildAnimatedElement(
                       type: AnimationType.slideUp,
@@ -270,7 +270,8 @@ class HistoryPage extends ConsumerWidget {
 
                         // 处理组内记录的排序
                         if (sortType == 'time') {
-                          dateHistories.sort((a, b) => b.lastRead.compareTo(a.lastRead));
+                          dateHistories
+                              .sort((a, b) => b.lastRead.compareTo(a.lastRead));
                         } else {
                           final titleMap = ref.read(historyTitleMapProvider);
                           if (titleMap.isNotEmpty) {
@@ -282,7 +283,8 @@ class HistoryPage extends ConsumerWidget {
                                   : titleB.compareTo(titleA);
                             });
                           } else {
-                            dateHistories.sort((a, b) => b.lastRead.compareTo(a.lastRead));
+                            dateHistories.sort(
+                                (a, b) => b.lastRead.compareTo(a.lastRead));
                           }
                         }
 
@@ -720,14 +722,18 @@ class _HistoryItem extends ConsumerWidget {
                                   volumeNumber: progress.volumeNumber,
                                   chapterNumber: progress.chapterNumber,
                                 );
-                                
-                                final titleAsync = ref.watch(chapterTitleProvider(params));
-                                
+
+                                final titleAsync =
+                                    ref.watch(chapterTitleProvider(params));
+
                                 return Text(
                                   titleAsync.when(
-                                    data: (title) => '第${progress.volumeNumber}卷 $title',
-                                    loading: () => '第${progress.volumeNumber}卷 第${progress.chapterNumber}话',
-                                    error: (_, __) => '第${progress.volumeNumber}卷 第${progress.chapterNumber}话',
+                                    data: (title) =>
+                                        '第${progress.volumeNumber}卷 $title',
+                                    loading: () =>
+                                        '第${progress.volumeNumber}卷 第${progress.chapterNumber}话',
+                                    error: (_, __) =>
+                                        '第${progress.volumeNumber}卷 第${progress.chapterNumber}话',
                                   ),
                                   style: TextStyle(
                                     fontSize: 12,
@@ -809,11 +815,14 @@ class _HistoryItem extends ConsumerWidget {
                     try {
                       // 先预加载卷列表数据
                       final volumesAsync = ref.read(volumeNotifierProvider);
-                      if (!volumesAsync.hasValue || volumesAsync.asData?.value.isEmpty == true) {
+                      if (!volumesAsync.hasValue ||
+                          volumesAsync.asData?.value.isEmpty == true) {
                         // 如果卷数据未加载，先加载卷数据
-                        await ref.read(volumeNotifierProvider.notifier).fetchVolumes(history.novelId);
+                        await ref
+                            .read(volumeNotifierProvider.notifier)
+                            .fetchVolumes(history.novelId);
                       }
-                      
+
                       // 获取章节内容
                       final chapter =
                           await ref.read(apiClientProvider).getChapterContent(
