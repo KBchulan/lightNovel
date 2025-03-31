@@ -1024,8 +1024,7 @@ func (h *NovelHandler) UploadAvatar(c *gin.Context) {
 	fileName := deviceID + fileExt
 	filePath := avatarDir + fileName
 
-	// 检查并删除可能存在的其他格式头像
-	// 如果当前是jpg，则检查是否存在png，反之亦然
+	// 检查并删除可能存在的其他格式头像，不同格式的相同名称头像文件
 	otherExt := ".png"
 	if fileExt == ".png" {
 		otherExt = ".jpg"
@@ -1033,9 +1032,7 @@ func (h *NovelHandler) UploadAvatar(c *gin.Context) {
 
 	otherFilePath := avatarDir + deviceID + otherExt
 	if _, err := os.Stat(otherFilePath); err == nil {
-		// 文件存在，删除它
 		if err := os.Remove(otherFilePath); err != nil {
-			// 仅记录错误，不影响上传流程
 			log.Printf("清理旧头像文件失败: %v", err)
 		} else {
 			log.Printf("已删除旧格式头像文件: %s", otherFilePath)
@@ -1051,10 +1048,9 @@ func (h *NovelHandler) UploadAvatar(c *gin.Context) {
 	// 返回文件的URL路径
 	avatarURL := "/static/avatars/" + fileName
 
-	// 自动更新用户资料
+	// 更新用户资料
 	_, err = h.novelService.UpdateUserProfile(c.Request.Context(), deviceID, "", avatarURL)
 	if err != nil {
-		// 即使更新失败也返回URL，不中断流程
 		log.Printf("上传头像成功，但更新用户资料失败: %v", err)
 	}
 

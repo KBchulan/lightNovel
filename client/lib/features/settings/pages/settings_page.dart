@@ -40,13 +40,13 @@ class _UserAvatarState extends State<UserAvatar> {
   String? _cachedAvatarUrl;
   bool _isDefaultAvatar = false;
   bool _useIconFallback = false;
-  
+
   @override
   void initState() {
     super.initState();
     _updateCachedUrl();
   }
-  
+
   @override
   void didUpdateWidget(UserAvatar oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -56,18 +56,18 @@ class _UserAvatarState extends State<UserAvatar> {
       _updateCachedUrl();
     }
   }
-  
+
   void _updateCachedUrl() {
-    if (widget.avatarUrl.isEmpty || 
-        widget.avatarUrl == "/static/avatars/default.png" || 
+    if (widget.avatarUrl.isEmpty ||
+        widget.avatarUrl == "/static/avatars/default.png" ||
         widget.avatarUrl == "/static/avatars/default.jpg") {
       _cachedAvatarUrl = '${AppConfig.staticUrl}/static/avatars/default.png';
       _isDefaultAvatar = true;
       return;
     }
-    
+
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    _cachedAvatarUrl = widget.avatarUrl.startsWith('http') 
+    _cachedAvatarUrl = widget.avatarUrl.startsWith('http')
         ? '${widget.avatarUrl}${widget.avatarUrl.contains('?') ? '&' : '?'}t=$timestamp'
         : '${AppConfig.staticUrl}${widget.avatarUrl}${widget.avatarUrl.contains('?') ? '&' : '?'}t=$timestamp';
   }
@@ -75,7 +75,7 @@ class _UserAvatarState extends State<UserAvatar> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     Widget defaultAvatar = Container(
       width: widget.size,
       height: widget.size,
@@ -105,7 +105,7 @@ class _UserAvatarState extends State<UserAvatar> {
       ),
       child: ClipOval(
         child: Image.network(
-          _isDefaultAvatar 
+          _isDefaultAvatar
               ? '${AppConfig.staticUrl}/static/avatars/default.png'
               : _cachedAvatarUrl!,
           fit: BoxFit.cover,
@@ -115,10 +115,8 @@ class _UserAvatarState extends State<UserAvatar> {
           cacheHeight: null,
           errorBuilder: (context, error, stackTrace) {
             debugPrint('头像加载失败: $error，路径: $_cachedAvatarUrl');
-            // 如果不是默认头像加载失败，则尝试加载默认头像
             if (!_isDefaultAvatar) {
               _isDefaultAvatar = true;
-              // 重新构建组件以加载默认头像
               Future.microtask(() {
                 if (mounted) setState(() {});
               });
@@ -128,7 +126,6 @@ class _UserAvatarState extends State<UserAvatar> {
                 width: widget.size,
                 height: widget.size,
                 errorBuilder: (context, error, stackTrace) {
-                  // 如果默认头像也加载失败，才使用Icon
                   debugPrint('默认头像也加载失败: $error');
                   _useIconFallback = true;
                   Future.microtask(() {
@@ -150,9 +147,9 @@ class _UserAvatarState extends State<UserAvatar> {
             return Center(
               child: CircularProgressIndicator(
                 value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded / 
-                      loadingProgress.expectedTotalBytes!
-                  : null,
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                    : null,
                 strokeWidth: 2,
               ),
             );
@@ -176,41 +173,41 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _isAboutExpanded = false;
   bool _isAppExpanded = false;
   bool _isUserExpanded = false;
-  
+
   // 用户信息
   User? _user;
   bool _isLoading = false;
-  
+
   // 用户名编辑控制器
   final TextEditingController _nameController = TextEditingController();
-  
+
   // 添加编辑状态控制
   bool _isEditingName = false;
-  
+
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
   }
-  
+
   @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
   }
-  
+
   // 加载用户资料
   Future<void> _loadUserProfile() async {
     if (_isLoading) return;
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final apiClient = ref.read(apiClientProvider);
       final user = await apiClient.getUserProfile();
-      
+
       setState(() {
         _user = user;
         _isLoading = false;
@@ -226,7 +223,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       }
     }
   }
-  
+
   // 选择并上传头像
   Future<void> _pickAndUploadAvatar() async {
     final ImagePicker picker = ImagePicker();
@@ -236,14 +233,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       maxHeight: 800,
       imageQuality: 85,
     );
-    
+
     if (image != null && mounted) {
       try {
         final apiClient = ref.read(apiClientProvider);
         final updatedUser = await apiClient.uploadAvatarAndUpdateProfile(
           File(image.path),
         );
-        
+
         if (mounted) {
           setState(() {
             _user = updatedUser;
@@ -278,7 +275,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   // 修改用户名
   Future<void> _updateUsername() async {
     if (_user == null) return;
-    
+
     final newName = _nameController.text.trim();
     if (newName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -286,20 +283,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       );
       return;
     }
-    
+
     if (newName == _user!.name) {
       setState(() {
         _isEditingName = false;
       });
       return;
     }
-    
+
     try {
       final apiClient = ref.read(apiClientProvider);
       final updatedUser = await apiClient.updateUserProfile(
         name: newName,
       );
-      
+
       setState(() {
         _user = updatedUser;
         _isEditingName = false;
@@ -316,7 +313,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   // 打开URL链接
   Future<void> _launchUrl(String url) async {
     if (!mounted) return;
-    
+
     try {
       final uri = Uri.parse(url);
       if (!await url_launcher.launchUrl(uri)) {
@@ -338,7 +335,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   // 发送邮件
   Future<void> _sendEmail(String email) async {
     if (!mounted) return;
-    
+
     try {
       final uri = Uri.parse('mailto:$email?subject=${AppConfig.appName}用户反馈');
       if (!await url_launcher.launchUrl(uri)) {
@@ -360,15 +357,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   // 主题切换处理
   void _handleThemeChange(ThemeMode? value) {
     if (value == null) return;
-    
+
     final notifier = ref.read(themeNotifierProvider.notifier);
     final currentThemeMode = ref.read(themeNotifierProvider);
-    
+
     if (value == currentThemeMode) return;
-    
+
     // 为主题切换添加视觉反馈
     final targetMode = value;
-    
+
     // 启用平滑过渡
     notifier.setThemeMode(targetMode);
   }
@@ -386,7 +383,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       body: ListView(
         children: [
           const SizedBox(height: 8),
-          
+
           // 用户信息
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -397,7 +394,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             child: _buildUserSection(theme),
           ),
-          
+
           // 主题设置
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -457,7 +454,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ),
     );
   }
-  
+
   // 用户信息区域
   Widget _buildUserSection(ThemeData theme) {
     return Column(
@@ -497,7 +494,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: theme.colorScheme.primary.withAlpha(50),
+                                      color: theme.colorScheme.primary
+                                          .withAlpha(50),
                                       width: 2,
                                     ),
                                   ),
@@ -509,51 +507,71 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              
+
                               // 用户名
                               Expanded(
                                 child: Row(
                                   children: [
                                     Expanded(
                                       child: _isEditingName
-                                        ? Container(
-                                            decoration: BoxDecoration(
-                                              color: theme.colorScheme.surfaceContainerHighest.withAlpha(125),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: TextField(
-                                              controller: _nameController,
-                                              style: theme.textTheme.titleMedium?.copyWith(
+                                          ? Container(
+                                              decoration: BoxDecoration(
+                                                color: theme.colorScheme
+                                                    .surfaceContainerHighest
+                                                    .withAlpha(125),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: TextField(
+                                                controller: _nameController,
+                                                style: theme
+                                                    .textTheme.titleMedium
+                                                    ?.copyWith(
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                                decoration: InputDecoration(
+                                                  contentPadding:
+                                                      const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 12,
+                                                          vertical: 8),
+                                                  border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                    borderSide: BorderSide.none,
+                                                  ),
+                                                  isDense: true,
+                                                  hintText: '请输入新的用户名',
+                                                  hintStyle: theme
+                                                      .textTheme.titleMedium
+                                                      ?.copyWith(
+                                                    color: theme
+                                                        .colorScheme.onSurface
+                                                        .withAlpha(128),
+                                                  ),
+                                                ),
+                                                maxLength: 20,
+                                                buildCounter: (context,
+                                                        {required currentLength,
+                                                        required isFocused,
+                                                        maxLength}) =>
+                                                    null,
+                                                onSubmitted: (value) {
+                                                  if (value.trim().isNotEmpty) {
+                                                    _updateUsername();
+                                                  }
+                                                },
+                                                autofocus: true,
+                                              ),
+                                            )
+                                          : Text(
+                                              _user?.name ?? '',
+                                              style: theme.textTheme.titleMedium
+                                                  ?.copyWith(
                                                 fontWeight: FontWeight.w500,
                                               ),
-                                              decoration: InputDecoration(
-                                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                                border: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(8),
-                                                  borderSide: BorderSide.none,
-                                                ),
-                                                isDense: true,
-                                                hintText: '请输入新的用户名',
-                                                hintStyle: theme.textTheme.titleMedium?.copyWith(
-                                                  color: theme.colorScheme.onSurface.withAlpha(128),
-                                                ),
-                                              ),
-                                              maxLength: 20,
-                                              buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
-                                              onSubmitted: (value) {
-                                                if (value.trim().isNotEmpty) {
-                                                  _updateUsername();
-                                                }
-                                              },
-                                              autofocus: true,
                                             ),
-                                          )
-                                        : Text(
-                                            _user?.name ?? '',
-                                            style: theme.textTheme.titleMedium?.copyWith(
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
                                     ),
                                     if (_isEditingName)
                                       Row(
@@ -563,7 +581,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                             onPressed: _cancelEditingName,
                                             icon: Icon(
                                               Icons.close,
-                                              color: theme.colorScheme.error.withAlpha(230),
+                                              color: theme.colorScheme.error
+                                                  .withAlpha(230),
                                               size: 18,
                                             ),
                                             tooltip: '取消',
@@ -573,13 +592,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                           ),
                                           IconButton(
                                             onPressed: () {
-                                              if (_nameController.text.trim().isNotEmpty) {
+                                              if (_nameController.text
+                                                  .trim()
+                                                  .isNotEmpty) {
                                                 _updateUsername();
                                               }
                                             },
                                             icon: Icon(
                                               Icons.check,
-                                              color: theme.colorScheme.primary.withAlpha(230),
+                                              color: theme.colorScheme.primary
+                                                  .withAlpha(230),
                                               size: 18,
                                             ),
                                             tooltip: '保存',
@@ -594,7 +616,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                         onPressed: _startEditingName,
                                         icon: Icon(
                                           Icons.edit_outlined,
-                                          color: theme.colorScheme.primary.withAlpha(230),
+                                          color: theme.colorScheme.primary
+                                              .withAlpha(230),
                                           size: 18,
                                         ),
                                         tooltip: '修改用户名',
@@ -615,7 +638,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               child: Text(
                                 '后续会有更多个性化选项',
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurface.withAlpha(115),
+                                  color: theme.colorScheme.onSurface
+                                      .withAlpha(115),
                                   fontSize: 12,
                                 ),
                               ),
@@ -628,7 +652,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       padding: EdgeInsets.all(20.0),
                       child: Center(child: Text('获取用户资料失败')),
                     )),
-          crossFadeState: _isUserExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          crossFadeState: _isUserExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 300),
           sizeCurve: Curves.easeOutCubic,
           firstCurve: Curves.easeOutCubic,
@@ -637,7 +663,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ],
     );
   }
-  
+
   // 主题设置区域
   Widget _buildThemeSection(ThemeData theme, ThemeMode currentThemeMode) {
     return Column(
@@ -682,7 +708,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               const SizedBox(height: 8),
             ],
           ),
-          crossFadeState: _isThemeExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          crossFadeState: _isThemeExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 300),
           sizeCurve: Curves.easeOutCubic,
           firstCurve: Curves.easeOutCubic,
@@ -734,10 +762,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     // 显示检查更新的提示
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: const Text('当前已是最新版本', style: TextStyle(fontSize: 15)),
+                        content: const Text('当前已是最新版本',
+                            style: TextStyle(fontSize: 15)),
                         duration: const Duration(seconds: 2),
                         behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                         backgroundColor: theme.colorScheme.primary,
                         elevation: 6,
                         margin: const EdgeInsets.all(12),
@@ -771,10 +801,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: const Text('缓存已清除', style: TextStyle(fontSize: 15)),
+                                  content: const Text('缓存已清除',
+                                      style: TextStyle(fontSize: 15)),
                                   duration: const Duration(seconds: 1),
                                   behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
                                   backgroundColor: theme.colorScheme.primary,
                                   elevation: 6,
                                   margin: const EdgeInsets.all(12),
@@ -797,7 +829,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ],
             ),
           ),
-          crossFadeState: _isAppExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          crossFadeState: _isAppExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 300),
           sizeCurve: Curves.easeOutCubic,
           firstCurve: Curves.easeOutCubic,
@@ -902,7 +936,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ],
             ),
           ),
-          crossFadeState: _isAboutExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          crossFadeState: _isAboutExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 300),
           sizeCurve: Curves.easeOutCubic,
           firstCurve: Curves.easeOutCubic,
@@ -1054,7 +1090,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withAlpha(isExpanded ? 40 : 26),
+                  color:
+                      theme.colorScheme.primary.withAlpha(isExpanded ? 40 : 26),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(

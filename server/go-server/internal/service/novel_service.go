@@ -1414,8 +1414,6 @@ func (s *NovelService) DeleteComment(ctx context.Context, deviceID, commentID st
 	return nil
 }
 
-// 辅助方法
-
 // updateUserLastActive 更新用户最后活跃时间
 func (s *NovelService) updateUserLastActive(ctx context.Context, deviceID string) {
 	collection := s.db.GetCollection("users")
@@ -1431,11 +1429,9 @@ func (s *NovelService) updateUserLastActive(ctx context.Context, deviceID string
 	)
 
 	if err != nil {
-		// 记录错误但不返回
 		log.Printf("Failed to update user last active time: %v", err)
 	}
 
-	// 更新缓存
 	cacheKey := cache.UserKey + deviceID
 	s.cache.Delete(ctx, cacheKey)
 }

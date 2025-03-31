@@ -168,7 +168,8 @@ class AnimationManager {
   }) {
     if (!withAnimation) return child;
 
-    final actualAnimationId = animationId ?? 'element_${DateTime.now().millisecondsSinceEpoch}';
+    final actualAnimationId =
+        animationId ?? 'element_${DateTime.now().millisecondsSinceEpoch}';
     if (!canStartNewAnimation(actualAnimationId)) {
       return child;
     }
@@ -279,11 +280,20 @@ class AnimationManager {
     Curve? buttonCurve,
     String? animationId,
   }) {
-    final actualAnimationId = animationId ?? 'empty_state_${DateTime.now().millisecondsSinceEpoch}';
+    final actualAnimationId =
+        animationId ?? 'empty_state_${DateTime.now().millisecondsSinceEpoch}';
     if (!canStartNewAnimation(actualAnimationId)) {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [icon, const SizedBox(height: 24), title, const SizedBox(height: 10), subtitle, const SizedBox(height: 28), button],
+        children: [
+          icon,
+          const SizedBox(height: 24),
+          title,
+          const SizedBox(height: 10),
+          subtitle,
+          const SizedBox(height: 28),
+          button
+        ],
       );
     }
 
@@ -338,7 +348,6 @@ class AnimationManager {
   }
 
   /// 判断是否应该执行动画
-  /// 用于避免在数据未加载完成时执行动画造成闪烁
   static bool shouldAnimateAfterDataLoad({
     required bool hasData,
     required bool isLoading,

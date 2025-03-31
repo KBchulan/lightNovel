@@ -99,7 +99,6 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       _loadReadingProgress();
     }
 
-    // 预加载小说卷和章节数据，确保目录可用
     _preloadNovelData();
 
     // 预加载图片URL
@@ -107,14 +106,12 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       _preloadChapterImages();
     }
     
-    // 确保在帧绘制后系统UI仍然隐藏
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _setSystemUIMode(true);
       }
     });
     
-    // 延迟再次确保系统UI隐藏，确保在页面过渡动画完成后仍然保持隐藏状态
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
         _setSystemUIMode(true);
@@ -123,7 +120,6 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-    // 确保初始状态下控制面板不显示
     Future.microtask(() {
       ref.read(readingNotifierProvider.notifier).setShowControls(false);
       _controlPanelController.value = 0;
@@ -145,15 +141,11 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     }
   }
 
-  // 章节切换时确保系统UI保持隐藏状态
   void _ensureSystemUIHiddenForChapterTransition() {
-    // 立即隐藏系统UI
     _setSystemUIMode(true);
     
-    // 添加多次保障，确保在整个过渡过程中系统UI都保持隐藏
     Future.microtask(() => _setSystemUIMode(true));
     
-    // 延迟确保
     Future.delayed(const Duration(milliseconds: 50), () {
       if (mounted) _setSystemUIMode(true);
     });
@@ -461,15 +453,20 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       transitionAnimationController: _bottomSheetController,
       builder: (context) => sheet,
     ).whenComplete(() {
-      if (!ref.read(readingNotifierProvider).showControls) {
-        _setSystemUIMode(true);
-        
-        Future.delayed(const Duration(milliseconds: 300), () {
-          if (mounted && !ref.read(readingNotifierProvider).showControls) {
-            _setSystemUIMode(true);
-          }
-        });
-      }
+      // 读取当前控制面板的显示状态
+      final showControls = ref.read(readingNotifierProvider).showControls;
+      
+      // 设置系统UI状态与控制面板状态一致
+      // showControls为true时显示系统UI，为false时隐藏系统UI
+      _setSystemUIMode(!showControls);
+      
+      // 确保系统UI状态在UI刷新后保持一致
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          final currentShowControls = ref.read(readingNotifierProvider).showControls;
+          _setSystemUIMode(!currentShowControls);
+        }
+      });
     });
   }
 
@@ -1143,7 +1140,11 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
                   _buildFunctionButton(
                     Icons.chat_bubble_outline,
                     foregroundColor,
-                    onTap: () => _showBottomSheet(const CommentSheet()),
+                    onTap: () => _showBottomSheet(CommentSheet(
+                      novelId: widget.novelId,
+                      volumeNumber: widget.chapter.volumeNumber,
+                      chapterNumber: widget.chapter.chapterNumber,
+                    )),
                   ),
                   _buildFunctionButton(
                     Icons.settings,
