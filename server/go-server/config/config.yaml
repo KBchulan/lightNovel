@@ -38,6 +38,6 @@ cache:
   comment: 30m
 
 rate:
-  limit: 1000000
-  burst: 1000000
+  limit: 200
+  burst: 1000
   window: 1
