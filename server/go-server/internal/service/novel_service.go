@@ -14,6 +14,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -1154,6 +1155,14 @@ func (s *NovelService) GetUserProfile(ctx context.Context, deviceID string) (*mo
 			if err != nil {
 				return nil, err
 			}
+
+			// 确保默认头像目录存在
+			os.MkdirAll("./static/avatars/", 0755)
+
+			// 添加到缓存
+			s.cache.Set(ctx, cacheKey, user, s.cfg.Cache.User)
+
+			return &user, nil
 		} else {
 			return nil, err
 		}
@@ -1169,6 +1178,46 @@ func (s *NovelService) GetUserProfile(ctx context.Context, deviceID string) (*mo
 func (s *NovelService) UpdateUserProfile(ctx context.Context, deviceID string, name string, avatar string) (*models.User, error) {
 	collection := s.db.GetCollection("users")
 
+	var existingUser models.User
+	err := collection.FindOne(ctx, bson.M{"_id": deviceID}).Decode(&existingUser)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			now := time.Now()
+
+			userName := "用户" + deviceID[0:6]
+			if name != "" {
+				userName = name
+			}
+
+			userAvatar := "/static/avatars/default.png"
+			if avatar != "" {
+				userAvatar = avatar
+			}
+
+			newUser := models.User{
+				ID:           deviceID,
+				Name:         userName,
+				Avatar:       userAvatar,
+				CreatedAt:    now,
+				UpdatedAt:    now,
+				LastActiveAt: now,
+			}
+
+			_, err = collection.InsertOne(ctx, newUser)
+			if err != nil {
+				return nil, err
+			}
+
+			// 添加到缓存
+			cacheKey := cache.UserKey + deviceID
+			s.cache.Set(ctx, cacheKey, newUser, s.cfg.Cache.User)
+
+			return &newUser, nil
+		}
+		return nil, err
+	}
+
+	// 用户存在，执行更新
 	update := bson.M{
 		"$set": bson.M{
 			"updatedAt":    time.Now(),
@@ -1187,7 +1236,7 @@ func (s *NovelService) UpdateUserProfile(ctx context.Context, deviceID string, n
 	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
 	var updatedUser models.User
 
-	err := collection.FindOneAndUpdate(
+	err = collection.FindOneAndUpdate(
 		ctx,
 		bson.M{"_id": deviceID},
 		update,

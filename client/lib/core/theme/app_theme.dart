@@ -21,6 +21,8 @@ class ThemeNotifier extends _$ThemeNotifier {
   ThemeMode build() => ThemeMode.system;
 
   void setThemeMode(ThemeMode mode) {
+    if (state == mode) return;
+    
     state = mode;
 
     // 通知阅读提供程序主题已更改

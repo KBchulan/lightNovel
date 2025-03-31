@@ -85,6 +85,9 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       curve: Curves.easeInOut,
     );
 
+    // 立即隐藏系统UI，确保在页面创建时就不显示系统UI
+    _setSystemUIMode(true);
+    
     // 如果有传入初始位置，则直接跳转
     if (widget.initialPosition != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -103,9 +106,15 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     if (widget.chapter.hasImages && widget.chapter.imageCount > 0) {
       _preloadChapterImages();
     }
-
-    _setSystemUIMode(true);
     
+    // 确保在帧绘制后系统UI仍然隐藏
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _setSystemUIMode(true);
+      }
+    });
+    
+    // 延迟再次确保系统UI隐藏，确保在页面过渡动画完成后仍然保持隐藏状态
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
         _setSystemUIMode(true);
@@ -134,6 +143,24 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
     } else {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
+  }
+
+  // 章节切换时确保系统UI保持隐藏状态
+  void _ensureSystemUIHiddenForChapterTransition() {
+    // 立即隐藏系统UI
+    _setSystemUIMode(true);
+    
+    // 添加多次保障，确保在整个过渡过程中系统UI都保持隐藏
+    Future.microtask(() => _setSystemUIMode(true));
+    
+    // 延迟确保
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (mounted) _setSystemUIMode(true);
+    });
+    
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) _setSystemUIMode(true);
+    });
   }
 
   @override
@@ -312,6 +339,9 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
         setState(() => _isChapterLoading = true);
       }
 
+      // 确保系统UI在整个过程中保持隐藏状态
+      _ensureSystemUIHiddenForChapterTransition();
+
       // 保存当前章节的阅读进度
       await _saveReadingProgress(position: 0);
 
@@ -323,8 +353,8 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       );
 
       if (mounted) {
-        // 跳转前确保系统UI保持隐藏状态
-        _setSystemUIMode(true);
+        // 在页面推入前再次确保系统UI隐藏
+        _ensureSystemUIHiddenForChapterTransition();
         
         Navigator.pushReplacement(
           context,
@@ -336,6 +366,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
             ),
             type: SharedAxisTransitionType.horizontal,
             reverse: !isNext,
+            maintainSystemUIOverlay: false, // 告知路由在转场过程中保持系统UI隐藏
           ),
         );
       }
@@ -492,6 +523,13 @@ class _ReadingPageState extends ConsumerState<ReadingPage>
       // 使用Future.microtask确保在UI绘制完成后调用
       Future.microtask(() => _setSystemUIMode(true));
     }
+
+    // 当页面首次构建完成后，确保系统UI隐藏
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !readingState.showControls) {
+        _setSystemUIMode(true);
+      }
+    });
 
     return PopScope(
       canPop: true,

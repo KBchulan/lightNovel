@@ -9,6 +9,7 @@
 // ****************************************************************************
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 abstract class BasePageRoute<T> extends PageRouteBuilder<T> {
   static const defaultDuration = Duration(milliseconds: 300);
@@ -122,13 +123,22 @@ class ScalePageRoute<T> extends BasePageRoute<T> {
 class SharedAxisPageRoute<T> extends BasePageRoute<T> {
   final SharedAxisTransitionType type;
   final bool reverse;
+  final bool maintainSystemUIOverlay;
 
   SharedAxisPageRoute({
     required super.page,
     this.type = SharedAxisTransitionType.horizontal,
     this.reverse = false,
+    this.maintainSystemUIOverlay = true,
   }) : super(
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            // 如果需要维持系统UI隐藏状态，在过渡动画期间隐藏系统UI
+            if (!maintainSystemUIOverlay) {
+              Future.microtask(() {
+                SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+              });
+            }
+
             Widget transitionChild = child;
 
             switch (type) {

@@ -12,12 +12,12 @@ package v1
 
 import (
 	"context"
-	"fmt"
 	"lightnovel/internal/service"
 	"lightnovel/pkg/errors"
 	"lightnovel/pkg/response"
 	"lightnovel/pkg/utils"
 	"log"
+	"os"
 	"strconv"
 	"time"
 
@@ -983,7 +983,7 @@ func (h *NovelHandler) DeleteComment(c *gin.Context) {
 // @Router /user/upload/avatar [post]
 func (h *NovelHandler) UploadAvatar(c *gin.Context) {
 	// 获取设备ID
-	deviceID := c.GetHeader("X-Device-ID")
+	deviceID := c.GetString("deviceID")
 	if deviceID == "" {
 		response.Error(c, errors.NewErrorWithMessage(errors.ErrInvalidParameter, "缺少设备ID"))
 		return
@@ -1009,13 +1009,38 @@ func (h *NovelHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 
-	// 生成文件名：设备ID_时间戳.扩展名
+	// 确保头像目录存在
+	avatarDir := "./static/avatars/"
+	if err := os.MkdirAll(avatarDir, 0755); err != nil {
+		response.Error(c, errors.NewErrorWithMessage(errors.ErrInternalServer, "创建头像目录失败: "+err.Error()))
+		return
+	}
+
+	// 生成固定文件名：设备ID.扩展名
 	fileExt := ".jpg"
 	if contentType == "image/png" {
 		fileExt = ".png"
 	}
-	fileName := fmt.Sprintf("%s_%d%s", deviceID, time.Now().Unix(), fileExt)
-	filePath := "./static/avatars/" + fileName
+	fileName := deviceID + fileExt
+	filePath := avatarDir + fileName
+
+	// 检查并删除可能存在的其他格式头像
+	// 如果当前是jpg，则检查是否存在png，反之亦然
+	otherExt := ".png"
+	if fileExt == ".png" {
+		otherExt = ".jpg"
+	}
+
+	otherFilePath := avatarDir + deviceID + otherExt
+	if _, err := os.Stat(otherFilePath); err == nil {
+		// 文件存在，删除它
+		if err := os.Remove(otherFilePath); err != nil {
+			// 仅记录错误，不影响上传流程
+			log.Printf("清理旧头像文件失败: %v", err)
+		} else {
+			log.Printf("已删除旧格式头像文件: %s", otherFilePath)
+		}
+	}
 
 	// 保存文件
 	if err := c.SaveUploadedFile(file, filePath); err != nil {
@@ -1025,6 +1050,13 @@ func (h *NovelHandler) UploadAvatar(c *gin.Context) {
 
 	// 返回文件的URL路径
 	avatarURL := "/static/avatars/" + fileName
+
+	// 自动更新用户资料
+	_, err = h.novelService.UpdateUserProfile(c.Request.Context(), deviceID, "", avatarURL)
+	if err != nil {
+		// 即使更新失败也返回URL，不中断流程
+		log.Printf("上传头像成功，但更新用户资料失败: %v", err)
+	}
 
 	response.Success(c, map[string]string{
 		"url": avatarURL,

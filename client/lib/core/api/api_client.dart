@@ -841,7 +841,34 @@ class ApiClient {
 
       return User.fromJson(data['data'] as Map<String, dynamic>);
     } catch (e) {
-      debugPrint('❌ 获取用户资料错误: $e');
+      if (e is DioException) {
+        if (e.response?.statusCode == 404 || e.response?.statusCode == 500) {
+          debugPrint('用户资料不存在或服务器错误，创建默认用户');
+          
+          try {
+            final updateResponse = await _dio.put<Map<String, dynamic>>(
+              '/user/profile',
+              data: {},
+            );
+            
+            if (updateResponse.data != null && updateResponse.data!['data'] != null) {
+              return User.fromJson(updateResponse.data!['data'] as Map<String, dynamic>);
+            }
+          } catch (updateError) {
+            debugPrint('尝试触发用户创建失败: $updateError');
+          }
+          
+          final now = DateTime.now();
+          return User(
+            id: await _deviceService.getDeviceId(),
+            name: '用户',
+            avatar: '/static/avatars/default.png',
+            createdAt: now,
+            updatedAt: now,
+            lastActiveAt: now,
+          );
+        }
+      }
       rethrow;
     }
   }
@@ -971,6 +998,7 @@ class ApiClient {
         );
       }
       
+      // 检查文件大小（限制为10MB）
       if (imageBytes.length > 10 * 1024 * 1024) {
         throw DioException(
           requestOptions: RequestOptions(path: '/user/upload/avatar'),
@@ -978,16 +1006,19 @@ class ApiClient {
         );
       }
       
+      // 创建MultipartFile，明确设置contentType
       final multipartFile = MultipartFile.fromBytes(
         imageBytes,
         filename: 'avatar.$fileExt',
         contentType: MediaType.parse(mimeType),
       );
       
+      // 创建FormData对象
       final formData = FormData.fromMap({
         'file': multipartFile,
       });
       
+      // 发送请求
       final response = await _dio.post<Map<String, dynamic>>(
         '/user/upload/avatar',
         data: formData,
@@ -1022,6 +1053,7 @@ class ApiClient {
         );
       }
       
+      // 检查文件大小（限制为10MB）
       final fileSize = await file.length();
       if (fileSize > 10 * 1024 * 1024) {
         throw DioException(
@@ -1030,6 +1062,7 @@ class ApiClient {
         );
       }
       
+      // 创建文件的MultipartFile，明确设置contentType
       final fileBytes = await file.readAsBytes();
       final multipartFile = MultipartFile.fromBytes(
         fileBytes,
@@ -1037,10 +1070,12 @@ class ApiClient {
         contentType: MediaType.parse(mimeType),
       );
       
+      // 创建FormData对象
       final formData = FormData.fromMap({
         'file': multipartFile,
       });
       
+      // 发送请求
       final response = await _dio.post<Map<String, dynamic>>(
         '/user/upload/avatar',
         data: formData,

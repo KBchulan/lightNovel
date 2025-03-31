@@ -13,11 +13,155 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:async';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../config/app_config.dart';
 import '../../../core/providers/api_provider.dart';
 import '../../../core/models/models.dart';
+
+class UserAvatar extends StatefulWidget {
+  const UserAvatar({
+    super.key,
+    required this.avatarUrl,
+    required this.onTap,
+    this.size = 80,
+  });
+
+  final String avatarUrl;
+  final VoidCallback onTap;
+  final double size;
+
+  @override
+  State<UserAvatar> createState() => _UserAvatarState();
+}
+
+class _UserAvatarState extends State<UserAvatar> {
+  String? _cachedAvatarUrl;
+  bool _isDefaultAvatar = false;
+  bool _useIconFallback = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    _updateCachedUrl();
+  }
+  
+  @override
+  void didUpdateWidget(UserAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.avatarUrl != widget.avatarUrl) {
+      _isDefaultAvatar = false;
+      _useIconFallback = false;
+      _updateCachedUrl();
+    }
+  }
+  
+  void _updateCachedUrl() {
+    if (widget.avatarUrl.isEmpty || 
+        widget.avatarUrl == "/static/avatars/default.png" || 
+        widget.avatarUrl == "/static/avatars/default.jpg") {
+      _cachedAvatarUrl = '${AppConfig.staticUrl}/static/avatars/default.png';
+      _isDefaultAvatar = true;
+      return;
+    }
+    
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    _cachedAvatarUrl = widget.avatarUrl.startsWith('http') 
+        ? '${widget.avatarUrl}${widget.avatarUrl.contains('?') ? '&' : '?'}t=$timestamp'
+        : '${AppConfig.staticUrl}${widget.avatarUrl}${widget.avatarUrl.contains('?') ? '&' : '?'}t=$timestamp';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    Widget defaultAvatar = Container(
+      width: widget.size,
+      height: widget.size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: theme.colorScheme.primary.withAlpha(26),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.person,
+          size: widget.size * 0.5,
+          color: theme.colorScheme.primary,
+        ),
+      ),
+    );
+
+    if (_useIconFallback) {
+      return defaultAvatar;
+    }
+
+    return Container(
+      width: widget.size,
+      height: widget.size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: theme.colorScheme.primary.withAlpha(26),
+      ),
+      child: ClipOval(
+        child: Image.network(
+          _isDefaultAvatar 
+              ? '${AppConfig.staticUrl}/static/avatars/default.png'
+              : _cachedAvatarUrl!,
+          fit: BoxFit.cover,
+          width: widget.size,
+          height: widget.size,
+          cacheWidth: null,
+          cacheHeight: null,
+          errorBuilder: (context, error, stackTrace) {
+            debugPrint('头像加载失败: $error，路径: $_cachedAvatarUrl');
+            // 如果不是默认头像加载失败，则尝试加载默认头像
+            if (!_isDefaultAvatar) {
+              _isDefaultAvatar = true;
+              // 重新构建组件以加载默认头像
+              Future.microtask(() {
+                if (mounted) setState(() {});
+              });
+              return Image.network(
+                '${AppConfig.staticUrl}/static/avatars/default.png',
+                fit: BoxFit.cover,
+                width: widget.size,
+                height: widget.size,
+                errorBuilder: (context, error, stackTrace) {
+                  // 如果默认头像也加载失败，才使用Icon
+                  debugPrint('默认头像也加载失败: $error');
+                  _useIconFallback = true;
+                  Future.microtask(() {
+                    if (mounted) setState(() {});
+                  });
+                  return defaultAvatar;
+                },
+              );
+            }
+            // 如果是默认头像加载失败，则使用Icon
+            _useIconFallback = true;
+            Future.microtask(() {
+              if (mounted) setState(() {});
+            });
+            return defaultAvatar;
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Center(
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded / 
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+                strokeWidth: 2,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -35,17 +179,30 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   
   // 用户信息
   User? _user;
-  bool _isLoading = true;
+  bool _isLoading = false;
+  
+  // 用户名编辑控制器
+  final TextEditingController _nameController = TextEditingController();
+  
+  // 添加编辑状态控制
+  bool _isEditingName = false;
   
   @override
   void initState() {
     super.initState();
-    // 加载用户资料
     _loadUserProfile();
+  }
+  
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
   
   // 加载用户资料
   Future<void> _loadUserProfile() async {
+    if (_isLoading) return;
+    
     setState(() {
       _isLoading = true;
     });
@@ -53,6 +210,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     try {
       final apiClient = ref.read(apiClientProvider);
       final user = await apiClient.getUserProfile();
+      
       setState(() {
         _user = user;
         _isLoading = false;
@@ -72,56 +230,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   // 选择并上传头像
   Future<void> _pickAndUploadAvatar() async {
     final ImagePicker picker = ImagePicker();
-    // 打开图片选择器
     final XFile? image = await picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 800, // 限制图片宽度
-      maxHeight: 800, // 限制图片高度
-      imageQuality: 85, // 压缩质量
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 85,
     );
     
     if (image != null && mounted) {
       try {
-        // 显示加载对话框
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (BuildContext context) {
-            return const AlertDialog(
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('正在上传头像...')
-                ],
-              ),
-            );
-          },
-        );
-        
         final apiClient = ref.read(apiClientProvider);
         final updatedUser = await apiClient.uploadAvatarAndUpdateProfile(
           File(image.path),
         );
         
         if (mounted) {
-          // 关闭对话框
-          Navigator.of(context).pop();
-          
           setState(() {
             _user = updatedUser;
           });
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('头像更新成功')),
-          );
         }
       } catch (e) {
         if (mounted) {
-          // 关闭对话框
-          Navigator.of(context).pop();
-          
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('头像更新失败: $e')),
           );
@@ -130,16 +259,68 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
+  // 开始编辑用户名
+  void _startEditingName() {
+    setState(() {
+      _isEditingName = true;
+      _nameController.text = _user?.name ?? '';
+    });
+  }
+
+  // 取消编辑用户名
+  void _cancelEditingName() {
+    setState(() {
+      _isEditingName = false;
+      _nameController.text = '';
+    });
+  }
+
+  // 修改用户名
+  Future<void> _updateUsername() async {
+    if (_user == null) return;
+    
+    final newName = _nameController.text.trim();
+    if (newName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('用户名不能为空')),
+      );
+      return;
+    }
+    
+    if (newName == _user!.name) {
+      setState(() {
+        _isEditingName = false;
+      });
+      return;
+    }
+    
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final updatedUser = await apiClient.updateUserProfile(
+        name: newName,
+      );
+      
+      setState(() {
+        _user = updatedUser;
+        _isEditingName = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('用户名修改失败: $e')),
+        );
+      }
+    }
+  }
+
   // 打开URL链接
   Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    // 在异步操作前先检查context是否挂载
     if (!mounted) return;
-
+    
     try {
+      final uri = Uri.parse(url);
       if (!await url_launcher.launchUrl(uri)) {
         if (mounted) {
-          // 再次检查mounted状态
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('无法打开链接: $url')),
           );
@@ -147,7 +328,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       }
     } catch (e) {
       if (mounted) {
-        // 异常处理中也要检查mounted状态
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('打开链接失败: $e')),
         );
@@ -157,14 +337,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   // 发送邮件
   Future<void> _sendEmail(String email) async {
-    final uri = Uri.parse('mailto:$email?subject=${AppConfig.appName}用户反馈');
-    // 在异步操作前先检查context是否挂载
     if (!mounted) return;
-
+    
     try {
+      final uri = Uri.parse('mailto:$email?subject=${AppConfig.appName}用户反馈');
       if (!await url_launcher.launchUrl(uri)) {
         if (mounted) {
-          // 再次检查mounted状态
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('无法打开邮件客户端')),
           );
@@ -172,7 +350,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       }
     } catch (e) {
       if (mounted) {
-        // 异常处理中也要检查mounted状态
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('发送邮件失败: $e')),
         );
@@ -181,18 +358,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   // 主题切换处理
-  Future<void> _handleThemeChange(ThemeMode? value) async {
-    if (value != null) {
-      final currentThemeMode = ref.read(themeNotifierProvider);
-      if (value == ThemeMode.system) {
-        ref.read(themeNotifierProvider.notifier).setThemeMode(value);
-        return;
-      }
-      if (value == currentThemeMode) {
-        return;
-      }
-      ref.read(themeNotifierProvider.notifier).setThemeMode(value);
-    }
+  void _handleThemeChange(ThemeMode? value) {
+    if (value == null) return;
+    
+    final notifier = ref.read(themeNotifierProvider.notifier);
+    final currentThemeMode = ref.read(themeNotifierProvider);
+    
+    if (value == currentThemeMode) return;
+    
+    // 为主题切换添加视觉反馈
+    final targetMode = value;
+    
+    // 启用平滑过渡
+    notifier.setThemeMode(targetMode);
   }
 
   @override
@@ -296,111 +474,170 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             });
           },
         ),
-        if (_isUserExpanded) ...[
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(20.0),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_user != null)
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  // 头像
-                  GestureDetector(
-                    onTap: _pickAndUploadAvatar,
-                    child: Stack(
-                      alignment: Alignment.bottomRight,
-                      children: [
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundImage: NetworkImage(
-                            _user!.avatar.startsWith('http') 
-                            ? _user!.avatar 
-                            : '${AppConfig.staticUrl}${_user!.avatar}',
+        AnimatedCrossFade(
+          firstChild: const SizedBox(height: 0),
+          secondChild: _isLoading
+              ? const Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              : (_user != null
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                      child: Column(
+                        children: [
+                          // 用户信息行
+                          Row(
+                            children: [
+                              // 头像
+                              GestureDetector(
+                                onTap: _pickAndUploadAvatar,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: theme.colorScheme.primary.withAlpha(50),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: UserAvatar(
+                                    avatarUrl: _user!.avatar,
+                                    onTap: _pickAndUploadAvatar,
+                                    size: 52,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              
+                              // 用户名
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: _isEditingName
+                                        ? Container(
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.surfaceContainerHighest.withAlpha(125),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: TextField(
+                                              controller: _nameController,
+                                              style: theme.textTheme.titleMedium?.copyWith(
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              decoration: InputDecoration(
+                                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                border: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  borderSide: BorderSide.none,
+                                                ),
+                                                isDense: true,
+                                                hintText: '请输入新的用户名',
+                                                hintStyle: theme.textTheme.titleMedium?.copyWith(
+                                                  color: theme.colorScheme.onSurface.withAlpha(128),
+                                                ),
+                                              ),
+                                              maxLength: 20,
+                                              buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                                              onSubmitted: (value) {
+                                                if (value.trim().isNotEmpty) {
+                                                  _updateUsername();
+                                                }
+                                              },
+                                              autofocus: true,
+                                            ),
+                                          )
+                                        : Text(
+                                            _user?.name ?? '',
+                                            style: theme.textTheme.titleMedium?.copyWith(
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                    ),
+                                    if (_isEditingName)
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            onPressed: _cancelEditingName,
+                                            icon: Icon(
+                                              Icons.close,
+                                              color: theme.colorScheme.error.withAlpha(230),
+                                              size: 18,
+                                            ),
+                                            tooltip: '取消',
+                                            style: IconButton.styleFrom(
+                                              padding: const EdgeInsets.all(8),
+                                            ),
+                                          ),
+                                          IconButton(
+                                            onPressed: () {
+                                              if (_nameController.text.trim().isNotEmpty) {
+                                                _updateUsername();
+                                              }
+                                            },
+                                            icon: Icon(
+                                              Icons.check,
+                                              color: theme.colorScheme.primary.withAlpha(230),
+                                              size: 18,
+                                            ),
+                                            tooltip: '保存',
+                                            style: IconButton.styleFrom(
+                                              padding: const EdgeInsets.all(8),
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    else
+                                      IconButton(
+                                        onPressed: _startEditingName,
+                                        icon: Icon(
+                                          Icons.edit_outlined,
+                                          color: theme.colorScheme.primary.withAlpha(230),
+                                          size: 18,
+                                        ),
+                                        tooltip: '修改用户名',
+                                        style: IconButton.styleFrom(
+                                          padding: const EdgeInsets.all(8),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                          backgroundColor: theme.colorScheme.primary.withAlpha(26),
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary,
-                            shape: BoxShape.circle,
+                          // 提示文本
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 8, right: 4),
+                              child: Text(
+                                '后续会有更多个性化选项',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurface.withAlpha(115),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
                           ),
-                          padding: const EdgeInsets.all(4),
-                          child: Icon(
-                            Icons.edit,
-                            size: 16,
-                            color: theme.colorScheme.onPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // 用户名
-                  Text(
-                    _user!.name,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // 加入时间
-                  Text(
-                    '加入时间: ${_formatDate(_user!.createdAt)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withAlpha(153),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  
-                  // 最后活跃时间
-                  Text(
-                    '最后活跃: ${_formatDate(_user!.lastActiveAt)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withAlpha(153),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // 修改用户名按钮
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      // TODO: 实现修改用户名功能
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('修改用户名功能开发中')),
-                      );
-                    },
-                    icon: const Icon(Icons.edit),
-                    label: const Text('修改用户名'),
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        ],
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            const Padding(
-              padding: EdgeInsets.all(20.0),
-              child: Center(child: Text('获取用户资料失败')),
-            ),
-          const SizedBox(height: 8),
-        ],
+                    )
+                  : const Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Center(child: Text('获取用户资料失败')),
+                    )),
+          crossFadeState: _isUserExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 300),
+          sizeCurve: Curves.easeOutCubic,
+          firstCurve: Curves.easeOutCubic,
+          secondCurve: Curves.easeOutCubic,
+        ),
       ],
     );
   }
   
-  // 格式化日期
-  String _formatDate(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-  }
-
   // 主题设置区域
   Widget _buildThemeSection(ThemeData theme, ThemeMode currentThemeMode) {
     return Column(
@@ -417,30 +654,40 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             });
           },
         ),
-        if (_isThemeExpanded) ...[
-          _ThemeModeOption(
-            title: '跟随系统',
-            icon: Icons.brightness_auto,
-            value: ThemeMode.system,
-            groupValue: currentThemeMode,
-            onChanged: _handleThemeChange,
+        AnimatedCrossFade(
+          firstChild: const SizedBox(height: 0),
+          secondChild: Column(
+            children: [
+              _ThemeModeOption(
+                title: '跟随系统',
+                icon: Icons.brightness_auto,
+                value: ThemeMode.system,
+                groupValue: currentThemeMode,
+                onChanged: _handleThemeChange,
+              ),
+              _ThemeModeOption(
+                title: '浅色主题',
+                icon: Icons.light_mode,
+                value: ThemeMode.light,
+                groupValue: currentThemeMode,
+                onChanged: _handleThemeChange,
+              ),
+              _ThemeModeOption(
+                title: '深色主题',
+                icon: Icons.dark_mode,
+                value: ThemeMode.dark,
+                groupValue: currentThemeMode,
+                onChanged: _handleThemeChange,
+              ),
+              const SizedBox(height: 8),
+            ],
           ),
-          _ThemeModeOption(
-            title: '浅色主题',
-            icon: Icons.light_mode,
-            value: ThemeMode.light,
-            groupValue: currentThemeMode,
-            onChanged: _handleThemeChange,
-          ),
-          _ThemeModeOption(
-            title: '深色主题',
-            icon: Icons.dark_mode,
-            value: ThemeMode.dark,
-            groupValue: currentThemeMode,
-            onChanged: _handleThemeChange,
-          ),
-          const SizedBox(height: 8),
-        ],
+          crossFadeState: _isThemeExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 300),
+          sizeCurve: Curves.easeOutCubic,
+          firstCurve: Curves.easeOutCubic,
+          secondCurve: Curves.easeOutCubic,
+        ),
       ],
     );
   }
@@ -461,8 +708,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             });
           },
         ),
-        if (_isAppExpanded) ...[
-          Padding(
+        AnimatedCrossFade(
+          firstChild: const SizedBox(height: 0),
+          secondChild: Padding(
             padding: const EdgeInsets.only(left: 25),
             child: Column(
               children: [
@@ -545,11 +793,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     );
                   },
                 ),
+                const SizedBox(height: 8),
               ],
             ),
           ),
-          const SizedBox(height: 8),
-        ],
+          crossFadeState: _isAppExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 300),
+          sizeCurve: Curves.easeOutCubic,
+          firstCurve: Curves.easeOutCubic,
+          secondCurve: Curves.easeOutCubic,
+        ),
       ],
     );
   }
@@ -570,8 +823,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             });
           },
         ),
-        if (_isAboutExpanded) ...[
-          Padding(
+        AnimatedCrossFade(
+          firstChild: const SizedBox(height: 0),
+          secondChild: Padding(
             padding: const EdgeInsets.only(left: 25),
             child: Column(
               children: [
@@ -644,11 +898,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     );
                   },
                 ),
+                const SizedBox(height: 8),
               ],
             ),
           ),
-          const SizedBox(height: 8),
-        ],
+          crossFadeState: _isAboutExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 300),
+          sizeCurve: Curves.easeOutCubic,
+          firstCurve: Curves.easeOutCubic,
+          secondCurve: Curves.easeOutCubic,
+        ),
       ],
     );
   }
@@ -790,10 +1049,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withAlpha(26),
+                  color: theme.colorScheme.primary.withAlpha(isExpanded ? 40 : 26),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -815,10 +1076,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               if (onTap != null)
                 AnimatedRotation(
                   turns: isExpanded ? 0.25 : 0,
-                  duration: const Duration(milliseconds: 200),
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
                   child: Icon(
                     Icons.chevron_right,
-                    color: theme.colorScheme.onSurface.withAlpha(128),
+                    color: isExpanded
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface.withAlpha(128),
                   ),
                 ),
             ],
@@ -858,7 +1122,9 @@ class _ThemeModeOption extends StatelessWidget {
           child: Row(
             children: [
               const SizedBox(width: 25), // 缩进对齐
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: isSelected
@@ -866,31 +1132,51 @@ class _ThemeModeOption extends StatelessWidget {
                       : theme.colorScheme.onSurface.withAlpha(13),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  icon,
-                  size: 18,
-                  color: isSelected
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurface.withAlpha(153),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: ScaleTransition(
+                        scale: animation,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Icon(
+                    icon,
+                    size: 18,
+                    key: ValueKey<bool>(isSelected),
+                    color: isSelected
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface.withAlpha(153),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: Text(
-                  title,
-                  style: theme.textTheme.bodyMedium?.copyWith(
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  style: theme.textTheme.bodyMedium!.copyWith(
                     color: isSelected
                         ? theme.colorScheme.primary
                         : theme.colorScheme.onSurface.withAlpha(204),
                     fontWeight: isSelected ? FontWeight.w600 : null,
                   ),
+                  child: Text(title),
                 ),
               ),
-              Radio<ThemeMode>(
-                value: value,
-                groupValue: groupValue,
-                onChanged: onChanged,
-                activeColor: theme.colorScheme.primary,
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Radio<ThemeMode>(
+                  value: value,
+                  groupValue: groupValue,
+                  onChanged: onChanged,
+                  activeColor: theme.colorScheme.primary,
+                ),
               ),
             ],
           ),
