@@ -21,7 +21,7 @@ class AppConfig {
       // return 'http://localhost:8080/api/v1'; // 本机服务器
       return 'http://120.27.201.149:8080/api/v1'; // 阿里云服务器
     }
-    return 'https://lightnovel.chulan.xin'; // cloudflare 服务器
+    return 'https://lightnovel.chulan.xin/api/v1'; // cloudflare 服务器
   }
 
   // 静态资源路径
@@ -30,7 +30,7 @@ class AppConfig {
       // return 'http://localhost:8080'; // 本机服务器
       return 'http://120.27.201.149:8080'; // 阿里云服务器
     }
-    return 'https://lightnovel.chulan.xin'; // cloudflare 服务器
+    return 'https://lightnovel.chulan.xin/api/v1'; // cloudflare 服务器
   }
 
   static String get wsBaseUrl {

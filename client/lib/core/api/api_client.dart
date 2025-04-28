@@ -844,20 +844,20 @@ class ApiClient {
       if (e is DioException) {
         if (e.response?.statusCode == 404 || e.response?.statusCode == 500) {
           debugPrint('用户资料不存在或服务器错误，创建默认用户');
-          
+
           try {
             final updateResponse = await _dio.put<Map<String, dynamic>>(
               '/user/profile',
               data: {},
             );
-            
+
             if (updateResponse.data != null && updateResponse.data!['data'] != null) {
               return User.fromJson(updateResponse.data!['data'] as Map<String, dynamic>);
             }
           } catch (updateError) {
             debugPrint('尝试触发用户创建失败: $updateError');
           }
-          
+
           final now = DateTime.now();
           return User(
             id: await _deviceService.getDeviceId(),
@@ -990,14 +990,14 @@ class ApiClient {
       // 检查文件类型
       final fileExt = fileName.split('.').last.toLowerCase();
       final mimeType = _getMimeTypeFromExtension(fileExt);
-      
+
       if (mimeType == null) {
         throw DioException(
           requestOptions: RequestOptions(path: '/user/upload/avatar'),
           error: '不支持的文件类型, 仅支持JPG和PNG格式',
         );
       }
-      
+
       // 检查文件大小（限制为10MB）
       if (imageBytes.length > 10 * 1024 * 1024) {
         throw DioException(
@@ -1005,25 +1005,25 @@ class ApiClient {
           error: '文件大小超过限制(10MB)',
         );
       }
-      
+
       // 创建MultipartFile，明确设置contentType
       final multipartFile = MultipartFile.fromBytes(
         imageBytes,
         filename: 'avatar.$fileExt',
         contentType: MediaType.parse(mimeType),
       );
-      
+
       // 创建FormData对象
       final formData = FormData.fromMap({
         'file': multipartFile,
       });
-      
+
       // 发送请求
       final response = await _dio.post<Map<String, dynamic>>(
         '/user/upload/avatar',
         data: formData,
       );
-      
+
       final data = response.data;
       if (data == null || data['data'] == null) {
         throw DioException(
@@ -1031,7 +1031,7 @@ class ApiClient {
           error: '响应数据格式错误',
         );
       }
-      
+
       return data['data']['url'] as String;
     } catch (e) {
       debugPrint('❌ 上传头像错误: $e');
@@ -1045,14 +1045,14 @@ class ApiClient {
       // 检查文件类型
       final fileExt = file.path.split('.').last.toLowerCase();
       final mimeType = _getMimeTypeFromExtension(fileExt);
-      
+
       if (mimeType == null) {
         throw DioException(
           requestOptions: RequestOptions(path: '/user/upload/avatar'),
           error: '不支持的文件类型, 仅支持JPG和PNG格式',
         );
       }
-      
+
       // 检查文件大小（限制为10MB）
       final fileSize = await file.length();
       if (fileSize > 10 * 1024 * 1024) {
@@ -1061,7 +1061,7 @@ class ApiClient {
           error: '文件大小超过限制(10MB)',
         );
       }
-      
+
       // 创建文件的MultipartFile，明确设置contentType
       final fileBytes = await file.readAsBytes();
       final multipartFile = MultipartFile.fromBytes(
@@ -1069,18 +1069,18 @@ class ApiClient {
         filename: 'avatar.$fileExt',
         contentType: MediaType.parse(mimeType),
       );
-      
+
       // 创建FormData对象
       final formData = FormData.fromMap({
         'file': multipartFile,
       });
-      
+
       // 发送请求
       final response = await _dio.post<Map<String, dynamic>>(
         '/user/upload/avatar',
         data: formData,
       );
-      
+
       final data = response.data;
       if (data == null || data['data'] == null) {
         throw DioException(
@@ -1088,14 +1088,14 @@ class ApiClient {
           error: '响应数据格式错误',
         );
       }
-      
+
       return data['data']['url'] as String;
     } catch (e) {
       debugPrint('❌ 上传头像文件错误: $e');
       rethrow;
     }
   }
-  
+
   // 获取文件的MIME类型
   String? _getMimeTypeFromExtension(String extension) {
     switch (extension.toLowerCase()) {
@@ -1114,7 +1114,7 @@ class ApiClient {
     try {
       // 上传头像
       final avatarUrl = await uploadAvatarFile(avatarFile);
-      
+
       // 更新用户资料
       return await updateUserProfile(
         avatar: avatarUrl,
