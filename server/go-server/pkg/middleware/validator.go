@@ -28,8 +28,8 @@ func ValidatePagination() gin.HandlerFunc {
 			return
 		}
 
-		size, err := strconv.Atoi(c.DefaultQuery("size", "10"))
-		if err != nil || size < 1 || size > 50 {
+		size, err := strconv.Atoi(c.DefaultQuery("size", "1000"))
+		if err != nil || size < 1 || size > 1000 {
 			response.Error(c, errors.NewError(errors.ErrInvalidParameter))
 			c.Abort()
 			return

@@ -113,8 +113,8 @@ func main() {
 			novels.GET("/search", middleware.ValidatePagination(), novelHandler.SearchNovels)
 
 			// 限制数量的路由
-			novels.GET("/latest", middleware.ValidateLimit(10, 100), novelHandler.GetLatestNovels)
-			novels.GET("/popular", middleware.ValidateLimit(10, 100), novelHandler.GetPopularNovels)
+			novels.GET("/latest", middleware.ValidateLimit(1000, 1000), novelHandler.GetLatestNovels)
+			novels.GET("/popular", middleware.ValidateLimit(1000, 1000), novelHandler.GetPopularNovels)
 
 			// 基于ID的路由
 			novels.GET("/:id", novelHandler.GetNovelByID)
