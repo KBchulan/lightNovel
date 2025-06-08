@@ -13,7 +13,7 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  
+
   # State management
   flutter_riverpod: ^2.4.10
   riverpod_annotation: ^2.3.4
@@ -24,10 +24,10 @@ dependencies:
   # Network
   dio: ^5.4.1
   web_socket_channel: ^2.4.0
-  
+
   # UI
   flex_color_scheme: ^7.3.1
-  
+
   # Utils
   json_annotation: ^4.8.1
   freezed_annotation: ^2.4.1
@@ -43,7 +43,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-    
+
   flutter_lints: ^3.0.1
   build_runner: ^2.4.8
   json_serializable: ^6.7.1

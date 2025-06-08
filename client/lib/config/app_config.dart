@@ -13,13 +13,13 @@ class AppConfig {
   static const String appVersion = '1.0.0';
 
   // API配置
-  static const bool isDebug = false; // 调试模式
+  static const bool isDebug = true; // 调试模式
 
   // 在调试模式下使用本地服务器，否则使用生产服务器
   static String get apiBaseUrl {
     if (isDebug) {
       // return 'http://localhost:8080/api/v1'; // 本机服务器
-      return 'http://120.27.201.149:8080/api/v1'; // 阿里云服务器
+      return 'http://14.103.206.66:8080/api/v1'; // 阿里云服务器
     }
     return 'https://lightnovel.chulan.xin/api/v1'; // cloudflare 服务器
   }
@@ -28,7 +28,7 @@ class AppConfig {
   static String get staticUrl {
     if (isDebug) {
       // return 'http://localhost:8080'; // 本机服务器
-      return 'http://120.27.201.149:8080'; // 阿里云服务器
+      return 'http://14.103.206.66:8080'; // 阿里云服务器
     }
     return 'https://lightnovel.chulan.xin'; // cloudflare 服务器
   }
@@ -36,7 +36,7 @@ class AppConfig {
   static String get wsBaseUrl {
     if (isDebug) {
       // return 'ws://localhost:8080/api/v1/ws'; // 本机服务器
-      return 'ws://120.27.201.149:8080/api/v1/ws'; // 阿里云服务器
+      return 'ws://14.103.206.66:8080/api/v1/ws'; // 阿里云服务器
     }
     return 'wss://lightnovel.chulan.xin/api/v1/ws'; // cloudflare 服务器
   }

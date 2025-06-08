@@ -78,14 +78,14 @@ func NewNovelHandler(novelService *service.NovelService) *NovelHandler {
 // @Accept json
 // @Produce json
 // @Param page query int false "页码" default(1) minimum(1)
-// @Param size query int false "每页数量" default(10) minimum(1) maximum(50)
+// @Param size query int false "每页数量" default(1000) minimum(1) maximum(1000)
 // @Success 200 {object} response.PageResponse{data=[]models.Novel} "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /novels [get]
 func (h *NovelHandler) GetAllNovels(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "10"))
+	size, _ := strconv.Atoi(c.DefaultQuery("size", "1000"))
 
 	novels, total, err := h.novelService.GetAllNovels(c.Request.Context(), page, size)
 	if err != nil {
@@ -229,7 +229,7 @@ func (h *NovelHandler) GetChapterByNumber(c *gin.Context) {
 // @Produce json
 // @Param keyword query string true "搜索关键词"
 // @Param page query int false "页码" default(1)
-// @Param size query int false "每页数量" default(10)
+// @Param size query int false "每页数量" default(1000)
 // @Success 200 {object} response.Response
 // @Router /novels/search [get]
 func (h *NovelHandler) SearchNovels(c *gin.Context) {
@@ -241,12 +241,12 @@ func (h *NovelHandler) SearchNovels(c *gin.Context) {
 
 	// 获取分页参数
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "10"))
+	size, _ := strconv.Atoi(c.DefaultQuery("size", "1000"))
 	if page < 1 {
 		page = 1
 	}
-	if size < 1 || size > 50 {
-		size = 10
+	if size < 1 || size > 1000 {
+		size = 1000
 	}
 
 	novels, total, err := h.novelService.SearchNovels(c.Request.Context(), keyword, page, size)
@@ -268,13 +268,13 @@ func (h *NovelHandler) SearchNovels(c *gin.Context) {
 // @Tags novels
 // @Accept json
 // @Produce json
-// @Param limit query int false "限制数量" default(10) minimum(1) maximum(100)
+// @Param limit query int false "限制数量" default(1000) minimum(1) maximum(1000)
 // @Success 200 {object} response.Response{data=[]models.Novel} "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /novels/latest [get]
 func (h *NovelHandler) GetLatestNovels(c *gin.Context) {
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "1000"))
 	novels, err := h.novelService.GetLatestNovels(c.Request.Context(), limit)
 	if err != nil {
 		response.Error(c, err)
@@ -289,13 +289,13 @@ func (h *NovelHandler) GetLatestNovels(c *gin.Context) {
 // @Tags novels
 // @Accept json
 // @Produce json
-// @Param limit query int false "限制数量" default(10) minimum(1) maximum(100)
+// @Param limit query int false "限制数量" default(1000) minimum(1) maximum(1000)
 // @Success 200 {object} response.Response{data=[]models.Novel} "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /novels/popular [get]
 func (h *NovelHandler) GetPopularNovels(c *gin.Context) {
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "1000"))
 	novels, err := h.novelService.GetPopularNovelsParallel(c.Request.Context(), limit)
 	if err != nil {
 		response.Error(c, err)
@@ -867,7 +867,7 @@ func (h *NovelHandler) UpdateUserProfile(c *gin.Context) {
 // @Param volume path int true "卷号"
 // @Param chapter path int true "章节号"
 // @Param page query int false "页码，默认1"
-// @Param size query int false "每页数量，默认20"
+// @Param size query int false "每页数量，默认1000"
 // @Success 200 {object} response.Response{data=response.PageResponse{data=[]models.CommentResponse}} "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 500 {object} response.Response "服务器错误"
@@ -887,7 +887,7 @@ func (h *NovelHandler) GetComments(c *gin.Context) {
 	}
 
 	page := utils.GetIntQuery(c, "page", 1)
-	size := utils.GetIntQuery(c, "size", 20)
+	size := utils.GetIntQuery(c, "size", 1000)
 
 	comments, total, err := h.novelService.GetComments(c.Request.Context(), novelID, volumeNumber, chapterNumber, page, size)
 	if err != nil {

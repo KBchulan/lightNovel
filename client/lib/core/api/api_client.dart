@@ -154,7 +154,7 @@ class ApiClient {
   // 获取小说列表
   Future<List<Novel>> getNovels({
     int page = 1,
-    int size = 10,
+    int size = 1000,
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
@@ -254,7 +254,7 @@ class ApiClient {
   Future<List<Novel>> searchNovels({
     required String keyword,
     int page = 1,
-    int size = 10,
+    int size = 1000,
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
@@ -908,7 +908,7 @@ class ApiClient {
     required int volumeNumber,
     required int chapterNumber,
     int page = 1,
-    int size = 20,
+    int size = 1000,
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
